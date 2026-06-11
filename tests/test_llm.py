@@ -62,6 +62,19 @@ def test_record_then_replay_round_trip(tmp_path: Path) -> None:
     assert replayed == recorded
 
 
+def test_replay_rejects_mismatched_stored_request(tmp_path: Path) -> None:
+    import json
+
+    request = _request()
+    fixture = {
+        "request": _request(system="something else entirely").model_dump(mode="json"),
+        "response": LLMResponse(text="{}", model=DEFAULT_MODEL).model_dump(mode="json"),
+    }
+    (tmp_path / f"{request_key(request)}.json").write_text(json.dumps(fixture))
+    with pytest.raises(ReplayMissError, match="collision or stale"):
+        ReplayClient(tmp_path).complete(request)
+
+
 def test_replay_miss_raises_with_guidance(tmp_path: Path) -> None:
     with pytest.raises(ReplayMissError, match="record one with RecordingClient"):
         ReplayClient(tmp_path).complete(_request())

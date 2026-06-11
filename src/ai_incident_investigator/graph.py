@@ -74,22 +74,20 @@ def run_graph(
     max_workers: int = 6,
 ) -> InvestigationState:
     """Run the graph to completion; the state must be treated as read-only by agents."""
+    if max_workers < 1:
+        raise GraphError(f"max_workers must be >= 1, got {max_workers}")
     for level in plan_levels(agents):
         outcomes: list[tuple[str, StateUpdate | Exception]] = []
-        if len(level) == 1:
-            agent = level[0]
-            outcomes.append((agent.name, _run_one(agent, state)))
-        else:
-            with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futures = [(agent.name, pool.submit(agent.run, state)) for agent in level]
-                for name, future in futures:
-                    exc = future.exception()
-                    if exc is None:
-                        outcomes.append((name, future.result()))
-                    elif isinstance(exc, Exception):
-                        outcomes.append((name, exc))
-                    else:
-                        raise exc  # KeyboardInterrupt and friends propagate
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = [(agent.name, pool.submit(agent.run, state)) for agent in level]
+            for name, future in futures:
+                exc = future.exception()
+                if exc is None:
+                    outcomes.append((name, future.result()))
+                elif isinstance(exc, Exception):
+                    outcomes.append((name, exc))
+                else:
+                    raise exc  # KeyboardInterrupt and friends propagate
 
         # Name order, not completion order: keeps the final state deterministic.
         for name, outcome in sorted(outcomes, key=lambda pair: pair[0]):
@@ -98,10 +96,3 @@ def run_graph(
             else:
                 state = apply_update(state, outcome)
     return state
-
-
-def _run_one(agent: FunctionAgent, state: InvestigationState) -> StateUpdate | Exception:
-    try:
-        return agent.run(state)
-    except Exception as exc:
-        return exc

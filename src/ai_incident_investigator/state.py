@@ -3,10 +3,17 @@
 The state is frozen: agents read it and return a StateUpdate; only the graph
 runner merges updates (between levels, in deterministic agent-name order).
 List fields merge additively; scalar fields are last-write-wins.
+
+Note: pydantic's frozen is shallow — it prevents field reassignment, not
+in-place mutation of list contents. Agents must treat the state as strictly
+read-only; all merge paths here build new lists and never mutate in place.
 """
+
+import typing
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ai_incident_investigator.ids import stable_id
 from ai_incident_investigator.models.package import IncidentPackage
 from ai_incident_investigator.models.report import (
     CommunicationDrafts,
@@ -75,21 +82,19 @@ class StateUpdate(BaseModel):
     postmortem_draft: PostmortemDraft | None = None
 
 
-_LIST_FIELDS = (
-    "missing_data",
-    "evidence",
-    "hypotheses",
-    "recommended_next_steps",
-    "safe_mitigation_options",
-    "reasoning_trace",
-)
-_SCALAR_FIELDS = (
-    "summary",
-    "severity",
-    "safety_review",
-    "communication_drafts",
-    "postmortem_draft",
-)
+def _split_fields() -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Derive merge behavior from StateUpdate itself so it cannot drift."""
+    lists: list[str] = []
+    scalars: list[str] = []
+    for name, info in StateUpdate.model_fields.items():
+        if typing.get_origin(info.annotation) is list:
+            lists.append(name)
+        else:
+            scalars.append(name)
+    return tuple(lists), tuple(scalars)
+
+
+_LIST_FIELDS, _SCALAR_FIELDS = _split_fields()
 
 
 def apply_update(state: InvestigationState, update: StateUpdate) -> InvestigationState:
@@ -109,22 +114,17 @@ def apply_update(state: InvestigationState, update: StateUpdate) -> Investigatio
 
 def record_failure(state: InvestigationState, agent: str, error: str) -> InvestigationState:
     """Degrade, never crash: a failed agent becomes missing data plus trace."""
-    from ai_incident_investigator.ids import stable_id
-
+    update = StateUpdate(
+        missing_data=[
+            MissingData(
+                id=stable_id("missing", "agent", agent, error),
+                description=f"agent '{agent}' failed: {error}",
+                impact="its findings are absent; the report is partial",
+            )
+        ],
+        reasoning_trace=[ReasoningStep(stage=agent, summary=f"failed and was skipped: {error}")],
+    )
+    state = apply_update(state, update)
     return state.model_copy(
-        update={
-            "failures": [*state.failures, AgentFailure(agent=agent, error=error)],
-            "missing_data": [
-                *state.missing_data,
-                MissingData(
-                    id=stable_id("missing", "agent", agent, error),
-                    description=f"agent '{agent}' failed: {error}",
-                    impact="its findings are absent; the report is partial",
-                ),
-            ],
-            "reasoning_trace": [
-                *state.reasoning_trace,
-                ReasoningStep(stage=agent, summary=f"failed and was skipped: {error}"),
-            ],
-        }
+        update={"failures": [*state.failures, AgentFailure(agent=agent, error=error)]}
     )

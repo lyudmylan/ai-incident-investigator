@@ -12,9 +12,11 @@ CI runs on ReplayClient only — no API keys (AGENTS.md rule).
 import hashlib
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
+import anthropic
 from pydantic import BaseModel, ConfigDict, Field
 
 DEFAULT_MODEL = "claude-opus-4-8"
@@ -72,12 +74,13 @@ def request_key(request: LLMRequest) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
+_OK_STOP_REASONS = ("end_turn", "stop_sequence")
+
+
 class AnthropicClient:
     """Live Claude API client (thin adapter over the official SDK)."""
 
     def __init__(self) -> None:
-        import anthropic
-
         self._client = anthropic.Anthropic()
 
     def complete(self, request: LLMRequest) -> LLMResponse:
@@ -94,18 +97,18 @@ class AnthropicClient:
                 "format": {"type": "json_schema", "schema": request.json_schema}
             }
 
-        import anthropic
-
         try:
             message = self._client.messages.create(**kwargs)
         except anthropic.APIError as exc:
             raise LLMError(f"Claude API call failed: {exc}") from exc
 
-        if message.stop_reason == "refusal":
-            raise LLMError("the model declined the request (stop_reason=refusal)")
-        if message.stop_reason == "max_tokens":
+        # Anything but a clean finish is an error: refusal, max_tokens
+        # truncation, pause_turn (server tools we don't use), or future
+        # stop reasons must not silently pass as a complete answer.
+        if message.stop_reason not in _OK_STOP_REASONS:
             raise LLMError(
-                f"response truncated at max_tokens={request.max_tokens}; raise the limit"
+                f"unexpected stop_reason={message.stop_reason!r} "
+                f"(max_tokens={request.max_tokens}); response is not usable as-is"
             )
 
         text = "".join(block.text for block in message.content if block.type == "text")
@@ -133,6 +136,11 @@ class ReplayClient:
                 f"system={request.system[:60]!r}...; record one with RecordingClient"
             )
         data = json.loads(path.read_text())
+        if data["request"] != request.model_dump(mode="json"):
+            raise ReplayMissError(
+                f"fixture {path.name} stores a different request than the one asked for "
+                "(key collision or stale fixture); re-record it"
+            )
         return LLMResponse.model_validate(data["response"])
 
 
@@ -151,5 +159,14 @@ class RecordingClient:
             "response": response.model_dump(mode="json"),
         }
         path = self._dir / f"{request_key(request)}.json"
-        path.write_text(json.dumps(fixture, indent=2, sort_keys=True) + "\n")
+        # Atomic write: concurrent agents in the graph's thread pool may record
+        # simultaneously; a torn write would corrupt the fixture.
+        fd, tmp_name = tempfile.mkstemp(dir=self._dir, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as handle:
+                handle.write(json.dumps(fixture, indent=2, sort_keys=True) + "\n")
+            os.replace(tmp_name, path)
+        except BaseException:
+            Path(tmp_name).unlink(missing_ok=True)
+            raise
         return response
