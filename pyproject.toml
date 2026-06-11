@@ -5,6 +5,7 @@ description = "Explainable, human-in-the-loop investigation layer for a future A
 readme = "docs/product.md"
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=0.109.1",
     "pydantic>=2.13.4",
 ]
 
