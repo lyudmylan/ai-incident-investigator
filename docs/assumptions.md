@@ -8,12 +8,30 @@ safety. Agents must apply these rules; they must not invent their own.
 - **Start**: `alert.triggered_at` minus a lookback of **30 minutes** (default,
   CLI-overridable). The lookback exists because telemetry usually degrades
   before the alert threshold is crossed.
-- **End**: the latest timestamp present in the package, unless the data shows
-  sustained recovery (signals back within ~10% of baseline for at least
-  3 consecutive points), in which case the start of that recovery. An incident
-  is reported as ongoing (`end: null`) when recovery cannot be established.
+- **End**: the start of sustained recovery, when every metric series that
+  deviated ends recovered (within 10% of baseline for at least 3 consecutive
+  trailing points). Otherwise the incident is reported as ongoing
+  (`end: null`) as of the latest data point in the package.
 - Evidence outside the window may still be cited (e.g. an earlier deploy), but
   must be marked as such in its interpretation.
+
+## Metric deviation rule
+
+A metric value is **anomalous** when it is >= 2x its pre-incident baseline or
+<= 0.5x of it. With a zero baseline, any nonzero value is anomalous. This is
+deliberately coarse: it flags candidates deterministically; interpreting them
+is the agents' job.
+
+## Timeline inclusion rules
+
+The deterministic timeline contains, in timestamp order:
+
+- the alert trigger
+- every deploy, config change, and feature flag flip
+- log records at WARN, ERROR, or FATAL (INFO/DEBUG stay available as evidence
+  but are not timeline events)
+- per metric series: the first anomalous point (see deviation rule)
+- root trace spans with status `error`
 
 ## Severity rules
 

@@ -30,7 +30,7 @@ An incident package is a directory of files describing one incident.
 | `alert.json` | yes | the alert that opened the incident; anchors the incident window |
 | `metrics.json` | no | metric series with required pre-incident baselines |
 | `logs.jsonl` | no | structured log records, one JSON object per line (preferred) |
-| `logs.txt` | no | unstructured logs, parsed best-effort into the same record shape |
+| `logs.txt` | no | fallback: lines of `<ISO timestamp> <LEVEL> <service> <message>` |
 | `traces.json` | no | distributed trace spans |
 | `deploys.json` | no | recent deploys, config changes, feature flag flips |
 | `topology.json` | no | service dependency graph |
