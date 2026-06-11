@@ -14,7 +14,12 @@ uv run ruff format .        # format (--check in CI)
 uv run ruff check .         # lint
 uv run mypy                 # type check (strict)
 uv run pytest               # tests
+uv run python -m ai_incident_investigator.contracts   # regenerate contract docs
 ```
+
+`docs/incident_package_contract.md` and `docs/output_contract.md` are generated
+from the Pydantic models; a test fails CI if they drift. After changing any
+model, regenerate them in the same PR.
 
 All four checks must pass locally before pushing.
 

@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Explainable, human-in-the-loop investigation layer for a future AI SRE agent"
 readme = "docs/product.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic>=2.13.4",
+]
 
 [dependency-groups]
 dev = [

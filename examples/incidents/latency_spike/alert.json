@@ -1,0 +1,11 @@
+{
+  "id": "alert_001",
+  "title": "High p95 latency on booking-service POST /book",
+  "service": "booking-service",
+  "triggered_at": "2026-06-01T14:35:00Z",
+  "severity": "critical",
+  "description": "p95 latency on the appointment booking endpoint exceeded the 1000ms threshold for 5 consecutive minutes.",
+  "signal": "p95_latency_ms",
+  "threshold": 1000,
+  "observed_value": 2100
+}

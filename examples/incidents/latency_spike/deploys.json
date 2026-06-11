@@ -1,0 +1,20 @@
+{
+  "deploys": [
+    {
+      "id": "deploy_002",
+      "service": "booking-service",
+      "version": "2026.06.01-1420",
+      "deployed_at": "2026-06-01T14:20:00Z",
+      "change_type": "deploy",
+      "description": "Enable payment eligibility enrichment in the booking flow (gated by feature flag payment_enrichment)"
+    },
+    {
+      "id": "deploy_001",
+      "service": "notifications-service",
+      "version": "2026.05.30-0915",
+      "deployed_at": "2026-05-30T09:15:00Z",
+      "change_type": "deploy",
+      "description": "Reminder template copy update"
+    }
+  ]
+}

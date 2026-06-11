@@ -1,0 +1,20 @@
+{"timestamp": "2026-06-01T14:02:11Z", "service": "booking-service", "level": "INFO", "message": "Booking confirmed for appointment 84121 in 412ms"}
+{"timestamp": "2026-06-01T14:10:43Z", "service": "booking-service", "level": "INFO", "message": "Booking confirmed for appointment 84137 in 438ms"}
+{"timestamp": "2026-06-01T14:20:05Z", "service": "booking-service", "level": "INFO", "message": "Deployment 2026.06.01-1420 rolled out; feature flag payment_enrichment enabled"}
+{"timestamp": "2026-06-01T14:23:18Z", "service": "payment-service", "level": "INFO", "message": "Eligibility enrichment lookup took 850ms for plan group medicare-b"}
+{"timestamp": "2026-06-01T14:26:02Z", "service": "booking-service", "level": "WARN", "message": "Payment eligibility check slow: 1480ms (threshold 500ms)"}
+{"timestamp": "2026-06-01T14:27:39Z", "service": "payment-service", "level": "WARN", "message": "Eligibility enrichment query exceeded slow query threshold: 1210ms"}
+{"timestamp": "2026-06-01T14:29:14Z", "service": "booking-service", "level": "WARN", "message": "Retrying eligibility lookup for booking 84152 (attempt 2 of 5)"}
+{"timestamp": "2026-06-01T14:30:27Z", "service": "appointments-db", "level": "WARN", "message": "Connection pool nearing saturation: 82/100 connections in use"}
+{"timestamp": "2026-06-01T14:31:08Z", "service": "booking-service", "level": "ERROR", "message": "Eligibility lookup timed out after 2000ms for booking 84158 (attempt 3 of 5)"}
+{"timestamp": "2026-06-01T14:32:36Z", "service": "booking-service", "level": "WARN", "message": "Retrying eligibility lookup for booking 84158 (attempt 4 of 5)"}
+{"timestamp": "2026-06-01T14:33:21Z", "service": "payment-service", "level": "ERROR", "message": "Eligibility enrichment query timed out after 2000ms"}
+{"timestamp": "2026-06-01T14:34:44Z", "service": "appointments-db", "level": "WARN", "message": "Connection pool saturated: 97/100 connections in use"}
+{"timestamp": "2026-06-01T14:35:52Z", "service": "booking-service", "level": "ERROR", "message": "Booking failed for appointment 84163: eligibility lookup exhausted retries (5 of 5)"}
+{"timestamp": "2026-06-01T14:36:30Z", "service": "booking-service", "level": "WARN", "message": "Booking queue depth 260 exceeds normal operating range"}
+{"timestamp": "2026-06-01T14:38:09Z", "service": "booking-service", "level": "ERROR", "message": "Booking failed for appointment 84170: eligibility lookup exhausted retries (5 of 5)"}
+{"timestamp": "2026-06-01T14:40:51Z", "service": "appointments-db", "level": "WARN", "message": "Slow query: SELECT plan_rules FROM eligibility_rules WHERE plan_group = $1 took 2350ms"}
+{"timestamp": "2026-06-01T14:45:17Z", "service": "booking-service", "level": "ERROR", "message": "Booking failed for appointment 84181: eligibility lookup exhausted retries (5 of 5)"}
+{"timestamp": "2026-06-01T14:50:33Z", "service": "booking-service", "level": "WARN", "message": "Retrying eligibility lookup for booking 84190 (attempt 2 of 5)"}
+{"timestamp": "2026-06-01T14:55:46Z", "service": "payment-service", "level": "ERROR", "message": "Eligibility enrichment query timed out after 2000ms"}
+{"timestamp": "2026-06-01T14:58:20Z", "service": "notifications-service", "level": "INFO", "message": "Reminder batch sent: 1200 notifications in 3.1s"}

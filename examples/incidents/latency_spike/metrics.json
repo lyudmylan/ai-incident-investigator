@@ -1,0 +1,130 @@
+{
+  "series": [
+    {
+      "service": "booking-service",
+      "signal": "p95_latency_ms",
+      "baseline": 450,
+      "unit": "ms",
+      "points": [
+        {"timestamp": "2026-06-01T14:00:00Z", "value": 445},
+        {"timestamp": "2026-06-01T14:05:00Z", "value": 450},
+        {"timestamp": "2026-06-01T14:10:00Z", "value": 460},
+        {"timestamp": "2026-06-01T14:15:00Z", "value": 455},
+        {"timestamp": "2026-06-01T14:20:00Z", "value": 470},
+        {"timestamp": "2026-06-01T14:25:00Z", "value": 520},
+        {"timestamp": "2026-06-01T14:30:00Z", "value": 900},
+        {"timestamp": "2026-06-01T14:35:00Z", "value": 2100},
+        {"timestamp": "2026-06-01T14:40:00Z", "value": 3200},
+        {"timestamp": "2026-06-01T14:45:00Z", "value": 3150},
+        {"timestamp": "2026-06-01T14:50:00Z", "value": 3300},
+        {"timestamp": "2026-06-01T14:55:00Z", "value": 3250},
+        {"timestamp": "2026-06-01T15:00:00Z", "value": 3200}
+      ]
+    },
+    {
+      "service": "booking-service",
+      "signal": "error_rate_pct",
+      "baseline": 0.3,
+      "unit": "%",
+      "points": [
+        {"timestamp": "2026-06-01T14:00:00Z", "value": 0.3},
+        {"timestamp": "2026-06-01T14:05:00Z", "value": 0.2},
+        {"timestamp": "2026-06-01T14:10:00Z", "value": 0.3},
+        {"timestamp": "2026-06-01T14:15:00Z", "value": 0.3},
+        {"timestamp": "2026-06-01T14:20:00Z", "value": 0.4},
+        {"timestamp": "2026-06-01T14:25:00Z", "value": 0.7},
+        {"timestamp": "2026-06-01T14:30:00Z", "value": 1.6},
+        {"timestamp": "2026-06-01T14:35:00Z", "value": 3.2},
+        {"timestamp": "2026-06-01T14:40:00Z", "value": 4.8},
+        {"timestamp": "2026-06-01T14:45:00Z", "value": 4.7},
+        {"timestamp": "2026-06-01T14:50:00Z", "value": 4.8},
+        {"timestamp": "2026-06-01T14:55:00Z", "value": 4.6},
+        {"timestamp": "2026-06-01T15:00:00Z", "value": 4.8}
+      ]
+    },
+    {
+      "service": "payment-service",
+      "signal": "p95_latency_ms",
+      "baseline": 220,
+      "unit": "ms",
+      "points": [
+        {"timestamp": "2026-06-01T14:00:00Z", "value": 215},
+        {"timestamp": "2026-06-01T14:05:00Z", "value": 225},
+        {"timestamp": "2026-06-01T14:10:00Z", "value": 218},
+        {"timestamp": "2026-06-01T14:15:00Z", "value": 222},
+        {"timestamp": "2026-06-01T14:20:00Z", "value": 230},
+        {"timestamp": "2026-06-01T14:25:00Z", "value": 410},
+        {"timestamp": "2026-06-01T14:30:00Z", "value": 980},
+        {"timestamp": "2026-06-01T14:35:00Z", "value": 1700},
+        {"timestamp": "2026-06-01T14:40:00Z", "value": 2400},
+        {"timestamp": "2026-06-01T14:45:00Z", "value": 2350},
+        {"timestamp": "2026-06-01T14:50:00Z", "value": 2450},
+        {"timestamp": "2026-06-01T14:55:00Z", "value": 2400},
+        {"timestamp": "2026-06-01T15:00:00Z", "value": 2380}
+      ]
+    },
+    {
+      "service": "appointments-db",
+      "signal": "cpu_pct",
+      "baseline": 38,
+      "unit": "%",
+      "points": [
+        {"timestamp": "2026-06-01T14:00:00Z", "value": 36},
+        {"timestamp": "2026-06-01T14:05:00Z", "value": 39},
+        {"timestamp": "2026-06-01T14:10:00Z", "value": 37},
+        {"timestamp": "2026-06-01T14:15:00Z", "value": 38},
+        {"timestamp": "2026-06-01T14:20:00Z", "value": 41},
+        {"timestamp": "2026-06-01T14:25:00Z", "value": 55},
+        {"timestamp": "2026-06-01T14:30:00Z", "value": 71},
+        {"timestamp": "2026-06-01T14:35:00Z", "value": 84},
+        {"timestamp": "2026-06-01T14:40:00Z", "value": 92},
+        {"timestamp": "2026-06-01T14:45:00Z", "value": 91},
+        {"timestamp": "2026-06-01T14:50:00Z", "value": 93},
+        {"timestamp": "2026-06-01T14:55:00Z", "value": 92},
+        {"timestamp": "2026-06-01T15:00:00Z", "value": 92}
+      ]
+    },
+    {
+      "service": "booking-queue",
+      "signal": "queue_depth",
+      "baseline": 12,
+      "unit": "messages",
+      "points": [
+        {"timestamp": "2026-06-01T14:00:00Z", "value": 10},
+        {"timestamp": "2026-06-01T14:05:00Z", "value": 12},
+        {"timestamp": "2026-06-01T14:10:00Z", "value": 11},
+        {"timestamp": "2026-06-01T14:15:00Z", "value": 13},
+        {"timestamp": "2026-06-01T14:20:00Z", "value": 14},
+        {"timestamp": "2026-06-01T14:25:00Z", "value": 35},
+        {"timestamp": "2026-06-01T14:30:00Z", "value": 110},
+        {"timestamp": "2026-06-01T14:35:00Z", "value": 260},
+        {"timestamp": "2026-06-01T14:40:00Z", "value": 480},
+        {"timestamp": "2026-06-01T14:45:00Z", "value": 510},
+        {"timestamp": "2026-06-01T14:50:00Z", "value": 540},
+        {"timestamp": "2026-06-01T14:55:00Z", "value": 530},
+        {"timestamp": "2026-06-01T15:00:00Z", "value": 545}
+      ]
+    },
+    {
+      "service": "notifications-service",
+      "signal": "p95_latency_ms",
+      "baseline": 120,
+      "unit": "ms",
+      "points": [
+        {"timestamp": "2026-06-01T14:00:00Z", "value": 118},
+        {"timestamp": "2026-06-01T14:05:00Z", "value": 122},
+        {"timestamp": "2026-06-01T14:10:00Z", "value": 119},
+        {"timestamp": "2026-06-01T14:15:00Z", "value": 121},
+        {"timestamp": "2026-06-01T14:20:00Z", "value": 120},
+        {"timestamp": "2026-06-01T14:25:00Z", "value": 123},
+        {"timestamp": "2026-06-01T14:30:00Z", "value": 119},
+        {"timestamp": "2026-06-01T14:35:00Z", "value": 124},
+        {"timestamp": "2026-06-01T14:40:00Z", "value": 121},
+        {"timestamp": "2026-06-01T14:45:00Z", "value": 120},
+        {"timestamp": "2026-06-01T14:50:00Z", "value": 122},
+        {"timestamp": "2026-06-01T14:55:00Z", "value": 119},
+        {"timestamp": "2026-06-01T15:00:00Z", "value": 121}
+      ]
+    }
+  ]
+}
