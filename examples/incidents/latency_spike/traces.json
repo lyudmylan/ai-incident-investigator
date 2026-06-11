@@ -1,0 +1,124 @@
+{
+  "spans": [
+    {
+      "trace_id": "trace_pre_01",
+      "span_id": "s1",
+      "parent_span_id": null,
+      "service": "booking-service",
+      "operation": "POST /book",
+      "start_time": "2026-06-01T14:08:12Z",
+      "duration_ms": 430,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_pre_01",
+      "span_id": "s2",
+      "parent_span_id": "s1",
+      "service": "payment-service",
+      "operation": "check_eligibility",
+      "start_time": "2026-06-01T14:08:12Z",
+      "duration_ms": 95,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_pre_01",
+      "span_id": "s3",
+      "parent_span_id": "s2",
+      "service": "appointments-db",
+      "operation": "eligibility_query",
+      "start_time": "2026-06-01T14:08:12Z",
+      "duration_ms": 40,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_pre_01",
+      "span_id": "s4",
+      "parent_span_id": "s1",
+      "service": "appointments-db",
+      "operation": "reserve_slot",
+      "start_time": "2026-06-01T14:08:12Z",
+      "duration_ms": 38,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_incident_01",
+      "span_id": "s1",
+      "parent_span_id": null,
+      "service": "booking-service",
+      "operation": "POST /book",
+      "start_time": "2026-06-01T14:39:05Z",
+      "duration_ms": 3180,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_01",
+      "span_id": "s2",
+      "parent_span_id": "s1",
+      "service": "payment-service",
+      "operation": "check_eligibility",
+      "start_time": "2026-06-01T14:39:05Z",
+      "duration_ms": 2410,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_01",
+      "span_id": "s3",
+      "parent_span_id": "s2",
+      "service": "appointments-db",
+      "operation": "eligibility_query",
+      "start_time": "2026-06-01T14:39:05Z",
+      "duration_ms": 2150,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_01",
+      "span_id": "s4",
+      "parent_span_id": "s1",
+      "service": "appointments-db",
+      "operation": "reserve_slot",
+      "start_time": "2026-06-01T14:39:08Z",
+      "duration_ms": 310,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_incident_02",
+      "span_id": "s1",
+      "parent_span_id": null,
+      "service": "booking-service",
+      "operation": "POST /book",
+      "start_time": "2026-06-01T14:52:31Z",
+      "duration_ms": 3320,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_02",
+      "span_id": "s2",
+      "parent_span_id": "s1",
+      "service": "payment-service",
+      "operation": "check_eligibility",
+      "start_time": "2026-06-01T14:52:31Z",
+      "duration_ms": 2480,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_02",
+      "span_id": "s3",
+      "parent_span_id": "s2",
+      "service": "appointments-db",
+      "operation": "eligibility_query",
+      "start_time": "2026-06-01T14:52:31Z",
+      "duration_ms": 2200,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_02",
+      "span_id": "s4",
+      "parent_span_id": "s1",
+      "service": "appointments-db",
+      "operation": "reserve_slot",
+      "start_time": "2026-06-01T14:52:34Z",
+      "duration_ms": 290,
+      "status": "ok"
+    }
+  ]
+}
