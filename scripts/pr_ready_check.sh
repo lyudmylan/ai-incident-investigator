@@ -15,7 +15,10 @@ echo
 echo "== Status checks =="
 gh pr view "$pr" --json statusCheckRollup --jq '
   .statusCheckRollup[]? |
-  "\(.name // .context): \(.conclusion // .status // .state)"'
+  "\(.name // .context): \(
+    if (.conclusion // "") != "" then .conclusion
+    elif (.status // "") != "" then .status
+    else (.state // "UNKNOWN") end)"'
 
 echo
 echo "== Top-level reviews =="
@@ -33,17 +36,26 @@ gh api "repos/${repo}/pulls/${pr}/comments" --jq '
   .[] | "\(.path):\(.line // .original_line // "?") \(.user.login): \(.body | split("\n")[0])"'
 
 echo
-failing="$(gh pr view "$pr" --json statusCheckRollup --jq '
+verdict="$(gh pr view "$pr" --json statusCheckRollup --jq '
   [.statusCheckRollup[]? |
-   select((.conclusion // .state // "") | test("FAILURE|ERROR|TIMED_OUT|CANCELLED"))] | length')"
+   if (.conclusion // "") != "" then .conclusion
+   elif (.status // "") != "" and .status != "COMPLETED" then "PENDING"
+   else (.state // "UNKNOWN") end] |
+  "\([.[] | select(test("FAILURE|ERROR|TIMED_OUT|CANCELLED|UNKNOWN"))] | length) \([.[] | select(test("PENDING|QUEUED|IN_PROGRESS|EXPECTED|WAITING"))] | length)"')"
+failing="${verdict%% *}"
+pending="${verdict##* }"
 decision="$(gh pr view "$pr" --json reviewDecision --jq '.reviewDecision // ""')"
 
 if [[ "$failing" != "0" ]]; then
   echo "NOT READY: ${failing} failing check(s)."
   exit 1
 fi
+if [[ "$pending" != "0" ]]; then
+  echo "NOT READY: ${pending} check(s) still pending."
+  exit 1
+fi
 if [[ "$decision" == "CHANGES_REQUESTED" ]]; then
   echo "NOT READY: changes requested."
   exit 1
 fi
-echo "READY: no failing checks, no changes requested. Review the comment sections above before merging."
+echo "READY: checks green, no changes requested. Review the comment sections above before merging."
