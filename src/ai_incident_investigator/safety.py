@@ -26,7 +26,7 @@ _ACTION_VERBS = (
     r"executed|applied|migrated|deleted|paged)"
 )
 EXECUTED_ACTION_PATTERNS = (
-    re.compile(rf"\b(?:i|we)\s+(?:have\s+|already\s+)?{_ACTION_VERBS}\b", re.IGNORECASE),
+    re.compile(rf"\b(?:i|we)\s+(?:have\s+)?(?:already\s+)?{_ACTION_VERBS}\b", re.IGNORECASE),
     re.compile(rf"\bhas\s+been\s+{_ACTION_VERBS}\b", re.IGNORECASE),
     re.compile(rf"\b{_ACTION_VERBS}\s+successfully\b", re.IGNORECASE),
 )

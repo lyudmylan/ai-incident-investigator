@@ -14,6 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from ai_incident_investigator.models.common import CheckResult
+
 
 class ResponseModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -72,7 +74,7 @@ class RankerResponse(ResponseModel):
 
 class CriticCheck(ResponseModel):
     check: str
-    result: Literal["pass", "warning", "blocked"]
+    result: CheckResult
     detail: str | None
 
 

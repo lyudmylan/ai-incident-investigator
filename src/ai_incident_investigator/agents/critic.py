@@ -6,9 +6,7 @@ not rewrite hypotheses - findings are for the human reading the report.
 The deterministic linter (safety.py) merges its own checks in afterwards.
 """
 
-from pydantic import ValidationError
-
-from ai_incident_investigator.agents.base import GROUNDING_PREAMBLE, gaps_to_missing_data
+from ai_incident_investigator.agents.base import complete_typed, gaps_to_missing_data
 from ai_incident_investigator.agents.rendering import (
     render_assessment,
     render_evidence,
@@ -18,7 +16,7 @@ from ai_incident_investigator.agents.rendering import (
 )
 from ai_incident_investigator.agents.responses import CriticResponse
 from ai_incident_investigator.graph import FunctionAgent
-from ai_incident_investigator.llm import LLMClient, LLMError, LLMMessage, LLMRequest
+from ai_incident_investigator.llm import LLMClient
 from ai_incident_investigator.models.report import ReasoningStep, SafetyCheck, SafetyReview
 from ai_incident_investigator.state import InvestigationState, StateUpdate
 
@@ -83,17 +81,9 @@ def make_critic(llm: LLMClient, depends_on: frozenset[str]) -> FunctionAgent:
                 ],
             )
 
-        request = LLMRequest(
-            system=f"{GROUNDING_PREAMBLE}\n{CRITIC_PROMPT}",
-            messages=[LLMMessage(role="user", content=_critic_input(state))],
-            json_schema=CriticResponse.model_json_schema(),
+        parsed = complete_typed(
+            llm, CRITIC_NAME, CRITIC_PROMPT, _critic_input(state), CriticResponse
         )
-        response = llm.complete(request)
-        try:
-            parsed = CriticResponse.model_validate_json(response.text)
-        except ValidationError as exc:
-            raise LLMError(f"critic returned JSON not matching its schema: {exc}") from exc
-
         checks = [
             SafetyCheck(check=c.check, result=c.result, detail=c.detail) for c in parsed.checks
         ]

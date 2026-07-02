@@ -23,22 +23,16 @@ from ai_incident_investigator.models.report import (
 from ai_incident_investigator.pipeline import initial_state, run_investigation
 from ai_incident_investigator.safety import lint_state, make_safety_linter
 from ai_incident_investigator.state import InvestigationState, StateUpdate, apply_update
+from helpers import EXAMPLE_DIR as EXAMPLE
+from helpers import make_evidence
 
-EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "incidents" / "latency_spike"
 NO_DEPS = frozenset[str]()
 
-
-def _evidence(source: Source, note: str) -> EvidenceItem:
-    return EvidenceItem(
-        id=stable_id("evidence", source.value, note), source=source, interpretation=note
-    )
-
-
-EV_METRICS = _evidence(Source.METRICS, "latency 7x baseline after 14:30")
-EV_LOGS = _evidence(Source.LOGS, "eligibility retries escalate from 14:29")
-EV_TRACES = _evidence(Source.TRACES, "eligibility_query dominates degraded traces")
-EV_DEPLOYS = _evidence(Source.DEPLOYS, "deploy landed 11 minutes before onset")
-EV_CONTROL = _evidence(Source.METRICS, "notifications-service stayed at baseline")
+EV_METRICS = make_evidence(Source.METRICS, "latency 7x baseline after 14:30")
+EV_LOGS = make_evidence(Source.LOGS, "eligibility retries escalate from 14:29")
+EV_TRACES = make_evidence(Source.TRACES, "eligibility_query dominates degraded traces")
+EV_DEPLOYS = make_evidence(Source.DEPLOYS, "deploy landed 11 minutes before onset")
+EV_CONTROL = make_evidence(Source.METRICS, "notifications-service stayed at baseline")
 ALL_EVIDENCE = [EV_METRICS, EV_LOGS, EV_TRACES, EV_DEPLOYS, EV_CONTROL]
 
 
@@ -303,9 +297,9 @@ def test_linter_standalone_when_critic_failed() -> None:
 
 def test_full_graph_end_to_end_with_scripted_llm() -> None:
     """Investigators -> ranker -> critic -> linter, all through run_investigation."""
-    from test_agents import ScriptedLLM, _default_script
+    from helpers import ScriptedLLM, default_script
 
-    script = _default_script()
+    script = default_script()
 
     def ranker_reply(request: LLMRequest) -> str:
         ids = re.findall(r"evidence_[0-9a-f]{10}", request.messages[0].content)

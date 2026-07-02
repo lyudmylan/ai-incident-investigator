@@ -15,7 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from pydantic import TypeAdapter, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from ai_incident_investigator.agents.responses import Finding, InvestigatorResponse
 from ai_incident_investigator.graph import FunctionAgent
@@ -44,6 +44,27 @@ Non-negotiable rules:
 """
 
 _AWARE_DATETIME = TypeAdapter(datetime)
+
+
+def complete_typed[R: BaseModel](
+    llm: LLMClient,
+    agent_name: str,
+    role_prompt: str,
+    user_content: str,
+    response_model: type[R],
+) -> R:
+    """The one LLM-call path every agent uses: grounded preamble, schema-
+    constrained response, ValidationError surfaced as a degradable LLMError."""
+    request = LLMRequest(
+        system=f"{GROUNDING_PREAMBLE}\n{role_prompt}",
+        messages=[LLMMessage(role="user", content=user_content)],
+        json_schema=response_model.model_json_schema(),
+    )
+    response = llm.complete(request)
+    try:
+        return response_model.model_validate_json(response.text)
+    except ValidationError as exc:
+        raise LLMError(f"{agent_name} returned JSON not matching its schema: {exc}") from exc
 
 
 @dataclass(frozen=True)
@@ -110,17 +131,9 @@ def _dedupe_by_id(items: list[EvidenceItem]) -> list[EvidenceItem]:
 
 def make_investigator(spec: InvestigatorSpec, llm: LLMClient) -> FunctionAgent:
     def run(state: InvestigationState) -> StateUpdate:
-        request = LLMRequest(
-            system=f"{GROUNDING_PREAMBLE}\n{spec.role_prompt}",
-            messages=[LLMMessage(role="user", content=spec.render_input(state))],
-            json_schema=InvestigatorResponse.model_json_schema(),
+        parsed = complete_typed(
+            llm, spec.name, spec.role_prompt, spec.render_input(state), InvestigatorResponse
         )
-        response = llm.complete(request)
-        try:
-            parsed = InvestigatorResponse.model_validate_json(response.text)
-        except ValidationError as exc:
-            raise LLMError(f"{spec.name} returned JSON not matching its schema: {exc}") from exc
-
         gaps = list(parsed.gaps)
         evidence = _dedupe_by_id(
             [evidence_from_finding(finding, spec.source, gaps) for finding in parsed.findings]

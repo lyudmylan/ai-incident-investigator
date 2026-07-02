@@ -2,23 +2,17 @@
 
 import pytest
 
-from ai_incident_investigator.ids import stable_id
 from ai_incident_investigator.models.common import Confidence, Source
-from ai_incident_investigator.models.report import ConfidenceRubric, EvidenceItem
+from ai_incident_investigator.models.report import ConfidenceRubric
 from ai_incident_investigator.rubric import TimingAlignment, build_rubric, derive_confidence
-
-
-def _evidence(source: Source, note: str) -> EvidenceItem:
-    return EvidenceItem(
-        id=stable_id("evidence", source.value, note), source=source, interpretation=note
-    )
+from helpers import make_evidence
 
 
 def test_aligned_signals_counts_distinct_sources_not_items() -> None:
     supporting = [
-        _evidence(Source.METRICS, "one"),
-        _evidence(Source.METRICS, "two"),
-        _evidence(Source.LOGS, "three"),
+        make_evidence(Source.METRICS, "one"),
+        make_evidence(Source.METRICS, "two"),
+        make_evidence(Source.LOGS, "three"),
     ]
     rubric = build_rubric(supporting, conflicting_count=0, timing_alignment="aligned")
     assert rubric.aligned_signals == 2  # metrics counted once

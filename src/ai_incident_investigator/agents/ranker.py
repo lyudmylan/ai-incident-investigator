@@ -9,9 +9,7 @@ A hypothesis whose citations don't survive validation is dropped and the
 drop is recorded - no evidence, no hypothesis (Principle 2).
 """
 
-from pydantic import ValidationError
-
-from ai_incident_investigator.agents.base import GROUNDING_PREAMBLE, gaps_to_missing_data
+from ai_incident_investigator.agents.base import complete_typed, gaps_to_missing_data
 from ai_incident_investigator.agents.rendering import (
     render_assessment,
     render_evidence,
@@ -21,10 +19,9 @@ from ai_incident_investigator.agents.rendering import (
 from ai_incident_investigator.agents.responses import HypothesisDraft, RankerResponse
 from ai_incident_investigator.graph import FunctionAgent
 from ai_incident_investigator.ids import stable_id
-from ai_incident_investigator.llm import LLMClient, LLMError, LLMMessage, LLMRequest
-from ai_incident_investigator.models.common import Confidence
+from ai_incident_investigator.llm import LLMClient
 from ai_incident_investigator.models.report import EvidenceItem, Hypothesis, ReasoningStep
-from ai_incident_investigator.rubric import build_rubric, derive_confidence
+from ai_incident_investigator.rubric import CONFIDENCE_ORDER, build_rubric, derive_confidence
 from ai_incident_investigator.state import InvestigationState, StateUpdate
 
 RANKER_NAME = "hypothesis_ranker"
@@ -56,7 +53,7 @@ accordingly - citing three findings from one source counts as one signal."""
 
 
 def _rank_key(hypothesis: Hypothesis) -> int:
-    return {Confidence.HIGH: 0, Confidence.MEDIUM: 1, Confidence.LOW: 2}[hypothesis.confidence]
+    return CONFIDENCE_ORDER[hypothesis.confidence]
 
 
 def _ranker_input(state: InvestigationState) -> str:
@@ -132,31 +129,26 @@ def make_ranker(llm: LLMClient, depends_on: frozenset[str]) -> FunctionAgent:
                 ],
             )
 
-        request = LLMRequest(
-            system=f"{GROUNDING_PREAMBLE}\n{RANKER_PROMPT}",
-            messages=[LLMMessage(role="user", content=_ranker_input(state))],
-            json_schema=RankerResponse.model_json_schema(),
+        parsed = complete_typed(
+            llm, RANKER_NAME, RANKER_PROMPT, _ranker_input(state), RankerResponse
         )
-        response = llm.complete(request)
-        try:
-            parsed = RankerResponse.model_validate_json(response.text)
-        except ValidationError as exc:
-            raise LLMError(f"ranker returned JSON not matching its schema: {exc}") from exc
-
         by_id = {item.id: item for item in state.evidence}
         gaps = list(parsed.gaps)
         hypotheses: list[Hypothesis] = []
+        kept_drafts: list[HypothesisDraft] = []
         seen_ids: set[str] = set()
         for draft in parsed.hypotheses:
             hypothesis = _convert_draft(draft, by_id, gaps)
             if hypothesis is not None and hypothesis.id not in seen_ids:
                 seen_ids.add(hypothesis.id)
                 hypotheses.append(hypothesis)
+                kept_drafts.append(draft)
         # Stable sort: derived-confidence tier first, LLM likelihood order within.
         hypotheses.sort(key=_rank_key)
 
+        # Only surviving hypotheses: the trace must not cite dropped ones.
         timing_notes = "; ".join(
-            f"'{draft.title}': {draft.timing_justification}" for draft in parsed.hypotheses
+            f"'{draft.title}': {draft.timing_justification}" for draft in kept_drafts
         )
         summary = (
             parsed.reasoning if not timing_notes else f"{parsed.reasoning} | timing: {timing_notes}"

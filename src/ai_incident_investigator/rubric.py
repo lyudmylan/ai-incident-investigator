@@ -12,6 +12,14 @@ from ai_incident_investigator.models.report import ConfidenceRubric, EvidenceIte
 
 TimingAlignment = Literal["aligned", "misaligned", "unknown"]
 
+CONFIDENCE_ORDER: dict[Confidence, int] = {
+    Confidence.HIGH: 0,
+    Confidence.MEDIUM: 1,
+    Confidence.LOW: 2,
+}
+"""Ranking order for confidence tiers; lives here with the rest of the
+confidence semantics so adding a tier means touching one module."""
+
 
 def build_rubric(
     supporting: list[EvidenceItem],

@@ -1,6 +1,11 @@
 """Shared vocabulary used by both the incident package and the report contracts."""
 
 from enum import StrEnum
+from typing import Literal
+
+CheckResult = Literal["pass", "warning", "blocked"]
+"""Safety-check outcome, shared by the report contract and the critic's
+response schema so the two can never drift apart."""
 
 
 class SeverityLevel(StrEnum):
