@@ -11,10 +11,10 @@ from ai_incident_investigator.collect import (
     collect_package,
     load_sources_config,
 )
+from ai_incident_investigator.collect.normalize import normalize_level
 from ai_incident_investigator.collect.sentry import (
     SentryAlertSource,
     SentryConfig,
-    normalize_level,
     parse_sentry_time,
     sentry_alert_source,
 )

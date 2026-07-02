@@ -103,6 +103,11 @@ def render_traces(package: IncidentPackage) -> str:
 
 def render_deploys(package: IncidentPackage) -> str:
     assert package.deploys is not None
+    if not package.deploys.deploys:
+        return (
+            "DEPLOYS AND CHANGES: none - the change window was checked and no "
+            "deploys, config changes, or flag flips were found (this is evidence)"
+        )
     lines = ["DEPLOYS AND CHANGES (chronological)"]
     for deploy in sorted(package.deploys.deploys, key=lambda d: d.deployed_at):
         description = f": {deploy.description}" if deploy.description else ""

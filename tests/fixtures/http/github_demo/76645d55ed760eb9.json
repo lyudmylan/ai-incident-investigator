@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "params": {
+      "per_page": "50"
+    },
+    "url": "https://github.stub.local/api/v3/repos/acme/booking-service/releases"
+  },
+  "response": {
+    "body": "[{\"tag_name\": \"2026.06.01-1420\", \"name\": \"Enable payment eligibility enrichment\", \"published_at\": \"2026-06-01T14:20:00Z\", \"draft\": false}, {\"tag_name\": \"2026.05.20-0900\", \"name\": \"Too old to be in the change window\", \"published_at\": \"2026-05-20T09:00:00Z\", \"draft\": false}, {\"tag_name\": \"draft-next\", \"name\": \"Draft\", \"published_at\": null, \"draft\": true}]",
+    "status": 200
+  }
+}

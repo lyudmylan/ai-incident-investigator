@@ -93,9 +93,13 @@ class Deploy(PackageModel):
 
 
 class DeploysFile(PackageModel):
-    """deploys.json — recent deploys, config changes, and flag flips."""
+    """deploys.json — recent deploys, config changes, and flag flips.
 
-    deploys: list[Deploy] = Field(min_length=1)
+    An empty list is valid and meaningful: it asserts the change window was
+    checked and nothing shipped — ruling-out evidence, not missing data.
+    """
+
+    deploys: list[Deploy] = Field(default_factory=list)
 
 
 class ServiceNode(PackageModel):

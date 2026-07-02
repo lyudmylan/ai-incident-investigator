@@ -11,7 +11,6 @@ fatal, which the orchestrator turns into a loud collection failure.
 """
 
 from datetime import UTC, datetime
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
@@ -24,21 +23,10 @@ from ai_incident_investigator.collect.http import (
     HTTPRequest,
     raise_for_status,
 )
+from ai_incident_investigator.collect.normalize import normalize_level
 from ai_incident_investigator.models.package import Alert, LogRecord
 
 SECTION = "sentry"
-
-LogLevel = Literal["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]
-
-_LEVEL_MAP: dict[str, LogLevel] = {
-    "debug": "DEBUG",
-    "info": "INFO",
-    "warning": "WARN",
-    "warn": "WARN",
-    "error": "ERROR",
-    "fatal": "FATAL",
-    "critical": "FATAL",
-}
 
 _DATETIME = TypeAdapter(datetime)
 
@@ -102,10 +90,6 @@ class SentryEvent(_WireModel):
     dateCreated: str  # Sentry wire field name; parsed via parse_sentry_time
     tags: list[SentryTag] = Field(default_factory=list)
     entries: list[SentryEntry] = Field(default_factory=list)
-
-
-def normalize_level(raw: str | None) -> LogLevel:
-    return _LEVEL_MAP.get((raw or "").lower(), "INFO")
 
 
 def parse_sentry_time(value: str) -> datetime:
