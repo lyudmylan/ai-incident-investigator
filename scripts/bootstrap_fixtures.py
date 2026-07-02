@@ -52,11 +52,28 @@ def regenerate(incident_id: str, goldens_only: bool) -> None:
     print(f"wrote golden -> {golden}")
 
 
+def regenerate_http_fixtures() -> None:
+    """HTTP fixtures for the collection adapters, recorded from the local stubs."""
+    from ai_incident_investigator.collect import RecordingHTTPClient
+    from ai_incident_investigator.collect.sentry import SentryAlertSource
+    from sentry_stub import DEMO_CONFIG, DEMO_ISSUE_ID, SentryStubHTTP
+
+    fixtures = ROOT / "tests" / "fixtures" / "http" / "sentry_demo"
+    shutil.rmtree(fixtures, ignore_errors=True)
+    recorder = RecordingHTTPClient(SentryStubHTTP(), fixtures)
+    SentryAlertSource(recorder, DEMO_CONFIG, DEMO_ISSUE_ID).fetch_alert()
+    print(f"recorded {len(list(fixtures.glob('*.json')))} HTTP fixtures -> {fixtures}")
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     goldens_only = "--goldens-only" in sys.argv
+    if "--http" in sys.argv:
+        regenerate_http_fixtures()
+        return
     for incident_id in args or sorted(SCRIPTED_INCIDENTS):
         regenerate(incident_id, goldens_only)
+    regenerate_http_fixtures()
 
 
 if __name__ == "__main__":

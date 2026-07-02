@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "GET",
+    "params": {},
+    "url": "https://sentry.stub.local/api/0/issues/9101/events/latest/"
+  },
+  "response": {
+    "body": "{\"eventID\": \"ab12cd34ef56\", \"dateCreated\": \"2026-06-01T14:35:52Z\", \"tags\": [{\"key\": \"environment\", \"value\": \"production\"}, {\"key\": \"service\", \"value\": \"booking-service\"}, {\"key\": \"release\", \"value\": \"2026.06.01-1420\"}], \"entries\": [{\"type\": \"breadcrumbs\", \"data\": {\"values\": [{\"timestamp\": \"2026-06-01T14:35:40Z\", \"level\": \"info\", \"category\": \"query\", \"message\": \"eligibility lookup started for booking 84163\"}, {\"timestamp\": \"2026-06-01T14:35:44\", \"level\": \"warning\", \"category\": \"retry\", \"message\": \"eligibility lookup retry (attempt 4 of 5)\"}, {\"timestamp\": \"2026-06-01T14:35:50Z\", \"level\": \"critical\", \"category\": null, \"message\": \"giving up after 5 attempts\"}, {\"timestamp\": \"2026-06-01T14:35:51Z\", \"level\": \"info\", \"category\": \"http\", \"message\": null}]}}, {\"type\": \"exception\", \"data\": {\"values\": []}}]}",
+    "status": 200
+  }
+}
