@@ -11,6 +11,8 @@ from ai_incident_investigator.models.report import (
     Hypothesis,
     IncidentWindow,
     MissingData,
+    NextStep,
+    SafetyReview,
     SeverityAssessment,
     Summary,
     TimelineEntry,
@@ -188,6 +190,25 @@ def render_hypotheses(hypotheses: list[Hypothesis]) -> str:
             f"  recommended checks: {'; '.join(hypothesis.recommended_checks) or '(none)'}"
         )
     return "\n".join(blocks)
+
+
+def render_next_steps(steps: list[NextStep]) -> str:
+    if not steps:
+        return "RECOMMENDED NEXT STEPS: none aggregated"
+    lines = ["RECOMMENDED NEXT STEPS (aggregated, with back-references)"]
+    lines.extend(f"- {step.id}: {step.description}" for step in steps)
+    return "\n".join(lines)
+
+
+def render_safety_review_summary(review: SafetyReview | None) -> str:
+    if review is None:
+        return "SAFETY REVIEW: not yet available"
+    non_pass = [c for c in review.checks if c.result != "pass"]
+    if not non_pass:
+        return f"SAFETY REVIEW: all {len(review.checks)} checks passed"
+    lines = [f"SAFETY REVIEW ({len(non_pass)} non-pass of {len(review.checks)} checks)"]
+    lines.extend(f"- [{c.result}] {c.check}: {c.detail or ''}" for c in non_pass)
+    return "\n".join(lines)
 
 
 def render_timeline(timeline: list[TimelineEntry]) -> str:

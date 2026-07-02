@@ -67,8 +67,11 @@ load + timeline -+-> logs_investigator -----+-> hypothesis_ranker -> safety_crit
 
 Investigator agents (epic #5) produce evidence and findings; the ranker
 (epic #6) combines them into hypotheses with the documented confidence
-rubric; the safety critic challenges them; recommendation/comms (epic #7)
-assemble the report.
+rubric; the safety critic challenges them; the deterministic recommendation
+builder and the reporter agent (epic #7) produce next steps, mitigation
+options, and drafts; the deterministic safety linter runs dead last so it
+lints the complete report, and `assemble.build_report` fills contract
+fields any failed stage left empty with explicit "unavailable" fallbacks.
 
 ## LLM harness (`llm.py`)
 

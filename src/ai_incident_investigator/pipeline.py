@@ -16,6 +16,7 @@ from typing import Literal
 from ai_incident_investigator.agents import build_investigators
 from ai_incident_investigator.agents.critic import CRITIC_NAME, make_critic
 from ai_incident_investigator.agents.ranker import RANKER_NAME, make_ranker
+from ai_incident_investigator.agents.reporter import REPORTER_NAME, make_reporter
 from ai_incident_investigator.graph import run_graph
 from ai_incident_investigator.llm import (
     AnthropicClient,
@@ -25,6 +26,7 @@ from ai_incident_investigator.llm import (
 )
 from ai_incident_investigator.loading import LoadedPackage
 from ai_incident_investigator.models.report import ReasoningStep
+from ai_incident_investigator.recommendations import BUILDER_NAME, make_recommendation_builder
 from ai_incident_investigator.safety import make_safety_linter
 from ai_incident_investigator.state import InvestigationState, StateUpdate, apply_update
 from ai_incident_investigator.timeline import build_timeline
@@ -60,7 +62,10 @@ def run_investigation(
     investigator_names = frozenset(agent.name for agent in agents)
     agents.append(make_ranker(llm, depends_on=investigator_names))
     agents.append(make_critic(llm, depends_on=frozenset({RANKER_NAME})))
-    agents.append(make_safety_linter(depends_on=frozenset({CRITIC_NAME})))
+    agents.append(make_recommendation_builder(depends_on=frozenset({CRITIC_NAME})))
+    agents.append(make_reporter(llm, depends_on=frozenset({BUILDER_NAME})))
+    # The linter runs dead last so it lints mitigations and next steps too.
+    agents.append(make_safety_linter(depends_on=frozenset({REPORTER_NAME})))
     if skipped:
         state = apply_update(
             state,

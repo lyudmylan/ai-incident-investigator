@@ -2,11 +2,12 @@
 
 Exit codes: 0 success, 1 investigation failure, 2 usage error.
 
---llm off (default) emits the deterministic facts only. The other modes run
-the investigator agents: live (Claude API), record (live + save fixtures),
-replay (serve saved fixtures; no network, no keys). Individual agent
-failures degrade the report and are visible in missing_data/failures;
-they do not fail the run.
+--llm off (default) emits the deterministic facts only (not the full
+contract). The other modes run the agent graph and emit the complete
+InvestigationReport (docs/output_contract.md): live (Claude API), record
+(live + save fixtures), replay (saved fixtures; no network, no keys).
+Individual agent failures degrade the report - visible in missing_data and
+the reasoning trace - and do not fail the run.
 """
 
 import argparse
@@ -18,7 +19,9 @@ from pathlib import Path
 from typing import Any
 
 from ai_incident_investigator import __version__
+from ai_incident_investigator.assemble import build_report
 from ai_incident_investigator.loading import PackageLoadError, load_package
+from ai_incident_investigator.markdown import render_markdown
 from ai_incident_investigator.pipeline import (
     DEFAULT_FIXTURES_ROOT,
     initial_state,
@@ -60,6 +63,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="fixture directory for record/replay "
         f"(default: {DEFAULT_FIXTURES_ROOT}/<incident-id>)",
     )
+    parser.add_argument(
+        "--format",
+        choices=["json", "markdown"],
+        default="json",
+        help="output format (markdown is the human-readable rendering)",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="write the report to this file instead of stdout",
+    )
     parser.add_argument("--version", action="version", version=__version__)
     return parser
 
@@ -70,21 +85,40 @@ def _facts(state: InvestigationState) -> dict[str, Any]:
         "incident_window": state.window.model_dump(mode="json"),
         "timeline": [entry.model_dump(mode="json") for entry in state.timeline],
         "missing_data": [item.model_dump(mode="json") for item in state.missing_data],
+        "note": (
+            "Deterministic facts only; run with --llm live|record|replay "
+            "for the full investigation report."
+        ),
     }
 
 
-def _investigation(state: InvestigationState) -> dict[str, Any]:
-    return {
-        "summary": state.summary.model_dump(mode="json") if state.summary else None,
-        "severity": state.severity.model_dump(mode="json") if state.severity else None,
-        "evidence": [item.model_dump(mode="json") for item in state.evidence],
-        "hypotheses": [h.model_dump(mode="json") for h in state.hypotheses],
-        "safety_review": state.safety_review.model_dump(mode="json")
-        if state.safety_review
-        else None,
-        "reasoning_trace": [step.model_dump(mode="json") for step in state.reasoning_trace],
-        "agent_failures": [failure.model_dump(mode="json") for failure in state.failures],
-    }
+def _facts_markdown(state: InvestigationState) -> str:
+    window = state.window
+    lines = [
+        f"# Incident facts: {state.package.incident_id}",
+        "",
+        f"Window: {window.start.isoformat()} -> "
+        f"{window.end.isoformat() if window.end else 'ongoing'} ({window.rule})",
+        "",
+        "## Timeline",
+        *(
+            f"- `{e.timestamp.isoformat()}` [{e.source.value}] {e.service or '-'}: {e.description}"
+            for e in state.timeline
+        ),
+    ]
+    if state.missing_data:
+        lines += ["", "## Missing data"]
+        lines += [f"- {m.description}" for m in state.missing_data]
+    lines += ["", "_Deterministic facts only; run with --llm for the full report._", ""]
+    return "\n".join(lines)
+
+
+def _emit(text: str, output: Path | None) -> None:
+    if output is None:
+        print(text)
+    else:
+        output.write_text(text if text.endswith("\n") else text + "\n")
+        print(f"wrote {output}", file=sys.stderr)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -100,28 +134,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     state = initial_state(loaded, timedelta(minutes=args.lookback_minutes))
-    output = _facts(state)
 
     if args.llm == "off":
-        output["note"] = (
-            "Deterministic facts only; run with --llm live|record|replay "
-            "to include the agentic investigation."
-        )
-    else:
-        fixtures_dir = args.fixtures_dir or DEFAULT_FIXTURES_ROOT / state.package.incident_id
-        try:
-            client = make_client(args.llm, fixtures_dir)
-        except Exception as exc:
-            print(f"error: could not create the LLM client: {exc}", file=sys.stderr)
-            return 1
-        state = run_investigation(state, client)
-        output = _facts(state)  # missing_data may have grown during investigation
-        output.update(_investigation(state))
-        output["note"] = (
-            "Partial investigation: next steps, mitigation options, and drafts arrive with epic #7."
-        )
+        if args.format == "markdown":
+            _emit(_facts_markdown(state), args.output)
+        else:
+            _emit(json.dumps(_facts(state), indent=2), args.output)
+        return 0
 
-    print(json.dumps(output, indent=2))
+    fixtures_dir = args.fixtures_dir or DEFAULT_FIXTURES_ROOT / state.package.incident_id
+    try:
+        client = make_client(args.llm, fixtures_dir)
+    except Exception as exc:
+        print(f"error: could not create the LLM client: {exc}", file=sys.stderr)
+        return 1
+
+    state = run_investigation(state, client)
+    report = build_report(state)
+    if args.format == "markdown":
+        _emit(render_markdown(report), args.output)
+    else:
+        _emit(report.model_dump_json(indent=2), args.output)
     return 0
 
 
