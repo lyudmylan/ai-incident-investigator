@@ -125,6 +125,8 @@ the v1 pipeline investigates them unchanged.
   a secret-looking key - credentials are `*_env` references, never values.
 - Topology has no standard observability source and stays hand-authored;
   `LocalTopologyAdapter` copies a validated local file into the package.
+- Per-source field mappings and normalization rules live in
+  docs/collection_sources.md; code and that document change together.
 
 ## Reasoning trace
 
