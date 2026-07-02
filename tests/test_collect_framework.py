@@ -219,6 +219,7 @@ def test_context_carries_documented_spans(tmp_path: Path) -> None:
     context = adapter.seen_context
     assert context is not None
     assert context.anchor_time == ALERT.triggered_at
+    assert context.anchor_service == "booking-service"  # from the alert, not config
     assert context.lookback.total_seconds() == 30 * 60
     assert context.services == ["booking-service"]
 
@@ -236,6 +237,7 @@ def _context() -> CollectionContext:
 
     return CollectionContext(
         anchor_time=ALERT.triggered_at,
+        anchor_service=ALERT.service,
         lookback=timedelta(minutes=30),
         change_lookback=timedelta(days=7),
         services=[],

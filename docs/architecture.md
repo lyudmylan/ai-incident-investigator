@@ -127,6 +127,10 @@ the v1 pipeline investigates them unchanged.
   `LocalTopologyAdapter` copies a validated local file into the package.
 - Per-source field mappings and normalization rules live in
   docs/collection_sources.md; code and that document change together.
+- The `collect` CLI subcommand assembles the configured sources
+  (`collect/registry.py`; [sentry] is required as the anchor) and can chain
+  straight into investigation; bare-flag invocations remain the v1
+  `investigate` behavior.
 
 ## Reasoning trace
 

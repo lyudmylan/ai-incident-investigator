@@ -35,6 +35,7 @@ class CollectionContext(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     anchor_time: datetime = Field(description="alert.triggered_at - anchors all spans")
+    anchor_service: str = Field(description="the alerting service (runbook selection keys on it)")
     lookback: timedelta = Field(description="incident-window lookback (docs/assumptions.md)")
     change_lookback: timedelta = Field(
         description="wider span for deploys/config changes; old changes rule things out"

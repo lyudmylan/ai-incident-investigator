@@ -47,6 +47,7 @@ def demo_collection_context() -> CollectionContext:
     """The context a real collection run derives from the Sentry demo issue."""
     return CollectionContext(
         anchor_time=parse_sentry_time(DEMO_EVENT_TIME),
+        anchor_service="booking-service",
         lookback=timedelta(minutes=30),
         change_lookback=timedelta(days=7),
         services=["booking-service"],

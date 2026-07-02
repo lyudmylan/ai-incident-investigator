@@ -38,6 +38,7 @@ from sentry_stub import DEMO_ISSUE_ID
 ANCHOR = datetime(2026, 6, 1, 14, 35, tzinfo=UTC)
 CONTEXT = CollectionContext(
     anchor_time=ANCHOR,
+    anchor_service="booking-service",
     lookback=timedelta(minutes=30),
     change_lookback=timedelta(days=7),
     services=["booking-service"],

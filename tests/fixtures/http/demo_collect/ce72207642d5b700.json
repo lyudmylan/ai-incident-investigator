@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "params": {
+      "direction": "forward",
+      "end": "1780326352000000000",
+      "limit": "500",
+      "query": "{app=\"booking-service\"}",
+      "start": "1780322752000000000"
+    },
+    "url": "https://loki.stub.local/loki/api/v1/query_range"
+  },
+  "response": {
+    "body": "{\"status\": \"success\", \"data\": {\"resultType\": \"streams\", \"result\": [{\"stream\": {\"app\": \"booking-service\"}, \"values\": [[\"1780323605000000000\", \"INFO deployment 2026.06.01-1420 rolled out\"], [\"1780324154000000000\", \"WARN retrying eligibility lookup (attempt 2 of 5)\"], [\"1780324268000000000\", \"ERROR eligibility lookup timed out after 2000ms\"]]}]}}",
+    "status": 200
+  }
+}

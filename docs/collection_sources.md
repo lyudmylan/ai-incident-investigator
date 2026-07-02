@@ -138,3 +138,24 @@ allows the empty list).
 Only the most recent `per_page` entries (default 50) per endpoint are
 examined - no pagination. For a days-scale change window this is ample;
 a repo shipping more than 50 changes in the window would be truncated.
+
+## Runbook source (`[runbook]`, `collect/runbook.py`)
+
+No search, no RAG (v2 scope): the operator maps services to documents in
+`[[runbook.documents]]`, each either a local `file` (relative to
+sources.toml) or a GitHub file (`repo` + `path` + optional `ref`, fetched
+read-only via the contents API and base64-decoded).
+
+Selection: the entry whose `service` equals the **alert's** service wins;
+otherwise an entry without `service` acts as the catch-all; otherwise the
+package has no runbook and the collection report says so. The selected
+document is carried into `runbook.md` verbatim.
+
+A configured-but-missing document fails the adapter visibly (operator
+error), unlike a service with no configured document (a note).
+
+## Topology (`[topology]`)
+
+No standard observability source exists for dependency graphs; topology
+stays a hand-authored local file (`file`, relative to sources.toml),
+validated and copied into the package by `LocalTopologyAdapter`.

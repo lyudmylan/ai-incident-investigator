@@ -132,6 +132,7 @@ def collect_package(
 
     context = CollectionContext(
         anchor_time=bundle.alert.triggered_at,
+        anchor_service=bundle.alert.service,
         lookback=timedelta(minutes=settings.lookback_minutes),
         change_lookback=timedelta(days=settings.change_lookback_days),
         services=settings.services,

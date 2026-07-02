@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "GET",
+    "params": {},
+    "url": "https://sentry.stub.local/api/0/issues/9101/"
+  },
+  "response": {
+    "body": "{\"id\": \"9101\", \"title\": \"EligibilityTimeout: eligibility lookup timed out after 2000ms\", \"culprit\": \"booking.eligibility.check_eligibility\", \"level\": \"error\", \"firstSeen\": \"2026-06-01T14:31:08Z\", \"lastSeen\": \"2026-06-01T14:55:46Z\", \"permalink\": \"https://sentry.stub.local/organizations/acme/issues/9101/\", \"project\": {\"id\": \"42\", \"name\": \"Booking\", \"slug\": \"booking\"}, \"metadata\": {\"type\": \"EligibilityTimeout\", \"value\": \"eligibility lookup timed out\"}, \"count\": \"184\"}",
+    "status": 200
+  }
+}
