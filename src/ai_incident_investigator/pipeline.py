@@ -15,6 +15,7 @@ from typing import Literal
 
 from ai_incident_investigator.agents import build_investigators
 from ai_incident_investigator.agents.critic import CRITIC_NAME, make_critic
+from ai_incident_investigator.agents.planner import PLANNER_NAME, make_planner
 from ai_incident_investigator.agents.ranker import RANKER_NAME, make_ranker
 from ai_incident_investigator.agents.reporter import REPORTER_NAME, make_reporter
 from ai_incident_investigator.graph import run_graph
@@ -64,8 +65,9 @@ def run_investigation(
     agents.append(make_critic(llm, depends_on=frozenset({RANKER_NAME})))
     agents.append(make_recommendation_builder(depends_on=frozenset({CRITIC_NAME})))
     agents.append(make_reporter(llm, depends_on=frozenset({BUILDER_NAME})))
-    # The linter runs dead last so it lints mitigations and next steps too.
-    agents.append(make_safety_linter(depends_on=frozenset({REPORTER_NAME})))
+    agents.append(make_planner(llm, depends_on=frozenset({REPORTER_NAME})))
+    # The linter runs dead last so it lints plans, mitigations, and next steps.
+    agents.append(make_safety_linter(depends_on=frozenset({PLANNER_NAME})))
     if skipped:
         state = apply_update(
             state,

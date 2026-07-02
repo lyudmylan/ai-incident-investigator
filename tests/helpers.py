@@ -10,6 +10,7 @@ from ai_incident_investigator.agents.responses import (
     Finding,
     InvestigatorResponse,
     MitigationDraft,
+    PlannerResponse,
     RankerResponse,
     ReporterResponse,
     TriageResponse,
@@ -101,6 +102,11 @@ def default_script() -> dict[str, str | Exception]:
             notes=None,
             gaps=[],
             reasoning="reviewed scripted output",
+        ).model_dump_json(),
+        # Benign default; real planner behavior is scripted per-example in
+        # scripted_runs.py and unit-tested in test_planner.py.
+        "Role: remediation planner": PlannerResponse(
+            plans=[], gaps=[], reasoning="no plans structured in this scripted run"
         ).model_dump_json(),
         "Role: reporter": ReporterResponse(
             mitigation_options=[

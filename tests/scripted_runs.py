@@ -15,6 +15,9 @@ from ai_incident_investigator.agents.responses import (
     CriticResponse,
     HypothesisDraft,
     MitigationDraft,
+    PlanDraft,
+    PlannerResponse,
+    PlanStepDraft,
     RankerResponse,
     ReporterResponse,
     TriageResponse,
@@ -28,6 +31,8 @@ from helpers import (
 )
 
 _EVIDENCE_LINE = re.compile(r"- (evidence_[0-9a-f]{10}) \[(\w+)\]")
+_HYPOTHESIS_ID = re.compile(r"(hypothesis_[0-9a-f]{10})")
+_MITIGATION_ID = re.compile(r"(mitigation_[0-9a-f]{10})")
 
 
 def scripted_ranker(
@@ -59,6 +64,95 @@ def scripted_ranker(
     return reply
 
 
+def scripted_planner(*specs: dict[str, object]) -> ScriptEntry:
+    """Plans citing the runtime hypothesis id (and mitigation id when the
+    spec sets link_mitigation) extracted from the rendered planner input."""
+
+    def reply(request: LLMRequest) -> str:
+        content = request.messages[0].content
+        hypothesis = _HYPOTHESIS_ID.search(content)
+        mitigation = _MITIGATION_ID.search(content)
+        assert hypothesis is not None, "planner input carried no hypothesis ids"
+        plans = []
+        for spec in specs:
+            fields = dict(spec)
+            link = bool(fields.pop("link_mitigation", False))
+            raw_steps = fields.pop("steps")
+            assert isinstance(raw_steps, list)
+            plans.append(
+                PlanDraft.model_validate(
+                    {
+                        **fields,
+                        "hypothesis_id": hypothesis.group(1),
+                        "mitigation_id": (
+                            mitigation.group(1) if link and mitigation is not None else None
+                        ),
+                        "steps": [PlanStepDraft.model_validate(s) for s in raw_steps],
+                    }
+                )
+            )
+        return PlannerResponse(
+            plans=plans, gaps=[], reasoning="structured the reviewed options into guided plans"
+        ).model_dump_json()
+
+    return reply
+
+
+BOOKING_PLANNER = scripted_planner(
+    {
+        "kind": "mitigation",
+        "title": "Consider disabling the payment_enrichment feature flag",
+        "link_mitigation": True,
+        "preconditions": ["staging fallback verification from 2026-05-28 still applies"],
+        "steps": [
+            {
+                "kind": "read_only",
+                "action": "confirm current payment_enrichment flag state and rollout scope",
+                "verification": "flag console shows the expected current state",
+            },
+            {
+                "kind": "state_changing",
+                "action": "disable the payment_enrichment feature flag",
+                "verification": (
+                    "eligibility retry warnings stop within 5 minutes and booking p95 "
+                    "trends toward the 450ms baseline"
+                ),
+            },
+        ],
+        "abort_conditions": [
+            "booking error rate rises further within 10 minutes of the flag change"
+        ],
+        "owner_role": "on-call engineer",
+    },
+    {
+        "kind": "rollback",
+        "title": "Rollback checklist for booking-service release 2026.06.01-1420",
+        "link_mitigation": False,
+        "preconditions": ["previous release 2026.05.28 artifacts still deployable"],
+        "steps": [
+            {
+                "kind": "read_only",
+                "action": (
+                    "check whether release 2026.06.01-1420 shipped data migrations or "
+                    "schema changes"
+                ),
+                "verification": "release notes and migration directory reviewed",
+            },
+            {
+                "kind": "state_changing",
+                "action": "roll booking-service back to the previous release",
+                "verification": (
+                    "deployed version reports the previous release and appointments-db "
+                    "CPU falls below 60%"
+                ),
+            },
+        ],
+        "abort_conditions": ["rollback pods crash-loop or error rate exceeds 10%"],
+        "owner_role": "on-call engineer",
+    },
+)
+
+
 CRITIC_PASS_JSON = CriticResponse(
     checks=[
         CriticCheck(check="overconfidence", result="pass", detail=None),
@@ -88,6 +182,7 @@ def latency_spike_script() -> dict[str, ScriptEntry]:
         ],
     )
     script["Role: safety critic"] = CRITIC_PASS_JSON
+    script["Role: remediation planner"] = BOOKING_PLANNER
     return script
 
 
@@ -197,6 +292,32 @@ def error_rate_spike_script() -> dict[str, ScriptEntry]:
             ],
         ),
         "Role: safety critic": CRITIC_PASS_JSON,
+        "Role: remediation planner": scripted_planner(
+            {
+                "kind": "mitigation",
+                "title": "Consider a guarded re-enable process for rich_templates",
+                "link_mitigation": True,
+                "preconditions": [
+                    "operator flag revert at 10:20 is holding (error rate at baseline)"
+                ],
+                "steps": [
+                    {
+                        "kind": "read_only",
+                        "action": "diff template placeholders against send-context fields",
+                        "verification": "every placeholder resolves against the context schema",
+                    },
+                    {
+                        "kind": "state_changing",
+                        "action": "drain the dead-letter queue in business-hours batches",
+                        "verification": (
+                            "queue depth decreases batch by batch with no duplicate-send reports"
+                        ),
+                    },
+                ],
+                "abort_conditions": ["duplicate notifications reported during the drain"],
+                "owner_role": "messaging team on-call",
+            }
+        ),
         "Role: reporter": ReporterResponse(
             mitigation_options=[
                 MitigationDraft(
@@ -356,6 +477,42 @@ def dependency_timeout_script() -> dict[str, ScriptEntry]:
             ],
         ),
         "Role: safety critic": CRITIC_PASS_JSON,
+        "Role: remediation planner": scripted_planner(
+            {
+                "kind": "mitigation",
+                "title": "Consider enabling the cached_tax_rates fallback",
+                "link_mitigation": True,
+                "preconditions": [
+                    "finance sign-off for cached rates (documented, up to 24h staleness)",
+                    "cached rates dataset is fresher than 24 hours",
+                ],
+                "steps": [
+                    {
+                        "kind": "read_only",
+                        "action": "check the tax-api vendor status page and open a P1 with them",
+                        "verification": "vendor case id recorded in the incident channel",
+                    },
+                    {
+                        "kind": "state_changing",
+                        "action": "enable the cached_tax_rates fallback flag",
+                        "verification": (
+                            "checkout error rate falls below 1% and p95 leaves the "
+                            "5000ms timeout ceiling within 10 minutes"
+                        ),
+                    },
+                    {
+                        "kind": "state_changing",
+                        "action": "reduce the tax-api client timeout to 1500ms",
+                        "verification": "no new checkout failures attributable to the timeout",
+                    },
+                ],
+                "abort_conditions": [
+                    "checkout error rate rises after the flag change",
+                    "finance flags a rate-accuracy problem",
+                ],
+                "owner_role": "payments on-call",
+            }
+        ),
         "Role: reporter": ReporterResponse(
             mitigation_options=[
                 MitigationDraft(

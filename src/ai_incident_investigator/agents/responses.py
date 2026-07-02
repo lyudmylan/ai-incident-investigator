@@ -95,6 +95,32 @@ class ReporterResponse(ResponseModel):
     reasoning: str
 
 
+class PlanStepDraft(ResponseModel):
+    """verification is a required key but nullable; the converter drops any
+    plan whose state-changing step arrives without one (documented invariant)."""
+
+    kind: Literal["read_only", "state_changing"]
+    action: str
+    verification: str | None
+
+
+class PlanDraft(ResponseModel):
+    kind: Literal["mitigation", "rollback"]
+    title: str
+    hypothesis_id: str
+    mitigation_id: str | None
+    preconditions: list[str]
+    steps: list[PlanStepDraft]
+    abort_conditions: list[str]
+    owner_role: str
+
+
+class PlannerResponse(ResponseModel):
+    plans: list[PlanDraft]
+    gaps: list[str]
+    reasoning: str
+
+
 class CriticCheck(ResponseModel):
     check: str
     result: CheckResult

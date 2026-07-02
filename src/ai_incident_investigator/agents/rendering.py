@@ -11,6 +11,7 @@ from ai_incident_investigator.models.report import (
     Hypothesis,
     IncidentWindow,
     MissingData,
+    MitigationOption,
     NextStep,
     SafetyReview,
     SeverityAssessment,
@@ -195,6 +196,16 @@ def render_hypotheses(hypotheses: list[Hypothesis]) -> str:
             f"  recommended checks: {'; '.join(hypothesis.recommended_checks) or '(none)'}"
         )
     return "\n".join(blocks)
+
+
+def render_mitigations(options: list[MitigationOption]) -> str:
+    if not options:
+        return "SAFE MITIGATION OPTIONS: none proposed"
+    lines = ["SAFE MITIGATION OPTIONS (cite by id when structuring into plans)"]
+    for option in options:
+        risks = f" (risks: {'; '.join(option.risks)})" if option.risks else ""
+        lines.append(f"- {option.id}: {option.action} - {option.rationale}{risks}")
+    return "\n".join(lines)
 
 
 def render_next_steps(steps: list[NextStep]) -> str:

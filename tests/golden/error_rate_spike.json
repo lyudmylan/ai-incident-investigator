@@ -282,7 +282,35 @@
       "requires_human_approval": true
     }
   ],
-  "remediation_plans": [],
+  "remediation_plans": [
+    {
+      "id": "plan_5737f5289c",
+      "kind": "mitigation",
+      "title": "Consider a guarded re-enable process for rich_templates",
+      "hypothesis_id": "hypothesis_89b86e30b8",
+      "mitigation_id": "mitigation_c6d43f7ed2",
+      "preconditions": [
+        "operator flag revert at 10:20 is holding (error rate at baseline)"
+      ],
+      "steps": [
+        {
+          "kind": "read_only",
+          "action": "diff template placeholders against send-context fields",
+          "verification": "every placeholder resolves against the context schema"
+        },
+        {
+          "kind": "state_changing",
+          "action": "drain the dead-letter queue in business-hours batches",
+          "verification": "queue depth decreases batch by batch with no duplicate-send reports",
+          "requires_human_approval": true
+        }
+      ],
+      "abort_conditions": [
+        "duplicate notifications reported during the drain"
+      ],
+      "owner_role": "messaging team on-call"
+    }
+  ],
   "recovery_verification": null,
   "safety_review": {
     "checks": [
@@ -318,6 +346,16 @@
       },
       {
         "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "plans_reference_existing_items",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "state_changing_steps_verified_and_approved",
         "result": "pass",
         "detail": null
       },
@@ -430,8 +468,15 @@
       ]
     },
     {
+      "stage": "planner",
+      "summary": "structured the reviewed options into guided plans (1 plan(s), 1 state-changing step(s), all requiring approval)",
+      "input_ids": [
+        "plan_5737f5289c"
+      ]
+    },
+    {
       "stage": "safety_linter",
-      "summary": "deterministic lint: 5 checks (total review: 0 blocked, 0 warning)",
+      "summary": "deterministic lint: 7 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
   ]
