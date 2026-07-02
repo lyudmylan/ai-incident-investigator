@@ -36,6 +36,43 @@ the box: `latency_spike` (deploy-driven retry amplification), `error_rate_spike`
 `collected_demo` (the same booking scenario as gathered by the `collect`
 command below - byte-for-byte reproducible from the committed HTTP fixtures).
 
+## Guided remediation (v3)
+
+Beyond diagnosis, the report carries guided, **strictly draft-only**
+artifacts - the tool never posts, creates, or executes anything, anywhere:
+
+- **Remediation plans**: the reviewed mitigation options structured into
+  stepwise plans, plus a rollback checklist when a deploy-correlated
+  hypothesis exists. Safety lives in the schema: a state-changing step
+  cannot exist without `requires_human_approval: true` and a verification;
+  abort conditions are mandatory; dangling references are linter-blocked.
+- **Recovery verification plan**: derived deterministically (no LLM) from
+  the deviated series and the documented recovery rule - what to watch,
+  for how long, which error patterns should stop, when to re-alert.
+- **External drafts** for a human to copy out: a Jira ticket (priority
+  mapped from severity in code), a Slack update (must state that nothing
+  was executed), and a status-page update held to lintable customer-safe
+  rules (internal service names are blocked mechanically).
+
+A rendered plan looks like this (from the latency_spike replay):
+
+```markdown
+### Rollback checklist for booking-service release 2026.06.01-1420 (rollback)
+
+> **Human approval required before any step of this plan is acted on.**
+
+- addresses hypothesis: `hypothesis_314fcf61a4`
+- suggested owner: on-call engineer
+- preconditions: previous release 2026.05.28 artifacts still deployable
+
+1. [read-only] check whether release 2026.06.01-1420 shipped data migrations
+   - verify: release notes and migration directory reviewed
+2. **[STATE-CHANGING - approval required]** roll booking-service back to the previous release
+   - verify: deployed version reports the previous release and appointments-db CPU falls below 60%
+
+**Abort if:** rollback pods crash-loop or error rate exceeds 10%
+```
+
 ## Collecting packages from live sources (v2)
 
 Instead of hand-authoring a package, `collect` gathers one from read-only

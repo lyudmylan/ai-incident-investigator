@@ -54,24 +54,38 @@ enough to port if that day comes.
   Malformed graphs (cycles, duplicate names, unknown dependencies) raise
   `GraphError` instead - those are programming errors.
 
-## v1 graph shape
+## Graph shape (v3)
 
 ```
                  +-> triage ----------------+
                  +-> metrics_investigator --+
 load + timeline -+-> logs_investigator -----+-> hypothesis_ranker -> safety_critic
-(deterministic)  +-> trace_investigator ----+         |                  |
-                 +-> deploy_correlation ----+         v                  v
-                 +-> runbook_agent ---------+   recommendation     comms + postmortem
+(deterministic)  +-> trace_investigator ----+                            |
+                 +-> deploy_correlation ----+                            v
+                 +-> runbook_agent ---------+                     recommendation
+                 +-> recovery_builder             (deterministic) builder
+                     (deterministic)                                     |
+                                                                         v
+                     safety_linter <- planner <- reporter (drafts incl. external)
+                     (deterministic,   (plans +
+                      dead last)        rollback)
 ```
 
-Investigator agents (epic #5) produce evidence and findings; the ranker
-(epic #6) combines them into hypotheses with the documented confidence
-rubric; the safety critic challenges them; the deterministic recommendation
-builder and the reporter agent (epic #7) produce next steps, mitigation
-options, and drafts; the deterministic safety linter runs dead last so it
-lints the complete report, and `assemble.build_report` fills contract
-fields any failed stage left empty with explicit "unavailable" fallbacks.
+Ten LLM calls per run: triage + five investigators in parallel, then
+ranker -> critic -> reporter -> planner. Two deterministic nodes bracket
+them: the recovery builder runs alongside the investigators with no
+dependencies (the recovery verification plan survives even a total LLM
+outage), and the safety linter runs dead last so it lints the complete
+report - plans, drafts, and the customer-facing status page included.
+`assemble.build_report` fills contract fields any failed stage left empty
+with explicit "unavailable" fallbacks.
+
+v3 is strictly draft-only: remediation plans, the rollback checklist, and
+the Jira/Slack/status-page drafts are artifacts a human copies out. The
+tool has no write path to any external system (the collect layer is
+GET-only by type), state-changing plan steps are approval-gated in the
+schema, and customer-safe wording on the status page is a blocking lint,
+not a prompt hope.
 
 ## LLM harness (`llm.py`)
 
