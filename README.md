@@ -29,6 +29,13 @@ ANTHROPIC_API_KEY=... uv run python -m ai_incident_investigator \
   --incident examples/incidents/latency_spike --llm live --output report.json
 ```
 
+Everything above runs on committed fixtures - tests, CI, and demos burn
+**zero LLM tokens** by design. `docs/testing_and_demo.md` is the decision
+guide: which mode costs what (measured: a full live investigation is 10
+calls / ~17k input tokens, roughly $1 on the default model and cents on
+Haiku), plus the standard recipes for free demos and the one recording
+worth paying for.
+
 Four example incidents ship with fixtures, so the replay demo works out of
 the box: `latency_spike` (deploy-driven retry amplification), `error_rate_spike`
 (feature flag breaks template rendering; recovers in-window),
