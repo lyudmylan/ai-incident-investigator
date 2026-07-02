@@ -383,15 +383,38 @@
         "check": "no_executed_action_phrasing",
         "result": "pass",
         "detail": null
+      },
+      {
+        "check": "status_page_customer_safe",
+        "result": "pass",
+        "detail": "checked against the wording rules"
+      },
+      {
+        "check": "slack_update_states_nothing_was_executed",
+        "result": "pass",
+        "detail": null
       }
     ],
     "notes": null
   },
   "communication_drafts": {
     "internal_update": "SEV-3, recovered: notification sends failed at up to 9% between 09:42 and 10:20 due to template rendering errors after the rich_templates flag was enabled; on-call disabled the flag and sends recovered. 1,204 notifications are queued for retry. No remediation beyond the already-performed operator flag revert has been executed; queue-drain options await human approval.",
-    "jira_ticket": null,
-    "slack_update": null,
-    "status_page": null
+    "jira_ticket": {
+      "summary": "Reconcile notification templates with send context after flag incident",
+      "description": "Notification send error rate peaked at 9.1% between 09:42Z and 10:20Z (recovered in-window after the operator reverted rich_templates). Leading hypothesis (high confidence): templates referenced placeholders absent from the send context. 1,204 notifications queued for retry. Affected: notifications-service.",
+      "priority_suggestion": "Medium",
+      "labels": [
+        "incident",
+        "notifications"
+      ]
+    },
+    "slack_update": {
+      "text": "SEV-3, recovered: notification sends failed at up to 9% for ~40 minutes after rich_templates was enabled; on-call reverted the flag and sends recovered. 1,204 notifications queued for retry. No remediation has been executed by the tool; queue-drain options await human approval."
+    },
+    "status_page": {
+      "phase": "monitoring",
+      "text": "Some notification emails were delayed earlier today. Delivery has returned to normal and delayed messages are being retried. We are monitoring to confirm full recovery."
+    }
   },
   "postmortem_draft": {
     "title": "Postmortem draft: notification send failures 2026-06-15",
@@ -496,7 +519,7 @@
     },
     {
       "stage": "safety_linter",
-      "summary": "deterministic lint: 7 checks (total review: 0 blocked, 0 warning)",
+      "summary": "deterministic lint: 9 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
   ]

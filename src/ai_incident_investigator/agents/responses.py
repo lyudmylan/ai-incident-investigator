@@ -80,11 +80,32 @@ class MitigationDraft(ResponseModel):
     risks: list[str]
 
 
+class JiraDraft(ResponseModel):
+    """No priority field on purpose: the suggestion is mapped from severity
+    in code (docs/assumptions.md) - a documented rule, not a model judgment."""
+
+    summary: str
+    description: str
+    labels: list[str]
+
+
+class SlackDraft(ResponseModel):
+    text: str
+
+
+class StatusPageResponseDraft(ResponseModel):
+    phase: Literal["investigating", "identified", "monitoring"]
+    text: str
+
+
 class ReporterResponse(ResponseModel):
-    """Mitigation options plus the two drafts, in one grounded call."""
+    """Mitigation options plus all communication drafts, in one grounded call."""
 
     mitigation_options: list[MitigationDraft]
     internal_update: str
+    jira_ticket: JiraDraft | None
+    slack_update: SlackDraft | None
+    status_page: StatusPageResponseDraft | None
     postmortem_title: str
     postmortem_summary: str
     postmortem_impact: str

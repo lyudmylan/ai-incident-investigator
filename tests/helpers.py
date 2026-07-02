@@ -9,10 +9,13 @@ from ai_incident_investigator.agents.responses import (
     CriticResponse,
     Finding,
     InvestigatorResponse,
+    JiraDraft,
     MitigationDraft,
     PlannerResponse,
     RankerResponse,
     ReporterResponse,
+    SlackDraft,
+    StatusPageResponseDraft,
     TriageResponse,
 )
 from ai_incident_investigator.ids import stable_id
@@ -119,6 +122,34 @@ def default_script() -> dict[str, str | Exception]:
             internal_update=(
                 "SEV-2: appointment booking degraded. No remediation has been "
                 "executed; mitigation options await human approval."
+            ),
+            jira_ticket=JiraDraft(
+                summary="Investigate booking latency degradation after the 14:20 deploy",
+                description=(
+                    "Booking p95 rose 450ms -> 3200ms and errors 0.3% -> 4.8% from "
+                    "2026-06-01T14:25Z (window start 14:05Z, ongoing). Leading "
+                    "hypothesis (medium confidence): deploy-driven eligibility retry "
+                    "amplification saturating appointments-db. Affected: "
+                    "booking-service, payment-service, appointments-db."
+                ),
+                labels=["incident", "booking"],
+            ),
+            slack_update=SlackDraft(
+                text=(
+                    "SEV-2, booking degraded: patients see slow or failed appointment "
+                    "booking. Leading hypothesis (medium confidence): the 14:20 deploy "
+                    "amplified eligibility retries. Checking retry bounds and pre/post "
+                    "deploy error rates next. No remediation has been executed; "
+                    "mitigation options await human approval."
+                )
+            ),
+            status_page=StatusPageResponseDraft(
+                phase="investigating",
+                text=(
+                    "Some users may currently experience slow or failed appointment "
+                    "scheduling. Our team is actively investigating with high "
+                    "priority. Updates will be posted here as we learn more."
+                ),
             ),
             postmortem_title="Postmortem draft: booking latency 2026-06-01",
             postmortem_summary="Booking latency and errors rose after a deploy.",

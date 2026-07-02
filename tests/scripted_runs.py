@@ -14,12 +14,15 @@ from ai_incident_investigator.agents.responses import (
     CriticCheck,
     CriticResponse,
     HypothesisDraft,
+    JiraDraft,
     MitigationDraft,
     PlanDraft,
     PlannerResponse,
     PlanStepDraft,
     RankerResponse,
     ReporterResponse,
+    SlackDraft,
+    StatusPageResponseDraft,
     TriageResponse,
 )
 from ai_incident_investigator.llm import LLMRequest
@@ -342,6 +345,34 @@ def error_rate_spike_script() -> dict[str, ScriptEntry]:
                 "already-performed operator flag revert has been executed; queue-drain "
                 "options await human approval."
             ),
+            jira_ticket=JiraDraft(
+                summary="Reconcile notification templates with send context after flag incident",
+                description=(
+                    "Notification send error rate peaked at 9.1% between 09:42Z and "
+                    "10:20Z (recovered in-window after the operator reverted "
+                    "rich_templates). Leading hypothesis (high confidence): templates "
+                    "referenced placeholders absent from the send context. 1,204 "
+                    "notifications queued for retry. Affected: notifications-service."
+                ),
+                labels=["incident", "notifications"],
+            ),
+            slack_update=SlackDraft(
+                text=(
+                    "SEV-3, recovered: notification sends failed at up to 9% for ~40 "
+                    "minutes after rich_templates was enabled; on-call reverted the "
+                    "flag and sends recovered. 1,204 notifications queued for retry. "
+                    "No remediation has been executed by the tool; queue-drain "
+                    "options await human approval."
+                )
+            ),
+            status_page=StatusPageResponseDraft(
+                phase="monitoring",
+                text=(
+                    "Some notification emails were delayed earlier today. Delivery "
+                    "has returned to normal and delayed messages are being retried. "
+                    "We are monitoring to confirm full recovery."
+                ),
+            ),
             postmortem_title="Postmortem draft: notification send failures 2026-06-15",
             postmortem_summary=(
                 "Enabling the rich_templates flag activated templates that referenced "
@@ -539,6 +570,35 @@ def dependency_timeout_script() -> dict[str, ScriptEntry]:
                 "healthy and no recent internal change aligns. Next: vendor status "
                 "check and a second-region probe. No remediation has been executed; "
                 "the cached-tax-rates fallback awaits human approval."
+            ),
+            jira_ticket=JiraDraft(
+                summary="Track tax-api degradation impact on checkout and vendor follow-up",
+                description=(
+                    "Checkout error rate reached 6.1% with p95 pinned at the 5000ms "
+                    "tax-api client timeout from 15:53Z (ongoing). Leading hypothesis "
+                    "(high confidence): third-party tax-api degradation - internal "
+                    "database and card paths healthy, no aligned internal change in "
+                    "7 days. Affected: payments-service (checkout flow)."
+                ),
+                labels=["incident", "checkout", "vendor"],
+            ),
+            slack_update=SlackDraft(
+                text=(
+                    "SEV-2, ongoing: ~6% of checkouts fail and p95 is pinned near 5s. "
+                    "Evidence points at the third-party tax vendor (high confidence); "
+                    "internal paths are healthy. Next: vendor status check + "
+                    "second-region probe. No remediation has been executed; the "
+                    "cached-rates fallback awaits human approval."
+                )
+            ),
+            status_page=StatusPageResponseDraft(
+                phase="identified",
+                text=(
+                    "Some customers may be unable to complete checkout, or may see "
+                    "checkout take longer than usual. We have identified the issue "
+                    "and are working to restore normal service. Updates will be "
+                    "posted here."
+                ),
             ),
             postmortem_title="Postmortem draft: checkout degradation via tax-api 2026-06-20",
             postmortem_summary=(

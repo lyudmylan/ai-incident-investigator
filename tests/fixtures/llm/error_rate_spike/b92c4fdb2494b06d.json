@@ -1,0 +1,225 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "JiraDraft": {
+          "additionalProperties": false,
+          "description": "No priority field on purpose: the suggestion is mapped from severity\nin code (docs/assumptions.md) - a documented rule, not a model judgment.",
+          "properties": {
+            "description": {
+              "title": "Description",
+              "type": "string"
+            },
+            "labels": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Labels",
+              "type": "array"
+            },
+            "summary": {
+              "title": "Summary",
+              "type": "string"
+            }
+          },
+          "required": [
+            "summary",
+            "description",
+            "labels"
+          ],
+          "title": "JiraDraft",
+          "type": "object"
+        },
+        "MitigationDraft": {
+          "additionalProperties": false,
+          "description": "A mitigation to CONSIDER; approval is enforced by the contract, not here.",
+          "properties": {
+            "action": {
+              "title": "Action",
+              "type": "string"
+            },
+            "rationale": {
+              "title": "Rationale",
+              "type": "string"
+            },
+            "risks": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Risks",
+              "type": "array"
+            }
+          },
+          "required": [
+            "action",
+            "rationale",
+            "risks"
+          ],
+          "title": "MitigationDraft",
+          "type": "object"
+        },
+        "SlackDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "title": "SlackDraft",
+          "type": "object"
+        },
+        "StatusPageResponseDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "phase": {
+              "enum": [
+                "investigating",
+                "identified",
+                "monitoring"
+              ],
+              "title": "Phase",
+              "type": "string"
+            },
+            "text": {
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "phase",
+            "text"
+          ],
+          "title": "StatusPageResponseDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Mitigation options plus all communication drafts, in one grounded call.",
+      "properties": {
+        "action_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Action Items",
+          "type": "array"
+        },
+        "contributing_factors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Contributing Factors",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "internal_update": {
+          "title": "Internal Update",
+          "type": "string"
+        },
+        "jira_ticket": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JiraDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mitigation_options": {
+          "items": {
+            "$ref": "#/$defs/MitigationDraft"
+          },
+          "title": "Mitigation Options",
+          "type": "array"
+        },
+        "open_questions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Open Questions",
+          "type": "array"
+        },
+        "postmortem_impact": {
+          "title": "Postmortem Impact",
+          "type": "string"
+        },
+        "postmortem_summary": {
+          "title": "Postmortem Summary",
+          "type": "string"
+        },
+        "postmortem_title": {
+          "title": "Postmortem Title",
+          "type": "string"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "slack_update": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SlackDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status_page": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatusPageResponseDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "mitigation_options",
+        "internal_update",
+        "jira_ticket",
+        "slack_update",
+        "status_page",
+        "postmortem_title",
+        "postmortem_summary",
+        "postmortem_impact",
+        "contributing_factors",
+        "open_questions",
+        "action_items",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "ReporterResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-15T09:25:00+00:00\nend: 2026-06-15T10:25:00+00:00\nrule: alert.triggered_at (2026-06-15T09:55:00+00:00) minus 30m lookback; end = start of sustained recovery across all deviated series\n\nTRIAGE ASSESSMENT\nseverity: SEV-3 (confidence high) - send error rate peaked at 9.1% but notifications are retried from a dead-letter queue and are not on the booking critical path; latency stayed at baseline and the incident recovered within the window\nwhat happened: Notification sends began failing at 09:42 with template rendering errors; the error rate recovered after 10:20.\naffected services: notifications-service\ncustomer impact: Patient notifications were delayed (queued for retry); no booking functionality was affected.\n\nRANKED HYPOTHESES (with code-derived confidence)\n- hypothesis_89b86e30b8 [high] rich_templates flag enabled templates with unprovided placeholders\n  statement: Enabling rich_templates at 09:40 activated templates referencing placeholders the send context does not provide, failing renders fast; disabling the flag at 10:20 restored sends, consistent with the flag being the trigger.\n  rubric: aligned_signals=5 timing=aligned conflicts=0\n  supporting: evidence_2ca9bbe04b, evidence_852b8daaa4, evidence_48afad1f79, evidence_68d3f4ccfc, evidence_f89726647f\n  conflicting: (none)\n  assumptions: telemetry in the package is complete for the window\n  recommended checks: diff welcome_v2/reminder_v2 placeholders against the send context fields; confirm dead-letter retry drain completed without duplicate sends\n\nEVIDENCE (cite items by their exact id)\n- evidence_2ca9bbe04b [deploys] service=notifications-service at 2026-06-15T09:40:00+00:00: feature_flag rich_templates@on at 09:40 precedes first errors by ~2 minutes; flag@off at 10:20 precedes recovery by ~5 minutes - alignment in both directions\n- evidence_c343a6dab5 [deploys] service=notifications-service at 2026-06-13T11:05:00+00:00: the 06-13 deploy shipped the rendering engine dormant behind the flag, so the code change predates the incident but its activation does not\n- evidence_852b8daaa4 [logs] service=notifications-service at 2026-06-15T09:42:38+00:00: TemplateRenderError for placeholder 'patient_name' appears at 09:42:38, two minutes after the rich_templates flag was enabled at 09:40:12\n- evidence_bd6d4a8c6d [logs] service=notifications-service at 2026-06-15T10:20:05+00:00: flag disabled by on-call at 10:20:05; the next send batch at 10:24:41 succeeded on the legacy template path\n- evidence_48afad1f79 [metrics] service=notifications-service signal=error_rate_pct value=4.8 at 2026-06-15T09:45:00+00:00: error_rate_pct first crossed the 2x-baseline rule at 09:45 (0.2% -> 4.8%), peaked at 9.1%, and returned to baseline from 10:25\n- evidence_2e97fc1ea6 [metrics] service=notifications-service signal=p95_latency_ms: p95 latency stayed at baseline throughout - failures are fast, pointing away from a capacity or dependency problem\n- evidence_b060aa91f4 [metrics] service=email-gateway signal=error_rate_pct: email-gateway error rate stayed at baseline, ruling the gateway out\n- evidence_68d3f4ccfc [runbook] service=notifications-service: runbook failure mode 'template rendering errors after template or flag changes' matches: TemplateRenderError with flat latency\n- evidence_f89726647f [traces] service=notifications-service signal=duration_ms value=9.0 at 2026-06-15T09:58:42+00:00: failing sends error inside render_template in ~10ms; the email-gateway deliver span is absent from failing traces - failures never reach the gateway\n\nRECOMMENDED NEXT STEPS (aggregated, with back-references)\n- next_step_1f4bc30b5f: diff welcome_v2/reminder_v2 placeholders against the send context fields\n- next_step_99920a32da: confirm dead-letter retry drain completed without duplicate sends\n- next_step_24e79cbb34: Investigate open question: runbook_investigator: dead-letter queue depth limit before notification delay becomes user-visible\n\nSAFETY REVIEW: all 4 checks passed\n\nKNOWN DATA GAPS\n- runbook_investigator: dead-letter queue depth limit before notification delay becomes user-visible (impact: flagged by an investigator as limiting its conclusions)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: reporter. You produce three deliverables from the reviewed\ninvestigation: safe mitigation OPTIONS, an internal update draft, and a\npostmortem draft.\n\nMitigation options:\n- propose only actions grounded in the evidence and hypotheses you were\n  given (runbook-documented mitigations are the strongest candidates;\n  standard reversible operations are acceptable when clearly relevant)\n- each option needs a rationale tied to a hypothesis and an honest list of\n  risks; note conditions (\"only if X\") in the action wording when the\n  evidence says so\n- these are options for a human to consider - never present one as chosen,\n  scheduled, or done; no option is ever pre-approved\n- an empty list is correct when nothing is well-grounded\n\nInternal update (for the incident channel, written now, mid-incident):\n- lead with status: severity, user impact, affected services\n- current leading hypothesis WITH its confidence label and what conflicts\n  with or limits it; never present a hypothesis as a confirmed cause\n- what is being checked next\n- state explicitly that no remediation has been executed and that\n  mitigation options await human approval\n- plain sentences a stressed on-call engineer can skim; no headings\n\nPostmortem draft (blameless, honest about uncertainty):\n- postmortem_summary: what happened and how it progressed, past tense\n- postmortem_impact: who/what was affected, with the observed numbers\n- contributing_factors: from hypotheses, each qualified by its confidence\n  (\"likely\", \"possibly\" for medium/low); never assert an unproven cause\n- open_questions: what the investigation could not establish\n- action_items: follow-ups grounded in the recommended next steps you were\n  given, plus durable improvements the evidence supports\n\nExternal drafts (a human copies these out; the tool never posts anything):\n- jira_ticket: summary is one imperative line; description is grounded in\n  the cited evidence with hypothesis confidence qualifiers, and includes\n  the incident window and affected services; labels are short slugs\n  (e.g. \"incident\"). Do not include a priority - it is derived in code\n  from severity.\n- slack_update: skimmable incident-channel text - severity, user impact,\n  leading hypothesis with confidence, what is being checked. It MUST state\n  explicitly that no remediation has been executed and options await\n  human approval.\n- status_page: customer-facing and held to strict rules. NO internal\n  service, system, or tool names of any kind; NO speculation language\n  (\"we believe\", \"likely\", \"appears to be\"); NO root-cause claims - those\n  belong to the postmortem. Say what users experience, that the team is\n  on it, and where updates appear. phase: \"monitoring\" once recovery is\n  observed, \"identified\" only when a mitigation path is in hand,\n  otherwise \"investigating\".\n- omit any external draft (null) rather than write one you cannot ground.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"mitigation_options\":[{\"action\":\"Keep rich_templates disabled until template placeholders are reconciled with the send context\",\"rationale\":\"the flag flip is the aligned trigger; legacy path is healthy\",\"risks\":[\"rich template features unavailable until fixed\"]},{\"action\":\"Drain the dead-letter queue in batches during business hours\",\"rationale\":\"runbook documents batch drain to avoid duplicate-send spikes\",\"risks\":[\"notifications delivered late\",\"duplicate sends if drained too fast\"]}],\"internal_update\":\"SEV-3, recovered: notification sends failed at up to 9% between 09:42 and 10:20 due to template rendering errors after the rich_templates flag was enabled; on-call disabled the flag and sends recovered. 1,204 notifications are queued for retry. No remediation beyond the already-performed operator flag revert has been executed; queue-drain options await human approval.\",\"jira_ticket\":{\"summary\":\"Reconcile notification templates with send context after flag incident\",\"description\":\"Notification send error rate peaked at 9.1% between 09:42Z and 10:20Z (recovered in-window after the operator reverted rich_templates). Leading hypothesis (high confidence): templates referenced placeholders absent from the send context. 1,204 notifications queued for retry. Affected: notifications-service.\",\"labels\":[\"incident\",\"notifications\"]},\"slack_update\":{\"text\":\"SEV-3, recovered: notification sends failed at up to 9% for ~40 minutes after rich_templates was enabled; on-call reverted the flag and sends recovered. 1,204 notifications queued for retry. No remediation has been executed by the tool; queue-drain options await human approval.\"},\"status_page\":{\"phase\":\"monitoring\",\"text\":\"Some notification emails were delayed earlier today. Delivery has returned to normal and delayed messages are being retried. We are monitoring to confirm full recovery.\"},\"postmortem_title\":\"Postmortem draft: notification send failures 2026-06-15\",\"postmortem_summary\":\"Enabling the rich_templates flag activated templates that referenced placeholders the send context did not provide; renders failed fast at up to 9.1% of sends until the flag was reverted 40 minutes later.\",\"postmortem_impact\":\"~40 minutes of degraded notification delivery; 1,204 notifications delayed into retry; no booking impact.\",\"contributing_factors\":[\"likely: templates and send-context fields were not validated together before the flag was enabled\"],\"open_questions\":[\"why template validation did not run against production contexts\"],\"action_items\":[\"diff template placeholders against send-context fields before re-enabling\",\"add a render smoke test to the flag-enable checklist\"],\"gaps\":[],\"reasoning\":\"drafted from the reviewed flag-rollback narrative\"}"
+  }
+}

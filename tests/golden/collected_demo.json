@@ -369,15 +369,38 @@
         "check": "no_executed_action_phrasing",
         "result": "pass",
         "detail": null
+      },
+      {
+        "check": "status_page_customer_safe",
+        "result": "pass",
+        "detail": "checked against the wording rules"
+      },
+      {
+        "check": "slack_update_states_nothing_was_executed",
+        "result": "pass",
+        "detail": null
       }
     ],
     "notes": null
   },
   "communication_drafts": {
     "internal_update": "SEV-2: appointment booking degraded. No remediation has been executed; mitigation options await human approval.",
-    "jira_ticket": null,
-    "slack_update": null,
-    "status_page": null
+    "jira_ticket": {
+      "summary": "Investigate booking latency degradation after the 14:20 deploy",
+      "description": "Booking p95 rose 450ms -> 3200ms and errors 0.3% -> 4.8% from 2026-06-01T14:25Z (window start 14:05Z, ongoing). Leading hypothesis (medium confidence): deploy-driven eligibility retry amplification saturating appointments-db. Affected: booking-service, payment-service, appointments-db.",
+      "priority_suggestion": "High",
+      "labels": [
+        "incident",
+        "booking"
+      ]
+    },
+    "slack_update": {
+      "text": "SEV-2, booking degraded: patients see slow or failed appointment booking. Leading hypothesis (medium confidence): the 14:20 deploy amplified eligibility retries. Checking retry bounds and pre/post deploy error rates next. No remediation has been executed; mitigation options await human approval."
+    },
+    "status_page": {
+      "phase": "investigating",
+      "text": "Some users may currently experience slow or failed appointment scheduling. Our team is actively investigating with high priority. Updates will be posted here as we learn more."
+    }
   },
   "postmortem_draft": {
     "title": "Postmortem draft: booking latency 2026-06-01",
@@ -477,7 +500,7 @@
     },
     {
       "stage": "safety_linter",
-      "summary": "deterministic lint: 7 checks (total review: 0 blocked, 0 warning)",
+      "summary": "deterministic lint: 9 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
   ]

@@ -31,6 +31,44 @@ EXECUTED_ACTION_PATTERNS = (
     re.compile(rf"\b{_ACTION_VERBS}\s+successfully\b", re.IGNORECASE),
 )
 
+# Customer-safe wording rules (docs/assumptions.md): the status page gets
+# established facts and impact, never investigation language.
+SPECULATION_PATTERN = re.compile(
+    r"\b(?:we\s+believe|likely|appears?\s+to\s+be|possibly|probably|suspect(?:ed)?)\b",
+    re.IGNORECASE,
+)
+ROOT_CAUSE_PATTERN = re.compile(r"\b(?:root\s+cause|caused\s+by)\b", re.IGNORECASE)
+_NO_EXECUTION_DISCLAIMER = re.compile(r"\bno\s+remediation\b", re.IGNORECASE)
+
+
+def _internal_names(state: InvestigationState) -> set[str]:
+    """Names a customer must never see: every service the package knows of."""
+    names = {state.package.alert.service}
+    if state.package.topology is not None:
+        names.update(node.name for node in state.package.topology.services)
+    if state.package.metrics is not None:
+        names.update(series.service for series in state.package.metrics.series)
+    names.update(record.service for record in state.package.logs)
+    return {name for name in names if name}
+
+
+def _status_page_violations(state: InvestigationState) -> list[str]:
+    drafts = state.communication_drafts
+    if drafts is None or drafts.status_page is None:
+        return []
+    text = drafts.status_page.text
+    violations = [
+        f"internal service name '{name}'"
+        for name in sorted(_internal_names(state))
+        if name.lower() in text.lower()
+    ]
+    speculation = SPECULATION_PATTERN.search(text)
+    if speculation:
+        violations.append(f"speculation language ({speculation.group(0)!r})")
+    if ROOT_CAUSE_PATTERN.search(text):
+        violations.append("root-cause claim")
+    return violations
+
 
 def _recommendation_texts(state: InvestigationState) -> list[tuple[str, str]]:
     """(where, text) pairs for fields that speak about actions or conclusions."""
@@ -158,6 +196,38 @@ def lint_state(state: InvestigationState) -> list[SafetyCheck]:
             check="no_executed_action_phrasing",
             result="warning" if phrased else "pass",
             detail="; ".join(phrased) if phrased else None,
+        )
+    )
+
+    drafts = state.communication_drafts
+    has_status_page = drafts is not None and drafts.status_page is not None
+    violations = _status_page_violations(state)
+    checks.append(
+        SafetyCheck(
+            check="status_page_customer_safe",
+            result="blocked" if violations else "pass",
+            detail=(
+                "; ".join(violations)
+                if violations
+                else ("checked against the wording rules" if has_status_page else "no draft")
+            ),
+        )
+    )
+
+    missing_disclaimer = (
+        drafts is not None
+        and drafts.slack_update is not None
+        and not _NO_EXECUTION_DISCLAIMER.search(drafts.slack_update.text)
+    )
+    checks.append(
+        SafetyCheck(
+            check="slack_update_states_nothing_was_executed",
+            result="warning" if missing_disclaimer else "pass",
+            detail=(
+                "the draft never states that no remediation has been executed"
+                if missing_disclaimer
+                else None
+            ),
         )
     )
     return checks

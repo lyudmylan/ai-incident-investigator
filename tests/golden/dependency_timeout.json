@@ -449,15 +449,39 @@
         "check": "no_executed_action_phrasing",
         "result": "pass",
         "detail": null
+      },
+      {
+        "check": "status_page_customer_safe",
+        "result": "pass",
+        "detail": "checked against the wording rules"
+      },
+      {
+        "check": "slack_update_states_nothing_was_executed",
+        "result": "pass",
+        "detail": null
       }
     ],
     "notes": null
   },
   "communication_drafts": {
     "internal_update": "SEV-2, ongoing: checkout is degraded - about 6% of checkouts fail and p95 is pinned near 5 seconds. Evidence points at the third-party tax-api timing out (high confidence); database and card paths are healthy and no recent internal change aligns. Next: vendor status check and a second-region probe. No remediation has been executed; the cached-tax-rates fallback awaits human approval.",
-    "jira_ticket": null,
-    "slack_update": null,
-    "status_page": null
+    "jira_ticket": {
+      "summary": "Track tax-api degradation impact on checkout and vendor follow-up",
+      "description": "Checkout error rate reached 6.1% with p95 pinned at the 5000ms tax-api client timeout from 15:53Z (ongoing). Leading hypothesis (high confidence): third-party tax-api degradation - internal database and card paths healthy, no aligned internal change in 7 days. Affected: payments-service (checkout flow).",
+      "priority_suggestion": "High",
+      "labels": [
+        "incident",
+        "checkout",
+        "vendor"
+      ]
+    },
+    "slack_update": {
+      "text": "SEV-2, ongoing: ~6% of checkouts fail and p95 is pinned near 5s. Evidence points at the third-party tax vendor (high confidence); internal paths are healthy. Next: vendor status check + second-region probe. No remediation has been executed; the cached-rates fallback awaits human approval."
+    },
+    "status_page": {
+      "phase": "identified",
+      "text": "Some customers may be unable to complete checkout, or may see checkout take longer than usual. We have identified the issue and are working to restore normal service. Updates will be posted here."
+    }
   },
   "postmortem_draft": {
     "title": "Postmortem draft: checkout degradation via tax-api 2026-06-20",
@@ -566,7 +590,7 @@
     },
     {
       "stage": "safety_linter",
-      "summary": "deterministic lint: 7 checks (total review: 0 blocked, 0 warning)",
+      "summary": "deterministic lint: 9 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
   ]
