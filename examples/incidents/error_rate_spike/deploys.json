@@ -1,0 +1,28 @@
+{
+  "deploys": [
+    {
+      "id": "change_002",
+      "service": "notifications-service",
+      "version": "flags/rich_templates@on",
+      "deployed_at": "2026-06-15T09:40:00Z",
+      "change_type": "feature_flag",
+      "description": "Enable rich_templates: new placeholder-based template rendering for patient notifications"
+    },
+    {
+      "id": "deploy_014",
+      "service": "notifications-service",
+      "version": "2026.06.13-1105",
+      "deployed_at": "2026-06-13T11:05:00Z",
+      "change_type": "deploy",
+      "description": "Add rich template rendering engine (dormant behind rich_templates flag)"
+    },
+    {
+      "id": "change_003",
+      "service": "notifications-service",
+      "version": "flags/rich_templates@off",
+      "deployed_at": "2026-06-15T10:20:00Z",
+      "change_type": "feature_flag",
+      "description": "Disable rich_templates (on-call rollback of cfg_774)"
+    }
+  ]
+}

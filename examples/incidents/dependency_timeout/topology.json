@@ -1,0 +1,19 @@
+{
+  "services": [
+    {
+      "name": "payments-service",
+      "kind": "service",
+      "depends_on": ["tax-api", "checkout-db"]
+    },
+    {
+      "name": "tax-api",
+      "kind": "third_party",
+      "depends_on": []
+    },
+    {
+      "name": "checkout-db",
+      "kind": "database",
+      "depends_on": []
+    }
+  ]
+}

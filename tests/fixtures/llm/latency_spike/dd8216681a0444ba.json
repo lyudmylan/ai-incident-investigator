@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nMETRIC SERIES (each with pre-incident baseline)\n- service=booking-service signal=p95_latency_ms baseline=450.0 ms\n  2026-06-01T14:00:00+00:00  445.0 ms\n  2026-06-01T14:05:00+00:00  450.0 ms\n  2026-06-01T14:10:00+00:00  460.0 ms\n  2026-06-01T14:15:00+00:00  455.0 ms\n  2026-06-01T14:20:00+00:00  470.0 ms\n  2026-06-01T14:25:00+00:00  520.0 ms\n  2026-06-01T14:30:00+00:00  900.0 ms\n  2026-06-01T14:35:00+00:00  2100.0 ms\n  2026-06-01T14:40:00+00:00  3200.0 ms\n  2026-06-01T14:45:00+00:00  3150.0 ms\n  2026-06-01T14:50:00+00:00  3300.0 ms\n  2026-06-01T14:55:00+00:00  3250.0 ms\n  2026-06-01T15:00:00+00:00  3200.0 ms\n- service=booking-service signal=error_rate_pct baseline=0.3 %\n  2026-06-01T14:00:00+00:00  0.3 %\n  2026-06-01T14:05:00+00:00  0.2 %\n  2026-06-01T14:10:00+00:00  0.3 %\n  2026-06-01T14:15:00+00:00  0.3 %\n  2026-06-01T14:20:00+00:00  0.4 %\n  2026-06-01T14:25:00+00:00  0.7 %\n  2026-06-01T14:30:00+00:00  1.6 %\n  2026-06-01T14:35:00+00:00  3.2 %\n  2026-06-01T14:40:00+00:00  4.8 %\n  2026-06-01T14:45:00+00:00  4.7 %\n  2026-06-01T14:50:00+00:00  4.8 %\n  2026-06-01T14:55:00+00:00  4.6 %\n  2026-06-01T15:00:00+00:00  4.8 %\n- service=payment-service signal=p95_latency_ms baseline=220.0 ms\n  2026-06-01T14:00:00+00:00  215.0 ms\n  2026-06-01T14:05:00+00:00  225.0 ms\n  2026-06-01T14:10:00+00:00  218.0 ms\n  2026-06-01T14:15:00+00:00  222.0 ms\n  2026-06-01T14:20:00+00:00  230.0 ms\n  2026-06-01T14:25:00+00:00  410.0 ms\n  2026-06-01T14:30:00+00:00  980.0 ms\n  2026-06-01T14:35:00+00:00  1700.0 ms\n  2026-06-01T14:40:00+00:00  2400.0 ms\n  2026-06-01T14:45:00+00:00  2350.0 ms\n  2026-06-01T14:50:00+00:00  2450.0 ms\n  2026-06-01T14:55:00+00:00  2400.0 ms\n  2026-06-01T15:00:00+00:00  2380.0 ms\n- service=appointments-db signal=cpu_pct baseline=38.0 %\n  2026-06-01T14:00:00+00:00  36.0 %\n  2026-06-01T14:05:00+00:00  39.0 %\n  2026-06-01T14:10:00+00:00  37.0 %\n  2026-06-01T14:15:00+00:00  38.0 %\n  2026-06-01T14:20:00+00:00  41.0 %\n  2026-06-01T14:25:00+00:00  55.0 %\n  2026-06-01T14:30:00+00:00  71.0 %\n  2026-06-01T14:35:00+00:00  84.0 %\n  2026-06-01T14:40:00+00:00  92.0 %\n  2026-06-01T14:45:00+00:00  91.0 %\n  2026-06-01T14:50:00+00:00  93.0 %\n  2026-06-01T14:55:00+00:00  92.0 %\n  2026-06-01T15:00:00+00:00  92.0 %\n- service=booking-queue signal=queue_depth baseline=12.0 messages\n  2026-06-01T14:00:00+00:00  10.0 messages\n  2026-06-01T14:05:00+00:00  12.0 messages\n  2026-06-01T14:10:00+00:00  11.0 messages\n  2026-06-01T14:15:00+00:00  13.0 messages\n  2026-06-01T14:20:00+00:00  14.0 messages\n  2026-06-01T14:25:00+00:00  35.0 messages\n  2026-06-01T14:30:00+00:00  110.0 messages\n  2026-06-01T14:35:00+00:00  260.0 messages\n  2026-06-01T14:40:00+00:00  480.0 messages\n  2026-06-01T14:45:00+00:00  510.0 messages\n  2026-06-01T14:50:00+00:00  540.0 messages\n  2026-06-01T14:55:00+00:00  530.0 messages\n  2026-06-01T15:00:00+00:00  545.0 messages\n- service=notifications-service signal=p95_latency_ms baseline=120.0 ms\n  2026-06-01T14:00:00+00:00  118.0 ms\n  2026-06-01T14:05:00+00:00  122.0 ms\n  2026-06-01T14:10:00+00:00  119.0 ms\n  2026-06-01T14:15:00+00:00  121.0 ms\n  2026-06-01T14:20:00+00:00  120.0 ms\n  2026-06-01T14:25:00+00:00  123.0 ms\n  2026-06-01T14:30:00+00:00  119.0 ms\n  2026-06-01T14:35:00+00:00  124.0 ms\n  2026-06-01T14:40:00+00:00  121.0 ms\n  2026-06-01T14:45:00+00:00  120.0 ms\n  2026-06-01T14:50:00+00:00  122.0 ms\n  2026-06-01T14:55:00+00:00  119.0 ms\n  2026-06-01T15:00:00+00:00  121.0 ms",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: metrics investigator.\nInput: metric series with pre-incident baselines, plus the incident window.\nThe documented deviation rule (docs/assumptions.md): a value is anomalous at\n>= 2x baseline or <= 0.5x baseline; with a zero baseline any nonzero value\nis anomalous.\n\nReport as findings, each tied to a concrete series and timestamp:\n- for each series that deviates: when it first crossed, how far it peaked\n  relative to baseline, and whether it recovered inside the window\n- ordering between deviating series (which moved first)\n- series that stayed at baseline - unaffected services are evidence too\n- suspicious shapes the rule misses (steady climb, step change, plateau)\nDo not speculate about causes in other sources; describe metric behavior.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"p95 latency first crossed 2x baseline at 14:30\",\"timestamp\":\"2026-06-01T14:30:00Z\",\"service\":\"booking-service\",\"signal\":\"p95_latency_ms\",\"value\":900.0},{\"interpretation\":\"notifications-service stayed at baseline throughout the window\",\"timestamp\":null,\"service\":\"notifications-service\",\"signal\":\"p95_latency_ms\",\"value\":null}],\"gaps\":[],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

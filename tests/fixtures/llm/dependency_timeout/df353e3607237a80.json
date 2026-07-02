@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-20T15:40:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-20T16:10:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nALERT\nid: alert_003\ntitle: Checkout latency and error rate elevated on payments-service\nservice: payments-service\ntriggered_at: 2026-06-20T16:10:00+00:00\nmonitoring severity label: critical\nsignal: error_rate_pct\nthreshold: 1.0\nobserved value at trigger: 6.1\ndescription: Checkout p95 latency and error rate breached thresholds simultaneously; failures cluster on tax calculation.\n\nDETERMINISTIC TIMELINE (17 events)\n2026-06-15T09:30:00+00:00 [deploys] payments-service: deploy 2026.06.15-0930 on payments-service: Routine dependency bump; no checkout-path changes\n2026-06-20T15:53:41+00:00 [logs] payments-service: WARN: tax-api response slow: 1840ms (p50 normally 90ms)\n2026-06-20T15:55:00+00:00 [metrics] tax-api: p95_latency_ms first deviated >=2.0x from baseline (150.0 ms -> 1900.0 ms)\n2026-06-20T15:55:00+00:00 [metrics] payments-service: error_rate_pct first deviated >=2.0x from baseline (0.4 % -> 1.8 %)\n2026-06-20T15:55:00+00:00 [metrics] payments-service: p95_latency_ms first deviated >=2.0x from baseline (380.0 ms -> 980.0 ms)\n2026-06-20T15:57:02+00:00 [logs] payments-service: ERROR: TimeoutError: tax-api did not respond within 5000ms (order 55148, attempt 1 of 3)\n2026-06-20T15:58:15+00:00 [logs] payments-service: WARN: Retrying tax quote for order 55148 (attempt 2 of 3)\n2026-06-20T16:03:27+00:00 [logs] payments-service: ERROR: TimeoutError: tax-api did not respond within 5000ms (order 55153, attempt 3 of 3); checkout failed\n2026-06-20T16:07:12+00:00 [traces] payments-service: Trace trace_incident_05: POST /checkout failed after 5600ms\n2026-06-20T16:08:55+00:00 [logs] payments-service: WARN: Circuit breaker for tax-api OPEN after 12 consecutive timeouts\n2026-06-20T16:10:00+00:00 [alert] payments-service: Alert fired: Checkout latency and error rate elevated on payments-service\n2026-06-20T16:12:31+00:00 [logs] payments-service: ERROR: Checkout failed for order 55171: tax quote unavailable (circuit open)\n2026-06-20T16:18:44+00:00 [logs] payments-service: WARN: Circuit breaker for tax-api HALF-OPEN: probe timed out after 5000ms\n2026-06-20T16:24:09+00:00 [logs] payments-service: ERROR: Checkout failed for order 55190: tax quote unavailable (circuit open)\n2026-06-20T16:26:48+00:00 [traces] payments-service: Trace trace_incident_06: POST /checkout failed after 5480ms\n2026-06-20T16:36:18+00:00 [logs] payments-service: WARN: Circuit breaker for tax-api HALF-OPEN: probe timed out after 5000ms\n2026-06-20T16:41:33+00:00 [logs] payments-service: ERROR: Checkout failed for order 55214: tax quote unavailable (circuit open)\n\nRUNBOOK (verbatim)\n# Runbook: checkout degradation\n\n## Service overview\n\n`payments-service` handles checkout. Critical path: `POST /checkout` ->\ntax quote (`tax-api`, third party) -> card charge -> order persist\n(`checkout-db`). Checkout failures block revenue directly; treat sustained\ndegradation as high urgency.\n\n## Known failure modes\n\n1. **tax-api degradation (third party).** Symptoms: `quote_tax` spans pinned\n   at the 5000ms client timeout, `TimeoutError` in logs, circuit breaker\n   opening, checkout latency saturating near the timeout while card\n   authorization stays healthy. We cannot fix the vendor; we can only shed\n   or bypass the dependency.\n2. **checkout-db saturation.** Symptoms: db CPU high, `persist_order` spans\n   slow, latency elevated but not pinned at a fixed ceiling.\n3. **Card processor degradation.** Symptoms: `charge_card` spans slow or\n   failing, processor status page incidents.\n\n## Checks\n\n- Check whether `quote_tax` durations are pinned at exactly the client\n  timeout (vendor-side) vs spread (network/ours).\n- Check the tax-api vendor status page and error rates from a second region.\n- Confirm card authorization and database paths are healthy to isolate the\n  dependency.\n- Check circuit breaker state transitions in logs.\n\n## Safe mitigations (human approval required)\n\n- Enable the `cached_tax_rates` fallback flag: checkout uses last-known tax\n  rates (verified safe for up to 24h staleness; finance sign-off exists).\n- Reduce the tax-api client timeout from 5000ms to 1500ms to fail fast -\n  only meaningful together with the cached-rates fallback.\n- Do NOT retry harder: retries against a timing-out vendor amplify load\n  and delay checkout further.\n\n## Escalation\n\n- Primary: payments on-call. Vendor: open a P1 with the tax-api provider,\n  attach trace exemplars. Finance: notify if cached rates are enabled.\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: runbook investigator.\nInput: the service runbook verbatim, the alert, and the deterministic\ntimeline of observed events.\n\nReport as findings:\n- known failure modes from the runbook whose documented symptoms match\n  observed timeline events (quote both sides)\n- runbook checks relevant to what is being observed\n- operational constraints and warnings the runbook states (e.g. when an\n  action is documented as unsafe)\n- mismatches: observed behavior no runbook failure mode covers\nThe runbook is guidance written in advance, not evidence of current state;\nframe findings as \"the runbook documents X, which matches observed Y\".",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"runbook failure mode 'tax-api degradation (third party)' matches: spans pinned at the 5000ms timeout, circuit breaker opening, healthy card path\",\"timestamp\":null,\"service\":\"payments-service\",\"signal\":null,\"value\":null},{\"interpretation\":\"runbook explicitly warns against harder retries during vendor timeouts (retry amplification)\",\"timestamp\":null,\"service\":\"payments-service\",\"signal\":null,\"value\":null}],\"gaps\":[\"vendor status page state at incident time is not in the package\"],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

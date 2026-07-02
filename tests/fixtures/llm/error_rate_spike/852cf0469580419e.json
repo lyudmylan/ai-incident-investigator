@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "HypothesisDraft": {
+          "additionalProperties": false,
+          "description": "One candidate explanation. Note: no confidence field - the label is\nderived in code from the citations below (rubric.py).",
+          "properties": {
+            "assumptions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Assumptions",
+              "type": "array"
+            },
+            "conflicting_evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Conflicting Evidence Ids",
+              "type": "array"
+            },
+            "recommended_checks": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Recommended Checks",
+              "type": "array"
+            },
+            "statement": {
+              "title": "Statement",
+              "type": "string"
+            },
+            "supporting_evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Supporting Evidence Ids",
+              "type": "array"
+            },
+            "timing_alignment": {
+              "enum": [
+                "aligned",
+                "misaligned",
+                "unknown"
+              ],
+              "title": "Timing Alignment",
+              "type": "string"
+            },
+            "timing_justification": {
+              "title": "Timing Justification",
+              "type": "string"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "statement",
+            "supporting_evidence_ids",
+            "conflicting_evidence_ids",
+            "timing_alignment",
+            "timing_justification",
+            "assumptions",
+            "recommended_checks"
+          ],
+          "title": "HypothesisDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "hypotheses": {
+          "items": {
+            "$ref": "#/$defs/HypothesisDraft"
+          },
+          "title": "Hypotheses",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hypotheses",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "RankerResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-15T09:25:00+00:00\nend: 2026-06-15T10:25:00+00:00\nrule: alert.triggered_at (2026-06-15T09:55:00+00:00) minus 30m lookback; end = start of sustained recovery across all deviated series\n\nTRIAGE ASSESSMENT\nseverity: SEV-3 (confidence high) - send error rate peaked at 9.1% but notifications are retried from a dead-letter queue and are not on the booking critical path; latency stayed at baseline and the incident recovered within the window\nwhat happened: Notification sends began failing at 09:42 with template rendering errors; the error rate recovered after 10:20.\naffected services: notifications-service\ncustomer impact: Patient notifications were delayed (queued for retry); no booking functionality was affected.\n\nEVIDENCE (cite items by their exact id)\n- evidence_2ca9bbe04b [deploys] service=notifications-service at 2026-06-15T09:40:00+00:00: feature_flag rich_templates@on at 09:40 precedes first errors by ~2 minutes; flag@off at 10:20 precedes recovery by ~5 minutes - alignment in both directions\n- evidence_c343a6dab5 [deploys] service=notifications-service at 2026-06-13T11:05:00+00:00: the 06-13 deploy shipped the rendering engine dormant behind the flag, so the code change predates the incident but its activation does not\n- evidence_852b8daaa4 [logs] service=notifications-service at 2026-06-15T09:42:38+00:00: TemplateRenderError for placeholder 'patient_name' appears at 09:42:38, two minutes after the rich_templates flag was enabled at 09:40:12\n- evidence_bd6d4a8c6d [logs] service=notifications-service at 2026-06-15T10:20:05+00:00: flag disabled by on-call at 10:20:05; the next send batch at 10:24:41 succeeded on the legacy template path\n- evidence_48afad1f79 [metrics] service=notifications-service signal=error_rate_pct value=4.8 at 2026-06-15T09:45:00+00:00: error_rate_pct first crossed the 2x-baseline rule at 09:45 (0.2% -> 4.8%), peaked at 9.1%, and returned to baseline from 10:25\n- evidence_2e97fc1ea6 [metrics] service=notifications-service signal=p95_latency_ms: p95 latency stayed at baseline throughout - failures are fast, pointing away from a capacity or dependency problem\n- evidence_b060aa91f4 [metrics] service=email-gateway signal=error_rate_pct: email-gateway error rate stayed at baseline, ruling the gateway out\n- evidence_68d3f4ccfc [runbook] service=notifications-service: runbook failure mode 'template rendering errors after template or flag changes' matches: TemplateRenderError with flat latency\n- evidence_f89726647f [traces] service=notifications-service signal=duration_ms value=9.0 at 2026-06-15T09:58:42+00:00: failing sends error inside render_template in ~10ms; the email-gateway deliver span is absent from failing traces - failures never reach the gateway\n\nKNOWN DATA GAPS\n- runbook_investigator: dead-letter queue depth limit before notification delay becomes user-visible (impact: flagged by an investigator as limiting its conclusions)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: hypothesis ranker. You combine the collected evidence into ranked,\nfalsifiable hypotheses about what contributed to the incident.\n\nRules for hypotheses:\n- order them most likely first\n- every hypothesis must cite supporting evidence by exact id from the\n  EVIDENCE section; cite conflicting evidence ids too - surfacing conflict\n  is required, not optional (an unaffected control service often conflicts\n  with broad-outage hypotheses)\n- statement wording: falsifiable and proportionate (\"X increased load on Y,\n  consistent with...\") - never \"root cause confirmed\"\n- timing_alignment: does the suspected cause precede symptom onset with a\n  plausible gap? aligned / misaligned / unknown, with a one-line\n  justification citing the relevant timestamps\n- assumptions: what you are taking for granted that the data does not show\n- recommended_checks: read-only verification steps a human could take next\n  (inspect, compare, query); never state-changing actions\n- prefer two or three well-evidenced hypotheses over many thin ones; include\n  a genuine alternative if the evidence permits one\n\nYou do NOT assign confidence. The pipeline derives it from your citations:\ndistinct supporting sources, timing alignment, and conflict count. Cite\naccordingly - citing three findings from one source counts as one signal.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"hypotheses\":[{\"title\":\"rich_templates flag enabled templates with unprovided placeholders\",\"statement\":\"Enabling rich_templates at 09:40 activated templates referencing placeholders the send context does not provide, failing renders fast; disabling the flag at 10:20 restored sends, consistent with the flag being the trigger.\",\"supporting_evidence_ids\":[\"evidence_2ca9bbe04b\",\"evidence_852b8daaa4\",\"evidence_48afad1f79\",\"evidence_68d3f4ccfc\",\"evidence_f89726647f\"],\"conflicting_evidence_ids\":[],\"timing_alignment\":\"aligned\",\"timing_justification\":\"flag on 09:40 -> errors 09:42; flag off 10:20 -> recovery 10:25\",\"assumptions\":[\"telemetry in the package is complete for the window\"],\"recommended_checks\":[\"diff welcome_v2/reminder_v2 placeholders against the send context fields\",\"confirm dead-letter retry drain completed without duplicate sends\"]}],\"gaps\":[],\"reasoning\":\"combined aligned findings across sources\"}"
+  }
+}

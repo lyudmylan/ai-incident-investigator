@@ -21,13 +21,26 @@ uv run python -m ai_incident_investigator.contracts   # regenerate contract docs
 from the Pydantic models; a test fails CI if they drift. After changing any
 model, regenerate them in the same PR.
 
-Record LLM fixtures for an example incident (the only step needing an API key;
-CI and tests replay from `tests/fixtures/llm/<incident-id>/`):
+LLM fixtures and golden reports: tests replay from
+`tests/fixtures/llm/<incident-id>/` and diff full reports against
+`tests/golden/<incident-id>.json`. After changing prompts, renderings, models,
+or examples, regenerate both in the same PR:
+
+```
+uv run --no-sync python scripts/bootstrap_fixtures.py
+```
+
+Committed fixtures are bootstrapped from scripted fake responses
+(tests/scripted_runs.py). To use real model output instead, record live
+fixtures (needs an API key), then refresh only the goldens:
 
 ```
 ANTHROPIC_API_KEY=... uv run python -m ai_incident_investigator \
   --incident examples/incidents/latency_spike --llm record
+uv run --no-sync python scripts/bootstrap_fixtures.py latency_spike --goldens-only
 ```
+
+Every example incident must have fixtures and a golden (a test enforces it).
 
 All four checks must pass locally before pushing.
 

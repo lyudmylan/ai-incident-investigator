@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-20T15:40:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-20T16:10:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nMETRIC SERIES (each with pre-incident baseline)\n- service=payments-service signal=p95_latency_ms baseline=380.0 ms\n  2026-06-20T15:30:00+00:00  375.0 ms\n  2026-06-20T15:35:00+00:00  380.0 ms\n  2026-06-20T15:40:00+00:00  390.0 ms\n  2026-06-20T15:45:00+00:00  385.0 ms\n  2026-06-20T15:50:00+00:00  410.0 ms\n  2026-06-20T15:55:00+00:00  980.0 ms\n  2026-06-20T16:00:00+00:00  2600.0 ms\n  2026-06-20T16:05:00+00:00  4900.0 ms\n  2026-06-20T16:10:00+00:00  5400.0 ms\n  2026-06-20T16:15:00+00:00  5350.0 ms\n  2026-06-20T16:20:00+00:00  5400.0 ms\n  2026-06-20T16:25:00+00:00  5380.0 ms\n  2026-06-20T16:30:00+00:00  5390.0 ms\n  2026-06-20T16:35:00+00:00  5410.0 ms\n  2026-06-20T16:40:00+00:00  5395.0 ms\n  2026-06-20T16:45:00+00:00  5400.0 ms\n- service=payments-service signal=error_rate_pct baseline=0.4 %\n  2026-06-20T15:30:00+00:00  0.4 %\n  2026-06-20T15:35:00+00:00  0.3 %\n  2026-06-20T15:40:00+00:00  0.4 %\n  2026-06-20T15:45:00+00:00  0.5 %\n  2026-06-20T15:50:00+00:00  0.6 %\n  2026-06-20T15:55:00+00:00  1.8 %\n  2026-06-20T16:00:00+00:00  3.9 %\n  2026-06-20T16:05:00+00:00  5.2 %\n  2026-06-20T16:10:00+00:00  6.1 %\n  2026-06-20T16:15:00+00:00  6.0 %\n  2026-06-20T16:20:00+00:00  6.2 %\n  2026-06-20T16:25:00+00:00  5.9 %\n  2026-06-20T16:30:00+00:00  6.1 %\n  2026-06-20T16:35:00+00:00  6.0 %\n  2026-06-20T16:40:00+00:00  6.1 %\n  2026-06-20T16:45:00+00:00  6.2 %\n- service=tax-api signal=p95_latency_ms baseline=150.0 ms\n  2026-06-20T15:30:00+00:00  148.0 ms\n  2026-06-20T15:35:00+00:00  152.0 ms\n  2026-06-20T15:40:00+00:00  150.0 ms\n  2026-06-20T15:45:00+00:00  155.0 ms\n  2026-06-20T15:50:00+00:00  160.0 ms\n  2026-06-20T15:55:00+00:00  1900.0 ms\n  2026-06-20T16:00:00+00:00  4200.0 ms\n  2026-06-20T16:05:00+00:00  5000.0 ms\n  2026-06-20T16:10:00+00:00  5000.0 ms\n  2026-06-20T16:15:00+00:00  5000.0 ms\n  2026-06-20T16:20:00+00:00  5000.0 ms\n  2026-06-20T16:25:00+00:00  5000.0 ms\n  2026-06-20T16:30:00+00:00  5000.0 ms\n  2026-06-20T16:35:00+00:00  5000.0 ms\n  2026-06-20T16:40:00+00:00  5000.0 ms\n  2026-06-20T16:45:00+00:00  5000.0 ms\n- service=checkout-db signal=cpu_pct baseline=42.0 %\n  2026-06-20T15:30:00+00:00  41.0 %\n  2026-06-20T15:45:00+00:00  43.0 %\n  2026-06-20T16:00:00+00:00  44.0 %\n  2026-06-20T16:15:00+00:00  46.0 %\n  2026-06-20T16:30:00+00:00  45.0 %\n  2026-06-20T16:45:00+00:00  44.0 %",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: metrics investigator.\nInput: metric series with pre-incident baselines, plus the incident window.\nThe documented deviation rule (docs/assumptions.md): a value is anomalous at\n>= 2x baseline or <= 0.5x baseline; with a zero baseline any nonzero value\nis anomalous.\n\nReport as findings, each tied to a concrete series and timestamp:\n- for each series that deviates: when it first crossed, how far it peaked\n  relative to baseline, and whether it recovered inside the window\n- ordering between deviating series (which moved first)\n- series that stayed at baseline - unaffected services are evidence too\n- suspicious shapes the rule misses (steady climb, step change, plateau)\nDo not speculate about causes in other sources; describe metric behavior.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"payments p95 rose 380ms -> 5400ms and plateaued at the 5000ms client timeout ceiling, first crossing 2x baseline at 15:55\",\"timestamp\":\"2026-06-20T15:55:00Z\",\"service\":\"payments-service\",\"signal\":\"p95_latency_ms\",\"value\":980.0},{\"interpretation\":\"tax-api p95 pinned at exactly 5000 from 16:05 onward - a flat ceiling characteristic of client-side timeout truncation, not load\",\"timestamp\":\"2026-06-20T16:05:00Z\",\"service\":\"tax-api\",\"signal\":\"p95_latency_ms\",\"value\":5000.0},{\"interpretation\":\"checkout-db CPU stayed at baseline (41-46%), ruling out the database\",\"timestamp\":null,\"service\":\"checkout-db\",\"signal\":\"cpu_pct\",\"value\":null}],\"gaps\":[],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

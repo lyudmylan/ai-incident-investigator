@@ -1,0 +1,11 @@
+{
+  "id": "alert_002",
+  "title": "Error rate spike on notifications-service send endpoint",
+  "service": "notifications-service",
+  "triggered_at": "2026-06-15T09:55:00Z",
+  "severity": "warning",
+  "description": "Send error rate exceeded the 2% threshold for 10 consecutive minutes; latency is normal.",
+  "signal": "error_rate_pct",
+  "threshold": 2,
+  "observed_value": 8.9
+}

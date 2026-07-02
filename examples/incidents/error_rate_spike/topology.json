@@ -1,0 +1,19 @@
+{
+  "services": [
+    {
+      "name": "notifications-service",
+      "kind": "service",
+      "depends_on": ["email-gateway", "template-store"]
+    },
+    {
+      "name": "email-gateway",
+      "kind": "third_party",
+      "depends_on": []
+    },
+    {
+      "name": "template-store",
+      "kind": "cache",
+      "depends_on": []
+    }
+  ]
+}

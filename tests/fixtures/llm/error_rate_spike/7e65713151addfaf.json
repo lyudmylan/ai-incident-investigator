@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-15T09:25:00+00:00\nend: 2026-06-15T10:25:00+00:00\nrule: alert.triggered_at (2026-06-15T09:55:00+00:00) minus 30m lookback; end = start of sustained recovery across all deviated series\n\nLOG RECORDS (13 total)\n2026-06-15T09:31:04+00:00 INFO notifications-service Send batch complete: 240 notifications, 0 failures\n2026-06-15T09:40:12+00:00 INFO notifications-service Feature flag rich_templates enabled (config change cfg_774)\n2026-06-15T09:42:38+00:00 ERROR notifications-service TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2\n2026-06-15T09:44:51+00:00 ERROR notifications-service TemplateRenderError: unknown placeholder 'patient_name' in template reminder_v2\n2026-06-15T09:47:20+00:00 WARN notifications-service Send failure ratio above 4% over last 5m; failing sends are all rich-template renders\n2026-06-15T09:52:33+00:00 ERROR notifications-service TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2\n2026-06-15T09:58:07+00:00 ERROR notifications-service TemplateRenderError: unknown placeholder 'clinic_address' in template confirmation_v2\n2026-06-15T10:03:44+00:00 INFO email-gateway Gateway healthy: acceptance rate 99.9%, no throttling\n2026-06-15T10:06:15+00:00 ERROR notifications-service TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2\n2026-06-15T10:12:29+00:00 WARN notifications-service Dead-letter queue growing: 1,204 undeliverable render failures queued for retry\n2026-06-15T10:20:05+00:00 INFO notifications-service Feature flag rich_templates disabled by on-call (config change cfg_775)\n2026-06-15T10:24:41+00:00 INFO notifications-service Send batch complete: 231 notifications, 1 failure; legacy template path active\n2026-06-15T10:31:17+00:00 INFO notifications-service Dead-letter retry drain started for 1,204 queued notifications",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: logs investigator.\nInput: structured log records (timestamp, level, service, message) and the\nincident window.\n\nReport as findings, each citing concrete records via timestamp and service:\n- error and warning patterns: what fails, where, starting when\n- repetition and escalation (e.g. retries per operation, attempt counts,\n  whether retry behavior is bounded)\n- resource saturation messages (pools, queues, limits) with their numbers\n- the first log record that departs from routine, and what changed at that\n  moment\n- notable silences: services logging normally through the window\nQuote key message fragments verbatim inside interpretations.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"TemplateRenderError for placeholder 'patient_name' appears at 09:42:38, two minutes after the rich_templates flag was enabled at 09:40:12\",\"timestamp\":\"2026-06-15T09:42:38Z\",\"service\":\"notifications-service\",\"signal\":null,\"value\":null},{\"interpretation\":\"flag disabled by on-call at 10:20:05; the next send batch at 10:24:41 succeeded on the legacy template path\",\"timestamp\":\"2026-06-15T10:20:05Z\",\"service\":\"notifications-service\",\"signal\":null,\"value\":null}],\"gaps\":[],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

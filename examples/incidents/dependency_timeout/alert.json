@@ -1,0 +1,11 @@
+{
+  "id": "alert_003",
+  "title": "Checkout latency and error rate elevated on payments-service",
+  "service": "payments-service",
+  "triggered_at": "2026-06-20T16:10:00Z",
+  "severity": "critical",
+  "description": "Checkout p95 latency and error rate breached thresholds simultaneously; failures cluster on tax calculation.",
+  "signal": "error_rate_pct",
+  "threshold": 1,
+  "observed_value": 6.1
+}
