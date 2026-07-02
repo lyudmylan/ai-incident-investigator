@@ -380,7 +380,51 @@
       "owner_role": "on-call engineer"
     }
   ],
-  "recovery_verification": null,
+  "recovery_verification": {
+    "mode": "watch_for_recovery",
+    "signals": [
+      {
+        "service": "appointments-db",
+        "signal": "cpu_pct",
+        "baseline": 38.0,
+        "recovered_when": "within 10% of baseline 38 % for >= 3 consecutive points",
+        "watch_minutes": 50
+      },
+      {
+        "service": "booking-queue",
+        "signal": "queue_depth",
+        "baseline": 12.0,
+        "recovered_when": "within 10% of baseline 12 messages for >= 3 consecutive points",
+        "watch_minutes": 70
+      },
+      {
+        "service": "booking-service",
+        "signal": "error_rate_pct",
+        "baseline": 0.3,
+        "recovered_when": "within 10% of baseline 0.3 % for >= 3 consecutive points",
+        "watch_minutes": 70
+      },
+      {
+        "service": "booking-service",
+        "signal": "p95_latency_ms",
+        "baseline": 450.0,
+        "recovered_when": "within 10% of baseline 450 ms for >= 3 consecutive points",
+        "watch_minutes": 60
+      },
+      {
+        "service": "payment-service",
+        "signal": "p95_latency_ms",
+        "baseline": 220.0,
+        "recovered_when": "within 10% of baseline 220 ms for >= 3 consecutive points",
+        "watch_minutes": 60
+      }
+    ],
+    "log_patterns_should_stop": [
+      "Booking failed for appointment N: eligibility lookup exhausted retries (N of N)",
+      "Eligibility enrichment query timed out after Nms"
+    ],
+    "re_alert_condition": "p95_latency_ms on booking-service crosses the alert threshold 1000 again"
+  },
   "safety_review": {
     "checks": [
       {
@@ -483,6 +527,11 @@
         "evidence_52ceb7a3c8",
         "evidence_56f3a09f3e"
       ]
+    },
+    {
+      "stage": "recovery_builder",
+      "summary": "derived from 5 deviated series and 2 recurring error pattern(s); mode=watch_for_recovery per the incident window rule",
+      "input_ids": []
     },
     {
       "stage": "runbook_investigator",

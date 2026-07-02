@@ -102,6 +102,27 @@ structurally and by the deterministic linter:
   phrasing is linted.
 - An empty plan list is valid when nothing is well-grounded.
 
+## Recovery verification plan derivation (v3)
+
+Built deterministically from package facts (`recovery.py`); no LLM:
+
+- **Watched signals**: exactly the metric series that deviated in the
+  window (the same >= 2x / <= 0.5x rule the window uses), each with its
+  baseline and the recovery rule spelled out (within 10% of baseline for
+  >= 3 consecutive points - the same rule that ends the window).
+- **Watch duration**: twice the observed deviation duration, minimum 30
+  minutes. Recovery should be observed for at least as long as the
+  disruption lasted.
+- **Log patterns that should stop**: ERROR/FATAL messages in the window,
+  digit runs normalized to `N`, recurring means >= 2 occurrences of the
+  same shape; at most 5 patterns, ordered by frequency then text.
+- **Re-alert condition**: the original alert's signal and threshold when
+  present, else the alert by name.
+- **Mode**: `confirm_sustained_recovery` when the window already ended
+  (recovery was observed in-window); otherwise `watch_for_recovery`.
+- No metrics, or no deviated series -> no plan (`null`), with the reason
+  in the reasoning trace.
+
 ## Customer-safe wording rules (status-page draft, v3)
 
 The status-page draft is the only customer-facing text the tool produces.

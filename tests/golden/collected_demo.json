@@ -292,7 +292,27 @@
       "owner_role": "on-call engineer"
     }
   ],
-  "recovery_verification": null,
+  "recovery_verification": {
+    "mode": "watch_for_recovery",
+    "signals": [
+      {
+        "service": "booking-service",
+        "signal": "error_rate_pct",
+        "baseline": 0.3,
+        "recovered_when": "within 10% of baseline 0.3 % for >= 3 consecutive points",
+        "watch_minutes": 80
+      },
+      {
+        "service": "booking-service",
+        "signal": "p95_latency_ms",
+        "baseline": 450.0,
+        "recovered_when": "within 10% of baseline 450 ms for >= 3 consecutive points",
+        "watch_minutes": 80
+      }
+    ],
+    "log_patterns_should_stop": [],
+    "re_alert_condition": "the original alert 'EligibilityTimeout: eligibility lookup timed out after 2000ms' fires again"
+  },
   "safety_review": {
     "checks": [
       {
@@ -400,6 +420,11 @@
         "evidence_52ceb7a3c8",
         "evidence_56f3a09f3e"
       ]
+    },
+    {
+      "stage": "recovery_builder",
+      "summary": "derived from 2 deviated series and 0 recurring error pattern(s); mode=watch_for_recovery per the incident window rule",
+      "input_ids": []
     },
     {
       "stage": "runbook_investigator",
