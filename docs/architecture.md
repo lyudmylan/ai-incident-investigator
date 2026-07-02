@@ -97,6 +97,35 @@ One protocol, three clients:
 - The client raises `LLMError` on refusals and `max_tokens` truncation;
   the graph's degradation contract turns that into a partial report.
 
+## Collection layer (v2, `collect/`)
+
+Read-only adapters turn external sources into ordinary incident packages;
+the v1 pipeline investigates them unchanged.
+
+- **Snapshot-first (decision, epic #17).** Collection writes a plain package
+  directory rather than feeding the pipeline in memory. Every live incident
+  becomes a replayable offline package: evidence is preserved, runs are
+  reproducible, and the package contract stays the single interface between
+  collection and investigation.
+- **Adapter contract** (`collect/adapter.py`): the alert source is the one
+  fatal dependency (it anchors the incident window); every other adapter
+  returns a typed `PackageContribution` (the collection analog of the
+  graph's `StateUpdate`) and failures degrade into the collection report -
+  the package simply lacks that file, and the v1 loader reports the gap.
+  Two adapters contributing the same single file is a configuration bug and
+  fails that adapter visibly.
+- **HTTP harness** (`collect/http.py`): GET-only by construction (no other
+  method is expressible), with record/replay fixtures mirroring `llm.py`.
+  The recordable request identity carries method/url/params only - auth is
+  an env-var *reference* resolved by the live client at send time, so
+  credentials structurally cannot enter fixtures or collected packages.
+  CI runs replay-only: no network, no credentials.
+- **Configuration** (`sources.toml`): each adapter owns its section schema;
+  the framework validates `[collection]` and rejects any config value under
+  a secret-looking key - credentials are `*_env` references, never values.
+- Topology has no standard observability source and stays hand-authored;
+  `LocalTopologyAdapter` copies a validated local file into the package.
+
 ## Reasoning trace
 
 Every graph node contributes `ReasoningStep`s describing what it concluded
