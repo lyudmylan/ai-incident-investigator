@@ -76,6 +76,29 @@ def regenerate_http_fixtures() -> None:
     PrometheusMetricsAdapter(prom_recorder, PROM_CONFIG).collect(demo_collection_context())
     print(f"recorded {len(list(prom_dir.glob('*.json')))} HTTP fixtures -> {prom_dir}")
 
+    from ai_incident_investigator.collect.github import GitHubDeploysAdapter
+    from ai_incident_investigator.collect.loki import LokiLogsAdapter
+    from loki_github_stubs import (
+        GITHUB_DEMO_CONFIG,
+        LOKI_DEMO_CONFIG,
+        GitHubStubHTTP,
+        LokiStubHTTP,
+    )
+
+    loki_dir = http_root / "loki_demo"
+    shutil.rmtree(loki_dir, ignore_errors=True)
+    LokiLogsAdapter(RecordingHTTPClient(LokiStubHTTP(), loki_dir), LOKI_DEMO_CONFIG).collect(
+        demo_collection_context()
+    )
+    print(f"recorded {len(list(loki_dir.glob('*.json')))} HTTP fixtures -> {loki_dir}")
+
+    github_dir = http_root / "github_demo"
+    shutil.rmtree(github_dir, ignore_errors=True)
+    GitHubDeploysAdapter(
+        RecordingHTTPClient(GitHubStubHTTP(), github_dir), GITHUB_DEMO_CONFIG
+    ).collect(demo_collection_context())
+    print(f"recorded {len(list(github_dir.glob('*.json')))} HTTP fixtures -> {github_dir}")
+
 
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]

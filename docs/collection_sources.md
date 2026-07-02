@@ -78,3 +78,63 @@ report. A query with an HTTP error, a non-success Prometheus status, an
 ambiguous result, or no usable baseline/window samples skips that series
 with a note; the adapter fails outright only when no series was collected
 at all.
+
+## Loki-like log source (`[loki]`, `collect/loki.py`)
+
+Endpoint used (read-only): `GET {base_url}/loki/api/v1/query_range` with a
+configured stream selector per service (`[[loki.streams]]`: `service`,
+`selector`), `start`/`end` in unix nanoseconds covering
+[window start, alert + `post_minutes`], `limit` (default 500), and
+`direction=forward` - so when the limit truncates, the **oldest** lines in
+the window are kept deterministically and the truncation is noted in the
+collection report.
+
+A selector may legitimately match several streams (pods, instances); all
+matched streams merge chronologically.
+
+### logs.jsonl
+
+| Record field | Source | Rule |
+| --- | --- | --- |
+| `timestamp` | value ns timestamp | nanoseconds -> aware UTC |
+| `service` | config | the stream entry's `service`, not a label |
+| `level` | stream label, else line text | first of labels `level`/`detected_level`/`severity`, else the first level token in the line, else `INFO`; normalized per the shared table |
+| `message` | log line | verbatim, trimmed |
+
+Unparseable lines are skipped and counted. A stream with an HTTP error is
+skipped with a note; the adapter fails only when every stream failed. A
+window with no lines is a note (and the package simply lacks logs.jsonl if
+no stream produced anything).
+
+## GitHub deploy/release source (`[github]`, `collect/github.py`)
+
+Endpoints used (read-only): `GET /repos/{repo}/releases` and
+`GET /repos/{repo}/deployments` (optionally filtered by the configured
+`environment`), per `[[github.repos]]` entry (`repo`, `service`, optional
+`environment`).
+
+Changes are collected over the **change lookback** ([collection]
+`change_lookback_days`, default 7 - deliberately wider than the incident
+window: an old change is ruling-out evidence) through alert +
+`post_minutes` (operator reverts during the incident matter).
+
+### deploys.json
+
+| Deploy field | Source | Rule |
+| --- | --- | --- |
+| `id` | release tag / deployment id | `release_{service}_{tag}` / `deployment_{service}_{id}` |
+| `service` | config | the repo entry's `service` |
+| `version` | release `tag_name` / deployment `ref` or short `sha` | |
+| `deployed_at` | `published_at` / `created_at` | UTC |
+| `change_type` | — | always `deploy` (GitHub has no flag concept) |
+| `description` | release `name` / deployment environment + description | release bodies are not imported (prose, not evidence) |
+
+Draft/unpublished releases are skipped and counted. A failing repo is
+skipped with a note; the adapter fails only when every repo failed. **No
+changes in the window writes an empty `deploys.json`**: "checked, nothing
+shipped" is evidence, not missing data (the package contract explicitly
+allows the empty list).
+
+Only the most recent `per_page` entries (default 50) per endpoint are
+examined - no pagination. For a days-scale change window this is ample;
+a repo shipping more than 50 changes in the window would be truncated.

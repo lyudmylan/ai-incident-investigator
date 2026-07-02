@@ -176,20 +176,16 @@ each file's payload are under `$defs`.
     },
     "DeploysFile": {
       "additionalProperties": false,
-      "description": "deploys.json \u2014 recent deploys, config changes, and flag flips.",
+      "description": "deploys.json \u2014 recent deploys, config changes, and flag flips.\n\nAn empty list is valid and meaningful: it asserts the change window was\nchecked and nothing shipped \u2014 ruling-out evidence, not missing data.",
       "properties": {
         "deploys": {
           "items": {
             "$ref": "#/$defs/Deploy"
           },
-          "minItems": 1,
           "title": "Deploys",
           "type": "array"
         }
       },
-      "required": [
-        "deploys"
-      ],
       "title": "DeploysFile",
       "type": "object"
     },
