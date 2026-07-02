@@ -55,14 +55,26 @@ def regenerate(incident_id: str, goldens_only: bool) -> None:
 def regenerate_http_fixtures() -> None:
     """HTTP fixtures for the collection adapters, recorded from the local stubs."""
     from ai_incident_investigator.collect import RecordingHTTPClient
+    from ai_incident_investigator.collect.prometheus import PrometheusMetricsAdapter
     from ai_incident_investigator.collect.sentry import SentryAlertSource
-    from sentry_stub import DEMO_CONFIG, DEMO_ISSUE_ID, SentryStubHTTP
+    from prometheus_stub import DEMO_CONFIG as PROM_CONFIG
+    from prometheus_stub import PromStubHTTP, demo_collection_context
+    from sentry_stub import DEMO_CONFIG as SENTRY_CONFIG
+    from sentry_stub import DEMO_ISSUE_ID, SentryStubHTTP
 
-    fixtures = ROOT / "tests" / "fixtures" / "http" / "sentry_demo"
-    shutil.rmtree(fixtures, ignore_errors=True)
-    recorder = RecordingHTTPClient(SentryStubHTTP(), fixtures)
-    SentryAlertSource(recorder, DEMO_CONFIG, DEMO_ISSUE_ID).fetch_alert()
-    print(f"recorded {len(list(fixtures.glob('*.json')))} HTTP fixtures -> {fixtures}")
+    http_root = ROOT / "tests" / "fixtures" / "http"
+
+    sentry_dir = http_root / "sentry_demo"
+    shutil.rmtree(sentry_dir, ignore_errors=True)
+    recorder = RecordingHTTPClient(SentryStubHTTP(), sentry_dir)
+    SentryAlertSource(recorder, SENTRY_CONFIG, DEMO_ISSUE_ID).fetch_alert()
+    print(f"recorded {len(list(sentry_dir.glob('*.json')))} HTTP fixtures -> {sentry_dir}")
+
+    prom_dir = http_root / "prometheus_demo"
+    shutil.rmtree(prom_dir, ignore_errors=True)
+    prom_recorder = RecordingHTTPClient(PromStubHTTP(), prom_dir)
+    PrometheusMetricsAdapter(prom_recorder, PROM_CONFIG).collect(demo_collection_context())
+    print(f"recorded {len(list(prom_dir.glob('*.json')))} HTTP fixtures -> {prom_dir}")
 
 
 def main() -> None:

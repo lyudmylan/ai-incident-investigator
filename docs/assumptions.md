@@ -22,6 +22,20 @@ A metric value is **anomalous** when it is >= 2x its pre-incident baseline or
 deliberately coarse: it flags candidates deterministically; interpreting them
 is the agents' job.
 
+## Collected metric baselines (v2)
+
+Hand-authored packages carry baselines explicitly. When metrics are
+collected live (`collect/prometheus.py`), each series' baseline is derived:
+
+- **baseline = median** of the samples in the pre-incident span (median,
+  not mean: robust against earlier spikes).
+- The span is a fixed **2 hours**, ending **15 minutes before the incident
+  window starts** (window start = alert trigger minus the lookback), so the
+  incident run-up cannot contaminate the baseline.
+- A series with no samples in that span cannot satisfy the contract and is
+  skipped, with the skip recorded in the collection report.
+- Non-finite samples (NaN/Inf) are skipped and counted in the report.
+
 ## Timeline inclusion rules
 
 The deterministic timeline contains, in timestamp order:

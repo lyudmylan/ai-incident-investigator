@@ -198,6 +198,21 @@ def test_conflicting_single_file_contributions_fail_the_later_adapter(tmp_path: 
     assert "configuration bug" in (by_name["metrics_two"].detail or "")
 
 
+def test_ok_adapter_notes_surface_in_the_report(tmp_path: Path) -> None:
+    adapters = [
+        FakeAdapter(
+            "metrics_source",
+            PackageContribution(
+                metrics=METRICS, notes=["svc/other skipped: no series", "1 sample skipped"]
+            ),
+        )
+    ]
+    report = collect_package(FakeAlertSource(), adapters, tmp_path / "pkg", SETTINGS)
+    status = {s.name: s for s in report.sources}["metrics_source"]
+    assert status.status == "ok"
+    assert status.detail == "svc/other skipped: no series; 1 sample skipped"
+
+
 def test_context_carries_documented_spans(tmp_path: Path) -> None:
     adapter = FakeAdapter("probe")
     collect_package(FakeAlertSource(), [adapter], tmp_path / "pkg", SETTINGS)

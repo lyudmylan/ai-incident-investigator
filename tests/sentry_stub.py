@@ -16,6 +16,7 @@ from ai_incident_investigator.collect.sentry import SentryConfig
 DEMO_ISSUE_ID = "9101"
 BASE_URL = "https://sentry.stub.local/api/0"
 DEMO_CONFIG = SentryConfig(base_url=BASE_URL, service_tag="service")
+DEMO_EVENT_TIME = "2026-06-01T14:35:52Z"  # dateCreated below; anchors demo collections
 
 ISSUE_PAYLOAD: dict[str, object] = {
     "id": DEMO_ISSUE_ID,

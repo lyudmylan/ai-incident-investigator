@@ -156,7 +156,14 @@ def collect_package(
         ]
         if contribution.logs:
             files.append("logs.jsonl")
-        statuses.append(SourceStatus(name=adapter.name, status="ok", files=sorted(files)))
+        statuses.append(
+            SourceStatus(
+                name=adapter.name,
+                status="ok",
+                files=sorted(files),
+                detail="; ".join(contribution.notes) or None,
+            )
+        )
 
     _write_package(
         out_dir, list(bundle.logs), merged, bundle.alert.model_dump_json(indent=2) + "\n"

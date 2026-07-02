@@ -50,3 +50,31 @@ Only event data that is genuinely log-shaped becomes log records:
 Level normalization (issue levels and breadcrumb levels):
 `debug->DEBUG, info->INFO, warning/warn->WARN, error->ERROR,
 fatal/critical->FATAL`, anything else `INFO`.
+
+## Prometheus-like metrics source (`[prometheus]`, `collect/prometheus.py`)
+
+Endpoint used (read-only): `GET {base_url}/api/v1/query_range` with
+`query`, `start`, `end`, `step` - one call per configured query.
+
+Configuration: one `[[prometheus.queries]]` entry per package series
+(`service`, `signal`, `query`, optional `unit`); `step_seconds` (default
+300) and `post_minutes` (default 30, how far past the alert trigger points
+are collected). No PromQL is authored by the tool - each configured query
+must return **exactly one** series; zero or several is a skip with a note
+(make the query more specific).
+
+### metrics.json
+
+| Series field | Source | Rule |
+| --- | --- | --- |
+| `service`, `signal`, `unit` | config | verbatim from the query entry |
+| `baseline` | derived | median over the pre-incident span - see "Collected metric baselines" in docs/assumptions.md |
+| `points` | query result | samples within [window start, alert + post_minutes], chronological |
+
+One `query_range` call covers baseline span plus window. Samples between
+the baseline span and the window (the 15-minute margin) are discarded.
+Non-finite samples (NaN/Inf) are skipped and counted in the collection
+report. A query with an HTTP error, a non-success Prometheus status, an
+ambiguous result, or no usable baseline/window samples skips that series
+with a note; the adapter fails outright only when no series was collected
+at all.

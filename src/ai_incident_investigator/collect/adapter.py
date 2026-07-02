@@ -63,6 +63,11 @@ class PackageContribution(BaseModel):
     deploys: DeploysFile | None = None
     topology: TopologyFile | None = None
     runbook: str | None = None
+    notes: list[str] = Field(
+        default_factory=list,
+        description="honest caveats for the collection report: what was skipped "
+        "or degraded inside an otherwise successful adapter run",
+    )
 
 
 class AlertSource(Protocol):
