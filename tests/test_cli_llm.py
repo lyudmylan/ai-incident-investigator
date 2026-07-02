@@ -18,6 +18,8 @@ CONTRACT_KEYS = {
     "missing_data",
     "recommended_next_steps",
     "safe_mitigation_options",
+    "remediation_plans",
+    "recovery_verification",
     "safety_review",
     "communication_drafts",
     "postmortem_draft",

@@ -326,6 +326,8 @@
       "requires_human_approval": true
     }
   ],
+  "remediation_plans": [],
+  "recovery_verification": null,
   "safety_review": {
     "checks": [
       {
@@ -377,7 +379,10 @@
     "notes": null
   },
   "communication_drafts": {
-    "internal_update": "SEV-2, ongoing: checkout is degraded - about 6% of checkouts fail and p95 is pinned near 5 seconds. Evidence points at the third-party tax-api timing out (high confidence); database and card paths are healthy and no recent internal change aligns. Next: vendor status check and a second-region probe. No remediation has been executed; the cached-tax-rates fallback awaits human approval."
+    "internal_update": "SEV-2, ongoing: checkout is degraded - about 6% of checkouts fail and p95 is pinned near 5 seconds. Evidence points at the third-party tax-api timing out (high confidence); database and card paths are healthy and no recent internal change aligns. Next: vendor status check and a second-region probe. No remediation has been executed; the cached-tax-rates fallback awaits human approval.",
+    "jira_ticket": null,
+    "slack_update": null,
+    "status_page": null
   },
   "postmortem_draft": {
     "title": "Postmortem draft: checkout degradation via tax-api 2026-06-20",

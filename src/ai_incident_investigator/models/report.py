@@ -10,7 +10,7 @@ The JSON-first output of an investigation run. Field-level rules:
   come from, so the report stays internally consistent
 """
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -106,6 +106,85 @@ class MitigationOption(ReportModel):
     )
 
 
+class ReadOnlyStep(ReportModel):
+    """A plan step that observes without changing anything."""
+
+    kind: Literal["read_only"]
+    action: str
+    verification: str | None = Field(
+        default=None, description="what confirms this check told you what you needed"
+    )
+
+
+class StateChangingStep(ReportModel):
+    """A plan step that changes system state - never pre-approved, always verified."""
+
+    kind: Literal["state_changing"]
+    action: str
+    verification: str = Field(
+        description="required: how a human confirms this step worked before continuing"
+    )
+    requires_human_approval: Literal[True] = Field(
+        default=True, description="schema-enforced: a state change can never be pre-approved"
+    )
+
+
+PlanStep = Annotated[ReadOnlyStep | StateChangingStep, Field(discriminator="kind")]
+
+
+class RemediationPlan(ReportModel):
+    """A guided, human-approved plan (docs/assumptions.md, plan invariants)."""
+
+    id: str
+    kind: Literal["mitigation", "rollback"]
+    title: str
+    hypothesis_id: str = Field(description="the hypothesis this plan addresses; must exist")
+    mitigation_id: str | None = Field(
+        default=None, description="the mitigation option this plan structures, when one exists"
+    )
+    preconditions: list[str] = Field(default_factory=list)
+    steps: list[PlanStep] = Field(min_length=1)
+    abort_conditions: list[str] = Field(
+        min_length=1, description="mandatory: when to stop and back out"
+    )
+    owner_role: str = Field(description="who should drive this, e.g. 'on-call engineer'")
+
+
+class WatchedSignal(ReportModel):
+    service: str
+    signal: str
+    baseline: float
+    recovered_when: str = Field(description="the documented recovery rule, spelled out")
+    watch_minutes: int
+
+
+class RecoveryVerificationPlan(ReportModel):
+    """What to watch to call the incident recovered (docs/assumptions.md rules)."""
+
+    mode: Literal["watch_for_recovery", "confirm_sustained_recovery"]
+    signals: list[WatchedSignal]
+    log_patterns_should_stop: list[str] = Field(default_factory=list)
+    re_alert_condition: str | None = None
+
+
+class JiraTicketDraft(ReportModel):
+    summary: str
+    description: str
+    priority_suggestion: str = Field(description="mapped from severity per docs/assumptions.md")
+    labels: list[str] = Field(default_factory=list)
+
+
+class SlackUpdateDraft(ReportModel):
+    text: str
+
+
+class StatusPageDraft(ReportModel):
+    """Customer-facing: held to the customer-safe wording rules (lintable)."""
+
+    phase: Literal["investigating", "identified", "monitoring"]
+    text: str
+
+
 class SafetyCheck(ReportModel):
     check: str
     result: CheckResult
@@ -119,6 +198,9 @@ class SafetyReview(ReportModel):
 
 class CommunicationDrafts(ReportModel):
     internal_update: str
+    jira_ticket: JiraTicketDraft | None = None
+    slack_update: SlackUpdateDraft | None = None
+    status_page: StatusPageDraft | None = None
 
 
 class PostmortemDraft(ReportModel):
@@ -150,6 +232,10 @@ class InvestigationReport(ReportModel):
     missing_data: list[MissingData]
     recommended_next_steps: list[NextStep]
     safe_mitigation_options: list[MitigationOption]
+    remediation_plans: list[RemediationPlan]
+    recovery_verification: RecoveryVerificationPlan | None = Field(
+        default=None, description="None when no metrics were available to derive it from"
+    )
     safety_review: SafetyReview
     communication_drafts: CommunicationDrafts
     postmortem_draft: PostmortemDraft

@@ -66,6 +66,8 @@ def build_report(state: InvestigationState) -> InvestigationReport:
         missing_data=state.missing_data,
         recommended_next_steps=state.recommended_next_steps,
         safe_mitigation_options=state.safe_mitigation_options,
+        remediation_plans=state.remediation_plans,
+        recovery_verification=state.recovery_verification,
         safety_review=state.safety_review
         or SafetyReview(checks=[], notes=f"Safety review {_UNAVAILABLE}"),
         communication_drafts=state.communication_drafts or _fallback_drafts(),
