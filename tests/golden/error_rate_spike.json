@@ -1,0 +1,433 @@
+{
+  "incident_id": "error_rate_spike",
+  "summary": {
+    "what_happened": "Notification sends began failing at 09:42 with template rendering errors; the error rate recovered after 10:20.",
+    "affected_services": [
+      "notifications-service"
+    ],
+    "customer_impact": "Patient notifications were delayed (queued for retry); no booking functionality was affected.",
+    "incident_window": {
+      "start": "2026-06-15T09:25:00Z",
+      "end": "2026-06-15T10:25:00Z",
+      "rule": "alert.triggered_at (2026-06-15T09:55:00+00:00) minus 30m lookback; end = start of sustained recovery across all deviated series"
+    }
+  },
+  "severity": {
+    "level": "SEV-3",
+    "explanation": "send error rate peaked at 9.1% but notifications are retried from a dead-letter queue and are not on the booking critical path; latency stayed at baseline and the incident recovered within the window",
+    "confidence": "high"
+  },
+  "timeline": [
+    {
+      "id": "timeline_e0057edee1",
+      "timestamp": "2026-06-13T11:05:00Z",
+      "source": "deploys",
+      "service": "notifications-service",
+      "description": "deploy 2026.06.13-1105 on notifications-service: Add rich template rendering engine (dormant behind rich_templates flag)"
+    },
+    {
+      "id": "timeline_b52add0954",
+      "timestamp": "2026-06-15T09:40:00Z",
+      "source": "deploys",
+      "service": "notifications-service",
+      "description": "feature_flag flags/rich_templates@on on notifications-service: Enable rich_templates: new placeholder-based template rendering for patient notifications"
+    },
+    {
+      "id": "timeline_42e77d296e",
+      "timestamp": "2026-06-15T09:42:38Z",
+      "source": "logs",
+      "service": "notifications-service",
+      "description": "ERROR: TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2"
+    },
+    {
+      "id": "timeline_31b47a350d",
+      "timestamp": "2026-06-15T09:44:51Z",
+      "source": "logs",
+      "service": "notifications-service",
+      "description": "ERROR: TemplateRenderError: unknown placeholder 'patient_name' in template reminder_v2"
+    },
+    {
+      "id": "timeline_e28ae002df",
+      "timestamp": "2026-06-15T09:45:00Z",
+      "source": "metrics",
+      "service": "notifications-service",
+      "description": "error_rate_pct first deviated >=2.0x from baseline (0.2 % -> 4.8 %)"
+    },
+    {
+      "id": "timeline_1781945612",
+      "timestamp": "2026-06-15T09:47:20Z",
+      "source": "logs",
+      "service": "notifications-service",
+      "description": "WARN: Send failure ratio above 4% over last 5m; failing sends are all rich-template renders"
+    },
+    {
+      "id": "timeline_338e0f5b02",
+      "timestamp": "2026-06-15T09:52:33Z",
+      "source": "logs",
+      "service": "notifications-service",
+      "description": "ERROR: TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2"
+    },
+    {
+      "id": "timeline_ab4e452ffc",
+      "timestamp": "2026-06-15T09:55:00Z",
+      "source": "alert",
+      "service": "notifications-service",
+      "description": "Alert fired: Error rate spike on notifications-service send endpoint"
+    },
+    {
+      "id": "timeline_9578241c41",
+      "timestamp": "2026-06-15T09:58:07Z",
+      "source": "logs",
+      "service": "notifications-service",
+      "description": "ERROR: TemplateRenderError: unknown placeholder 'clinic_address' in template confirmation_v2"
+    },
+    {
+      "id": "timeline_18c0584a88",
+      "timestamp": "2026-06-15T09:58:42Z",
+      "source": "traces",
+      "service": "notifications-service",
+      "description": "Trace trace_incident_03: POST /send failed after 96ms"
+    },
+    {
+      "id": "timeline_97b8c3dda2",
+      "timestamp": "2026-06-15T10:06:15Z",
+      "source": "logs",
+      "service": "notifications-service",
+      "description": "ERROR: TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2"
+    },
+    {
+      "id": "timeline_6d527cac58",
+      "timestamp": "2026-06-15T10:08:19Z",
+      "source": "traces",
+      "service": "notifications-service",
+      "description": "Trace trace_incident_04: POST /send failed after 88ms"
+    },
+    {
+      "id": "timeline_8af3c24762",
+      "timestamp": "2026-06-15T10:12:29Z",
+      "source": "logs",
+      "service": "notifications-service",
+      "description": "WARN: Dead-letter queue growing: 1,204 undeliverable render failures queued for retry"
+    },
+    {
+      "id": "timeline_760e1e00ed",
+      "timestamp": "2026-06-15T10:20:00Z",
+      "source": "deploys",
+      "service": "notifications-service",
+      "description": "feature_flag flags/rich_templates@off on notifications-service: Disable rich_templates (on-call rollback of cfg_774)"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_2ca9bbe04b",
+      "source": "deploys",
+      "interpretation": "feature_flag rich_templates@on at 09:40 precedes first errors by ~2 minutes; flag@off at 10:20 precedes recovery by ~5 minutes - alignment in both directions",
+      "timestamp": "2026-06-15T09:40:00Z",
+      "service": "notifications-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_c343a6dab5",
+      "source": "deploys",
+      "interpretation": "the 06-13 deploy shipped the rendering engine dormant behind the flag, so the code change predates the incident but its activation does not",
+      "timestamp": "2026-06-13T11:05:00Z",
+      "service": "notifications-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_852b8daaa4",
+      "source": "logs",
+      "interpretation": "TemplateRenderError for placeholder 'patient_name' appears at 09:42:38, two minutes after the rich_templates flag was enabled at 09:40:12",
+      "timestamp": "2026-06-15T09:42:38Z",
+      "service": "notifications-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_bd6d4a8c6d",
+      "source": "logs",
+      "interpretation": "flag disabled by on-call at 10:20:05; the next send batch at 10:24:41 succeeded on the legacy template path",
+      "timestamp": "2026-06-15T10:20:05Z",
+      "service": "notifications-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_48afad1f79",
+      "source": "metrics",
+      "interpretation": "error_rate_pct first crossed the 2x-baseline rule at 09:45 (0.2% -> 4.8%), peaked at 9.1%, and returned to baseline from 10:25",
+      "timestamp": "2026-06-15T09:45:00Z",
+      "service": "notifications-service",
+      "signal": "error_rate_pct",
+      "value": 4.8
+    },
+    {
+      "id": "evidence_2e97fc1ea6",
+      "source": "metrics",
+      "interpretation": "p95 latency stayed at baseline throughout - failures are fast, pointing away from a capacity or dependency problem",
+      "timestamp": null,
+      "service": "notifications-service",
+      "signal": "p95_latency_ms",
+      "value": null
+    },
+    {
+      "id": "evidence_b060aa91f4",
+      "source": "metrics",
+      "interpretation": "email-gateway error rate stayed at baseline, ruling the gateway out",
+      "timestamp": null,
+      "service": "email-gateway",
+      "signal": "error_rate_pct",
+      "value": null
+    },
+    {
+      "id": "evidence_68d3f4ccfc",
+      "source": "runbook",
+      "interpretation": "runbook failure mode 'template rendering errors after template or flag changes' matches: TemplateRenderError with flat latency",
+      "timestamp": null,
+      "service": "notifications-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_f89726647f",
+      "source": "traces",
+      "interpretation": "failing sends error inside render_template in ~10ms; the email-gateway deliver span is absent from failing traces - failures never reach the gateway",
+      "timestamp": "2026-06-15T09:58:42Z",
+      "service": "notifications-service",
+      "signal": "duration_ms",
+      "value": 9.0
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hypothesis_89b86e30b8",
+      "title": "rich_templates flag enabled templates with unprovided placeholders",
+      "statement": "Enabling rich_templates at 09:40 activated templates referencing placeholders the send context does not provide, failing renders fast; disabling the flag at 10:20 restored sends, consistent with the flag being the trigger.",
+      "confidence": "high",
+      "rubric": {
+        "aligned_signals": 5,
+        "timing_alignment": "aligned",
+        "conflicting_evidence_count": 0
+      },
+      "supporting_evidence_ids": [
+        "evidence_2ca9bbe04b",
+        "evidence_852b8daaa4",
+        "evidence_48afad1f79",
+        "evidence_68d3f4ccfc",
+        "evidence_f89726647f"
+      ],
+      "conflicting_evidence_ids": [],
+      "assumptions": [
+        "telemetry in the package is complete for the window"
+      ],
+      "recommended_checks": [
+        "diff welcome_v2/reminder_v2 placeholders against the send context fields",
+        "confirm dead-letter retry drain completed without duplicate sends"
+      ]
+    }
+  ],
+  "missing_data": [
+    {
+      "id": "missing_e3e31375a5",
+      "description": "runbook_investigator: dead-letter queue depth limit before notification delay becomes user-visible",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    }
+  ],
+  "recommended_next_steps": [
+    {
+      "id": "next_step_1f4bc30b5f",
+      "description": "diff welcome_v2/reminder_v2 placeholders against the send context fields",
+      "source_hypothesis_ids": [
+        "hypothesis_89b86e30b8"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_99920a32da",
+      "description": "confirm dead-letter retry drain completed without duplicate sends",
+      "source_hypothesis_ids": [
+        "hypothesis_89b86e30b8"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_24e79cbb34",
+      "description": "Investigate open question: runbook_investigator: dead-letter queue depth limit before notification delay becomes user-visible",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_e3e31375a5"
+      ]
+    }
+  ],
+  "safe_mitigation_options": [
+    {
+      "id": "mitigation_c6d43f7ed2",
+      "action": "Keep rich_templates disabled until template placeholders are reconciled with the send context",
+      "rationale": "the flag flip is the aligned trigger; legacy path is healthy",
+      "risks": [
+        "rich template features unavailable until fixed"
+      ],
+      "requires_human_approval": true
+    },
+    {
+      "id": "mitigation_cb90395a98",
+      "action": "Drain the dead-letter queue in batches during business hours",
+      "rationale": "runbook documents batch drain to avoid duplicate-send spikes",
+      "risks": [
+        "notifications delivered late",
+        "duplicate sends if drained too fast"
+      ],
+      "requires_human_approval": true
+    }
+  ],
+  "safety_review": {
+    "checks": [
+      {
+        "check": "overconfidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "evidence_grounding",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "action_safety",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "uncertainty",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "hypotheses_cite_resolvable_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "no_hypothesis_without_supporting_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "mitigations_require_human_approval",
+        "result": "pass",
+        "detail": "2 mitigation option(s) checked"
+      },
+      {
+        "check": "no_executed_action_phrasing",
+        "result": "pass",
+        "detail": null
+      }
+    ],
+    "notes": null
+  },
+  "communication_drafts": {
+    "internal_update": "SEV-3, recovered: notification sends failed at up to 9% between 09:42 and 10:20 due to template rendering errors after the rich_templates flag was enabled; on-call disabled the flag and sends recovered. 1,204 notifications are queued for retry. No remediation beyond the already-performed operator flag revert has been executed; queue-drain options await human approval."
+  },
+  "postmortem_draft": {
+    "title": "Postmortem draft: notification send failures 2026-06-15",
+    "summary": "Enabling the rich_templates flag activated templates that referenced placeholders the send context did not provide; renders failed fast at up to 9.1% of sends until the flag was reverted 40 minutes later.",
+    "impact": "~40 minutes of degraded notification delivery; 1,204 notifications delayed into retry; no booking impact.",
+    "contributing_factors": [
+      "likely: templates and send-context fields were not validated together before the flag was enabled"
+    ],
+    "open_questions": [
+      "why template validation did not run against production contexts"
+    ],
+    "action_items": [
+      "diff template placeholders against send-context fields before re-enabling",
+      "add a render smoke test to the flag-enable checklist"
+    ]
+  },
+  "reasoning_trace": [
+    {
+      "stage": "deploy_correlation",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_2ca9bbe04b",
+        "evidence_c343a6dab5"
+      ]
+    },
+    {
+      "stage": "logs_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_852b8daaa4",
+        "evidence_bd6d4a8c6d"
+      ]
+    },
+    {
+      "stage": "metrics_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_48afad1f79",
+        "evidence_2e97fc1ea6",
+        "evidence_b060aa91f4"
+      ]
+    },
+    {
+      "stage": "runbook_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_68d3f4ccfc"
+      ]
+    },
+    {
+      "stage": "trace_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_f89726647f"
+      ]
+    },
+    {
+      "stage": "triage",
+      "summary": "applied documented severity rules; recovery and workaround observed",
+      "input_ids": []
+    },
+    {
+      "stage": "hypothesis_ranker",
+      "summary": "combined aligned findings across sources | timing: 'rich_templates flag enabled templates with unprovided placeholders': flag on 09:40 -> errors 09:42; flag off 10:20 -> recovery 10:25",
+      "input_ids": [
+        "hypothesis_89b86e30b8"
+      ]
+    },
+    {
+      "stage": "safety_critic",
+      "summary": "statements stay within what the cited evidence shows (4 checks, 0 non-pass)",
+      "input_ids": []
+    },
+    {
+      "stage": "recommendation_builder",
+      "summary": "aggregated 3 next steps deterministically (2 from hypothesis checks, 1 from missing data)",
+      "input_ids": [
+        "next_step_1f4bc30b5f",
+        "next_step_99920a32da",
+        "next_step_24e79cbb34"
+      ]
+    },
+    {
+      "stage": "reporter",
+      "summary": "drafted from the reviewed flag-rollback narrative (2 mitigation option(s) proposed)",
+      "input_ids": [
+        "mitigation_c6d43f7ed2",
+        "mitigation_cb90395a98"
+      ]
+    },
+    {
+      "stage": "safety_linter",
+      "summary": "deterministic lint: 5 checks (total review: 0 blocked, 0 warning)",
+      "input_ids": []
+    }
+  ]
+}

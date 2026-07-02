@@ -1,0 +1,470 @@
+{
+  "incident_id": "latency_spike",
+  "summary": {
+    "what_happened": "Appointment booking latency and errors rose sharply.",
+    "affected_services": [
+      "booking-service",
+      "payment-service",
+      "appointments-db"
+    ],
+    "customer_impact": "Patients experience slow or failed appointment booking.",
+    "incident_window": {
+      "start": "2026-06-01T14:05:00Z",
+      "end": null,
+      "rule": "alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing"
+    }
+  },
+  "severity": {
+    "level": "SEV-2",
+    "explanation": "error rate 4.8% and p95 latency 7x baseline on the booking flow",
+    "confidence": "high"
+  },
+  "timeline": [
+    {
+      "id": "timeline_e00b133cac",
+      "timestamp": "2026-05-30T09:15:00Z",
+      "source": "deploys",
+      "service": "notifications-service",
+      "description": "deploy 2026.05.30-0915 on notifications-service: Reminder template copy update"
+    },
+    {
+      "id": "timeline_8f28f90c22",
+      "timestamp": "2026-06-01T14:20:00Z",
+      "source": "deploys",
+      "service": "booking-service",
+      "description": "deploy 2026.06.01-1420 on booking-service: Enable payment eligibility enrichment in the booking flow (gated by feature flag payment_enrichment)"
+    },
+    {
+      "id": "timeline_11d5d54191",
+      "timestamp": "2026-06-01T14:25:00Z",
+      "source": "metrics",
+      "service": "booking-queue",
+      "description": "queue_depth first deviated >=2.0x from baseline (12.0 messages -> 35.0 messages)"
+    },
+    {
+      "id": "timeline_634e90d7be",
+      "timestamp": "2026-06-01T14:25:00Z",
+      "source": "metrics",
+      "service": "booking-service",
+      "description": "error_rate_pct first deviated >=2.0x from baseline (0.3 % -> 0.7 %)"
+    },
+    {
+      "id": "timeline_93bd4ccaed",
+      "timestamp": "2026-06-01T14:26:02Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "WARN: Payment eligibility check slow: 1480ms (threshold 500ms)"
+    },
+    {
+      "id": "timeline_56fce26458",
+      "timestamp": "2026-06-01T14:27:39Z",
+      "source": "logs",
+      "service": "payment-service",
+      "description": "WARN: Eligibility enrichment query exceeded slow query threshold: 1210ms"
+    },
+    {
+      "id": "timeline_c82c762b5f",
+      "timestamp": "2026-06-01T14:29:14Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "WARN: Retrying eligibility lookup for booking 84152 (attempt 2 of 5)"
+    },
+    {
+      "id": "timeline_64650bf525",
+      "timestamp": "2026-06-01T14:30:00Z",
+      "source": "metrics",
+      "service": "booking-service",
+      "description": "p95_latency_ms first deviated >=2.0x from baseline (450.0 ms -> 900.0 ms)"
+    },
+    {
+      "id": "timeline_8e187075ca",
+      "timestamp": "2026-06-01T14:30:00Z",
+      "source": "metrics",
+      "service": "payment-service",
+      "description": "p95_latency_ms first deviated >=2.0x from baseline (220.0 ms -> 980.0 ms)"
+    },
+    {
+      "id": "timeline_e751ff42ad",
+      "timestamp": "2026-06-01T14:30:27Z",
+      "source": "logs",
+      "service": "appointments-db",
+      "description": "WARN: Connection pool nearing saturation: 82/100 connections in use"
+    },
+    {
+      "id": "timeline_209f67bcc3",
+      "timestamp": "2026-06-01T14:31:08Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "ERROR: Eligibility lookup timed out after 2000ms for booking 84158 (attempt 3 of 5)"
+    },
+    {
+      "id": "timeline_a33c582795",
+      "timestamp": "2026-06-01T14:32:36Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "WARN: Retrying eligibility lookup for booking 84158 (attempt 4 of 5)"
+    },
+    {
+      "id": "timeline_3e213a016c",
+      "timestamp": "2026-06-01T14:33:21Z",
+      "source": "logs",
+      "service": "payment-service",
+      "description": "ERROR: Eligibility enrichment query timed out after 2000ms"
+    },
+    {
+      "id": "timeline_a4ba6b8be4",
+      "timestamp": "2026-06-01T14:34:44Z",
+      "source": "logs",
+      "service": "appointments-db",
+      "description": "WARN: Connection pool saturated: 97/100 connections in use"
+    },
+    {
+      "id": "timeline_c32f19f14b",
+      "timestamp": "2026-06-01T14:35:00Z",
+      "source": "alert",
+      "service": "booking-service",
+      "description": "Alert fired: High p95 latency on booking-service POST /book"
+    },
+    {
+      "id": "timeline_443d6f762b",
+      "timestamp": "2026-06-01T14:35:00Z",
+      "source": "metrics",
+      "service": "appointments-db",
+      "description": "cpu_pct first deviated >=2.0x from baseline (38.0 % -> 84.0 %)"
+    },
+    {
+      "id": "timeline_68cebc04f8",
+      "timestamp": "2026-06-01T14:35:52Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "ERROR: Booking failed for appointment 84163: eligibility lookup exhausted retries (5 of 5)"
+    },
+    {
+      "id": "timeline_3666b4107f",
+      "timestamp": "2026-06-01T14:36:30Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "WARN: Booking queue depth 260 exceeds normal operating range"
+    },
+    {
+      "id": "timeline_96707a75ca",
+      "timestamp": "2026-06-01T14:38:09Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "ERROR: Booking failed for appointment 84170: eligibility lookup exhausted retries (5 of 5)"
+    },
+    {
+      "id": "timeline_978dba3b23",
+      "timestamp": "2026-06-01T14:39:05Z",
+      "source": "traces",
+      "service": "booking-service",
+      "description": "Trace trace_incident_01: POST /book failed after 3180ms"
+    },
+    {
+      "id": "timeline_487499fd72",
+      "timestamp": "2026-06-01T14:40:51Z",
+      "source": "logs",
+      "service": "appointments-db",
+      "description": "WARN: Slow query: SELECT plan_rules FROM eligibility_rules WHERE plan_group = $1 took 2350ms"
+    },
+    {
+      "id": "timeline_30fe7f32d0",
+      "timestamp": "2026-06-01T14:45:17Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "ERROR: Booking failed for appointment 84181: eligibility lookup exhausted retries (5 of 5)"
+    },
+    {
+      "id": "timeline_dd18c15954",
+      "timestamp": "2026-06-01T14:50:33Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "WARN: Retrying eligibility lookup for booking 84190 (attempt 2 of 5)"
+    },
+    {
+      "id": "timeline_a53c6c2c12",
+      "timestamp": "2026-06-01T14:52:31Z",
+      "source": "traces",
+      "service": "booking-service",
+      "description": "Trace trace_incident_02: POST /book failed after 3320ms"
+    },
+    {
+      "id": "timeline_8f8394db16",
+      "timestamp": "2026-06-01T14:55:46Z",
+      "source": "logs",
+      "service": "payment-service",
+      "description": "ERROR: Eligibility enrichment query timed out after 2000ms"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_3c8acc4730",
+      "source": "deploys",
+      "interpretation": "booking-service deploy 2026.06.01-1420 landed 11 minutes before latency crossed 2x baseline; timing aligned",
+      "timestamp": "2026-06-01T14:20:00Z",
+      "service": "booking-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_209616c3b2",
+      "source": "logs",
+      "interpretation": "eligibility retries escalate to exhaustion starting 14:29",
+      "timestamp": "2026-06-01T14:29:14Z",
+      "service": "booking-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_52ceb7a3c8",
+      "source": "metrics",
+      "interpretation": "p95 latency first crossed 2x baseline at 14:30",
+      "timestamp": "2026-06-01T14:30:00Z",
+      "service": "booking-service",
+      "signal": "p95_latency_ms",
+      "value": 900.0
+    },
+    {
+      "id": "evidence_56f3a09f3e",
+      "source": "metrics",
+      "interpretation": "notifications-service stayed at baseline throughout the window",
+      "timestamp": null,
+      "service": "notifications-service",
+      "signal": "p95_latency_ms",
+      "value": null
+    },
+    {
+      "id": "evidence_77e12ef58e",
+      "source": "runbook",
+      "interpretation": "runbook failure mode 'retry amplification after payment changes' matches observed retry warnings",
+      "timestamp": null,
+      "service": "booking-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_946ec9e47a",
+      "source": "traces",
+      "interpretation": "eligibility_query dominates degraded traces (2150ms of 3180ms root)",
+      "timestamp": "2026-06-01T14:39:05Z",
+      "service": "appointments-db",
+      "signal": "duration_ms",
+      "value": 2150.0
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hypothesis_314fcf61a4",
+      "title": "Deploy-driven eligibility retries saturating appointments-db",
+      "statement": "The 14:20 booking-service deploy enabled payment eligibility enrichment whose slow queries and unbounded-looking retries saturated appointments-db, consistent with the latency and error escalation from 14:25.",
+      "confidence": "high",
+      "rubric": {
+        "aligned_signals": 5,
+        "timing_alignment": "aligned",
+        "conflicting_evidence_count": 0
+      },
+      "supporting_evidence_ids": [
+        "evidence_3c8acc4730",
+        "evidence_209616c3b2",
+        "evidence_52ceb7a3c8",
+        "evidence_77e12ef58e",
+        "evidence_946ec9e47a"
+      ],
+      "conflicting_evidence_ids": [],
+      "assumptions": [
+        "telemetry in the package is complete for the window"
+      ],
+      "recommended_checks": [
+        "compare booking error rates before and after release 2026.06.01-1420",
+        "inspect payment eligibility retry bounds and backoff"
+      ]
+    }
+  ],
+  "missing_data": [
+    {
+      "id": "missing_0034287bba",
+      "description": "runbook_investigator: runbook does not cover queue consumer scaling",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    }
+  ],
+  "recommended_next_steps": [
+    {
+      "id": "next_step_3cab0921f5",
+      "description": "compare booking error rates before and after release 2026.06.01-1420",
+      "source_hypothesis_ids": [
+        "hypothesis_314fcf61a4"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_5de3bc61b8",
+      "description": "inspect payment eligibility retry bounds and backoff",
+      "source_hypothesis_ids": [
+        "hypothesis_314fcf61a4"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_e401e2f72a",
+      "description": "Investigate open question: runbook_investigator: runbook does not cover queue consumer scaling",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_0034287bba"
+      ]
+    }
+  ],
+  "safe_mitigation_options": [
+    {
+      "id": "mitigation_d4c3eb7cd4",
+      "action": "Consider disabling feature flag payment_enrichment",
+      "rationale": "the runbook documents it as a verified safe fallback",
+      "risks": [
+        "eligibility enrichment unavailable while disabled"
+      ],
+      "requires_human_approval": true
+    }
+  ],
+  "safety_review": {
+    "checks": [
+      {
+        "check": "overconfidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "evidence_grounding",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "action_safety",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "uncertainty",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "hypotheses_cite_resolvable_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "no_hypothesis_without_supporting_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "mitigations_require_human_approval",
+        "result": "pass",
+        "detail": "1 mitigation option(s) checked"
+      },
+      {
+        "check": "no_executed_action_phrasing",
+        "result": "pass",
+        "detail": null
+      }
+    ],
+    "notes": null
+  },
+  "communication_drafts": {
+    "internal_update": "SEV-2: appointment booking degraded. No remediation has been executed; mitigation options await human approval."
+  },
+  "postmortem_draft": {
+    "title": "Postmortem draft: booking latency 2026-06-01",
+    "summary": "Booking latency and errors rose after a deploy.",
+    "impact": "p95 rose 450ms to 3200ms; errors 0.3% to 4.8%.",
+    "contributing_factors": [
+      "likely: deploy-driven retry amplification"
+    ],
+    "open_questions": [
+      "whether retries are bounded"
+    ],
+    "action_items": [
+      "compare error rates before and after the deploy"
+    ]
+  },
+  "reasoning_trace": [
+    {
+      "stage": "deploy_correlation",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_3c8acc4730"
+      ]
+    },
+    {
+      "stage": "logs_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_209616c3b2"
+      ]
+    },
+    {
+      "stage": "metrics_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_52ceb7a3c8",
+        "evidence_56f3a09f3e"
+      ]
+    },
+    {
+      "stage": "runbook_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_77e12ef58e"
+      ]
+    },
+    {
+      "stage": "trace_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_946ec9e47a"
+      ]
+    },
+    {
+      "stage": "triage",
+      "summary": "applied documented severity rules to observed impact",
+      "input_ids": []
+    },
+    {
+      "stage": "hypothesis_ranker",
+      "summary": "combined aligned findings across sources | timing: 'Deploy-driven eligibility retries saturating appointments-db': deploy 14:20 precedes first metric deviation 14:25",
+      "input_ids": [
+        "hypothesis_314fcf61a4"
+      ]
+    },
+    {
+      "stage": "safety_critic",
+      "summary": "statements stay within what the cited evidence shows (4 checks, 0 non-pass)",
+      "input_ids": []
+    },
+    {
+      "stage": "recommendation_builder",
+      "summary": "aggregated 3 next steps deterministically (2 from hypothesis checks, 1 from missing data)",
+      "input_ids": [
+        "next_step_3cab0921f5",
+        "next_step_5de3bc61b8",
+        "next_step_e401e2f72a"
+      ]
+    },
+    {
+      "stage": "reporter",
+      "summary": "drafted from reviewed investigation output (1 mitigation option(s) proposed)",
+      "input_ids": [
+        "mitigation_d4c3eb7cd4"
+      ]
+    },
+    {
+      "stage": "safety_linter",
+      "summary": "deterministic lint: 5 checks (total review: 0 blocked, 0 warning)",
+      "input_ids": []
+    }
+  ]
+}

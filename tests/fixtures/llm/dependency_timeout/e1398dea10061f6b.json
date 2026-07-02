@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-20T15:40:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-20T16:10:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nTRACE SPANS (grouped by trace, chronological)\ntrace trace_pre_03\n  s1 payments-service POST /checkout start=2026-06-20T15:35:44+00:00 duration_ms=390 status=ok parent=-\n  s2 tax-api quote_tax start=2026-06-20T15:35:44+00:00 duration_ms=120 status=ok parent=s1\n  s3 payments-service charge_card start=2026-06-20T15:35:44+00:00 duration_ms=150 status=ok parent=s1\ntrace trace_incident_05\n  s1 payments-service POST /checkout start=2026-06-20T16:07:12+00:00 duration_ms=5600 status=error parent=-\n  s2 tax-api quote_tax start=2026-06-20T16:07:12+00:00 duration_ms=5001 status=error parent=s1\n  s3 payments-service charge_card start=2026-06-20T16:07:17+00:00 duration_ms=175 status=ok parent=s1\ntrace trace_incident_06\n  s1 payments-service POST /checkout start=2026-06-20T16:26:48+00:00 duration_ms=5480 status=error parent=-\n  s2 tax-api quote_tax start=2026-06-20T16:26:48+00:00 duration_ms=5000 status=error parent=s1",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: trace investigator.\nInput: distributed trace spans (grouped by trace) and the incident window.\n\nReport as findings, each citing trace ids, spans, and durations:\n- where time is spent in slow requests: which span dominates the critical\n  path, and what fraction of the root duration it accounts for\n- error propagation: which spans fail, and whether failures originate deep\n  and surface upward\n- before/after contrast when both healthy and degraded traces exist\n  (same operations, changed durations)\n- operations that stay fast even in degraded traces - they narrow the fault\nUse duration numbers from the input; never estimate.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"quote_tax accounts for 5001ms of the 5600ms failing checkout root; charge_card stays at 175ms - degradation isolated to the tax dependency\",\"timestamp\":\"2026-06-20T16:07:12Z\",\"service\":\"tax-api\",\"signal\":\"duration_ms\",\"value\":5001.0}],\"gaps\":[],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

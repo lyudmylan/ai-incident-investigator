@@ -1,0 +1,74 @@
+{
+  "spans": [
+    {
+      "trace_id": "trace_pre_02",
+      "span_id": "s1",
+      "parent_span_id": null,
+      "service": "notifications-service",
+      "operation": "POST /send",
+      "start_time": "2026-06-15T09:33:10Z",
+      "duration_ms": 210,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_pre_02",
+      "span_id": "s2",
+      "parent_span_id": "s1",
+      "service": "notifications-service",
+      "operation": "render_template",
+      "start_time": "2026-06-15T09:33:10Z",
+      "duration_ms": 12,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_pre_02",
+      "span_id": "s3",
+      "parent_span_id": "s1",
+      "service": "email-gateway",
+      "operation": "deliver",
+      "start_time": "2026-06-15T09:33:10Z",
+      "duration_ms": 165,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_incident_03",
+      "span_id": "s1",
+      "parent_span_id": null,
+      "service": "notifications-service",
+      "operation": "POST /send",
+      "start_time": "2026-06-15T09:58:42Z",
+      "duration_ms": 96,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_03",
+      "span_id": "s2",
+      "parent_span_id": "s1",
+      "service": "notifications-service",
+      "operation": "render_template",
+      "start_time": "2026-06-15T09:58:42Z",
+      "duration_ms": 9,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_04",
+      "span_id": "s1",
+      "parent_span_id": null,
+      "service": "notifications-service",
+      "operation": "POST /send",
+      "start_time": "2026-06-15T10:08:19Z",
+      "duration_ms": 88,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_04",
+      "span_id": "s2",
+      "parent_span_id": "s1",
+      "service": "notifications-service",
+      "operation": "render_template",
+      "start_time": "2026-06-15T10:08:19Z",
+      "duration_ms": 11,
+      "status": "error"
+    }
+  ]
+}

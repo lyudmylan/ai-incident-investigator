@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-15T09:25:00+00:00\nend: 2026-06-15T10:25:00+00:00\nrule: alert.triggered_at (2026-06-15T09:55:00+00:00) minus 30m lookback; end = start of sustained recovery across all deviated series\n\nALERT\nid: alert_002\ntitle: Error rate spike on notifications-service send endpoint\nservice: notifications-service\ntriggered_at: 2026-06-15T09:55:00+00:00\nmonitoring severity label: warning\nsignal: error_rate_pct\nthreshold: 2.0\nobserved value at trigger: 8.9\ndescription: Send error rate exceeded the 2% threshold for 10 consecutive minutes; latency is normal.\n\nDETERMINISTIC TIMELINE (14 events)\n2026-06-13T11:05:00+00:00 [deploys] notifications-service: deploy 2026.06.13-1105 on notifications-service: Add rich template rendering engine (dormant behind rich_templates flag)\n2026-06-15T09:40:00+00:00 [deploys] notifications-service: feature_flag flags/rich_templates@on on notifications-service: Enable rich_templates: new placeholder-based template rendering for patient notifications\n2026-06-15T09:42:38+00:00 [logs] notifications-service: ERROR: TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2\n2026-06-15T09:44:51+00:00 [logs] notifications-service: ERROR: TemplateRenderError: unknown placeholder 'patient_name' in template reminder_v2\n2026-06-15T09:45:00+00:00 [metrics] notifications-service: error_rate_pct first deviated >=2.0x from baseline (0.2 % -> 4.8 %)\n2026-06-15T09:47:20+00:00 [logs] notifications-service: WARN: Send failure ratio above 4% over last 5m; failing sends are all rich-template renders\n2026-06-15T09:52:33+00:00 [logs] notifications-service: ERROR: TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2\n2026-06-15T09:55:00+00:00 [alert] notifications-service: Alert fired: Error rate spike on notifications-service send endpoint\n2026-06-15T09:58:07+00:00 [logs] notifications-service: ERROR: TemplateRenderError: unknown placeholder 'clinic_address' in template confirmation_v2\n2026-06-15T09:58:42+00:00 [traces] notifications-service: Trace trace_incident_03: POST /send failed after 96ms\n2026-06-15T10:06:15+00:00 [logs] notifications-service: ERROR: TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2\n2026-06-15T10:08:19+00:00 [traces] notifications-service: Trace trace_incident_04: POST /send failed after 88ms\n2026-06-15T10:12:29+00:00 [logs] notifications-service: WARN: Dead-letter queue growing: 1,204 undeliverable render failures queued for retry\n2026-06-15T10:20:00+00:00 [deploys] notifications-service: feature_flag flags/rich_templates@off on notifications-service: Disable rich_templates (on-call rollback of cfg_774)\n\nRUNBOOK (verbatim)\n# Runbook: notification send failures\n\n## Service overview\n\n`notifications-service` renders and sends patient notifications (email) via\n`email-gateway`. Templates live in `template-store`. Notifications are not on\nthe booking critical path; failed sends are retried from a dead-letter queue,\nso patient impact is delayed rather than immediate.\n\n## Known failure modes\n\n1. **Template rendering errors after template or flag changes.** Symptoms:\n   `TemplateRenderError` in logs, error rate up while latency stays flat\n   (failures are fast). Almost always caused by templates referencing\n   placeholders the calling context does not provide.\n2. **email-gateway throttling.** Symptoms: elevated latency AND errors,\n   gateway acceptance rate below 99%, `429` responses in logs.\n3. **Dead-letter queue overflow.** Above ~50k queued messages, retry drain\n   can delay notifications by hours.\n\n## Checks\n\n- Correlate error onset with the most recent template, flag, or config\n  change; compare failing template names against the change.\n- Check email-gateway acceptance rate to rule the gateway in or out.\n- Check dead-letter queue depth and drain rate after recovery.\n\n## Safe mitigations (human approval required)\n\n- Disable the `rich_templates` feature flag (verified safe fallback: sends\n  use the legacy template path).\n- Re-drain the dead-letter queue during business hours only, in batches,\n  to avoid duplicate-send spikes.\n\n## Escalation\n\n- Primary: messaging team on-call. Gateway issues: escalate to vendor\n  support with acceptance-rate graphs attached.\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: runbook investigator.\nInput: the service runbook verbatim, the alert, and the deterministic\ntimeline of observed events.\n\nReport as findings:\n- known failure modes from the runbook whose documented symptoms match\n  observed timeline events (quote both sides)\n- runbook checks relevant to what is being observed\n- operational constraints and warnings the runbook states (e.g. when an\n  action is documented as unsafe)\n- mismatches: observed behavior no runbook failure mode covers\nThe runbook is guidance written in advance, not evidence of current state;\nframe findings as \"the runbook documents X, which matches observed Y\".",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"runbook failure mode 'template rendering errors after template or flag changes' matches: TemplateRenderError with flat latency\",\"timestamp\":null,\"service\":\"notifications-service\",\"signal\":null,\"value\":null}],\"gaps\":[\"dead-letter queue depth limit before notification delay becomes user-visible\"],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

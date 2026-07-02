@@ -1,6 +1,7 @@
 """Shared test helpers: the example package path, canned LLM responses, and
 the scripted fake client used by agent and pipeline tests."""
 
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from ai_incident_investigator.agents.responses import (
@@ -61,10 +62,17 @@ TRIAGE_JSON = TriageResponse(
 ).model_dump_json()
 
 
-class ScriptedLLM:
-    """Returns canned JSON keyed by a marker found in the system prompt."""
+ScriptEntry = str | Exception | Callable[[LLMRequest], str]
 
-    def __init__(self, by_marker: dict[str, str | Exception]) -> None:
+
+class ScriptedLLM:
+    """Returns canned JSON keyed by a marker found in the system prompt.
+
+    An entry may be a string (returned as-is), an Exception (raised), or a
+    callable receiving the full request (for responses that must reference
+    runtime content such as evidence ids)."""
+
+    def __init__(self, by_marker: Mapping[str, ScriptEntry]) -> None:
         self.by_marker = by_marker
         self.requests: list[LLMRequest] = []
 
@@ -74,7 +82,8 @@ class ScriptedLLM:
             if marker in request.system:
                 if isinstance(scripted, Exception):
                     raise scripted
-                return LLMResponse(text=scripted, model=request.model, stop_reason="end_turn")
+                body = scripted(request) if callable(scripted) else scripted
+                return LLMResponse(text=body, model=request.model, stop_reason="end_turn")
         raise AssertionError(f"no scripted response for system prompt: {request.system[:80]!r}")
 
 

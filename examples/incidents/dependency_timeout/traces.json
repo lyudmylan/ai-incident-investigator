@@ -1,0 +1,84 @@
+{
+  "spans": [
+    {
+      "trace_id": "trace_pre_03",
+      "span_id": "s1",
+      "parent_span_id": null,
+      "service": "payments-service",
+      "operation": "POST /checkout",
+      "start_time": "2026-06-20T15:35:44Z",
+      "duration_ms": 390,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_pre_03",
+      "span_id": "s2",
+      "parent_span_id": "s1",
+      "service": "tax-api",
+      "operation": "quote_tax",
+      "start_time": "2026-06-20T15:35:44Z",
+      "duration_ms": 120,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_pre_03",
+      "span_id": "s3",
+      "parent_span_id": "s1",
+      "service": "payments-service",
+      "operation": "charge_card",
+      "start_time": "2026-06-20T15:35:44Z",
+      "duration_ms": 150,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_incident_05",
+      "span_id": "s1",
+      "parent_span_id": null,
+      "service": "payments-service",
+      "operation": "POST /checkout",
+      "start_time": "2026-06-20T16:07:12Z",
+      "duration_ms": 5600,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_05",
+      "span_id": "s2",
+      "parent_span_id": "s1",
+      "service": "tax-api",
+      "operation": "quote_tax",
+      "start_time": "2026-06-20T16:07:12Z",
+      "duration_ms": 5001,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_05",
+      "span_id": "s3",
+      "parent_span_id": "s1",
+      "service": "payments-service",
+      "operation": "charge_card",
+      "start_time": "2026-06-20T16:07:17Z",
+      "duration_ms": 175,
+      "status": "ok"
+    },
+    {
+      "trace_id": "trace_incident_06",
+      "span_id": "s1",
+      "parent_span_id": null,
+      "service": "payments-service",
+      "operation": "POST /checkout",
+      "start_time": "2026-06-20T16:26:48Z",
+      "duration_ms": 5480,
+      "status": "error"
+    },
+    {
+      "trace_id": "trace_incident_06",
+      "span_id": "s2",
+      "parent_span_id": "s1",
+      "service": "tax-api",
+      "operation": "quote_tax",
+      "start_time": "2026-06-20T16:26:48Z",
+      "duration_ms": 5000,
+      "status": "error"
+    }
+  ]
+}

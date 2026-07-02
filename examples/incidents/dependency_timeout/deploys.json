@@ -1,0 +1,12 @@
+{
+  "deploys": [
+    {
+      "id": "deploy_031",
+      "service": "payments-service",
+      "version": "2026.06.15-0930",
+      "deployed_at": "2026-06-15T09:30:00Z",
+      "change_type": "deploy",
+      "description": "Routine dependency bump; no checkout-path changes"
+    }
+  ]
+}

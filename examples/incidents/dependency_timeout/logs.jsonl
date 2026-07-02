@@ -1,0 +1,12 @@
+{"timestamp": "2026-06-20T15:32:20Z", "service": "payments-service", "level": "INFO", "message": "Checkout completed for order 55102 in 372ms"}
+{"timestamp": "2026-06-20T15:53:41Z", "service": "payments-service", "level": "WARN", "message": "tax-api response slow: 1840ms (p50 normally 90ms)"}
+{"timestamp": "2026-06-20T15:57:02Z", "service": "payments-service", "level": "ERROR", "message": "TimeoutError: tax-api did not respond within 5000ms (order 55148, attempt 1 of 3)"}
+{"timestamp": "2026-06-20T15:58:15Z", "service": "payments-service", "level": "WARN", "message": "Retrying tax quote for order 55148 (attempt 2 of 3)"}
+{"timestamp": "2026-06-20T16:03:27Z", "service": "payments-service", "level": "ERROR", "message": "TimeoutError: tax-api did not respond within 5000ms (order 55153, attempt 3 of 3); checkout failed"}
+{"timestamp": "2026-06-20T16:08:55Z", "service": "payments-service", "level": "WARN", "message": "Circuit breaker for tax-api OPEN after 12 consecutive timeouts"}
+{"timestamp": "2026-06-20T16:12:31Z", "service": "payments-service", "level": "ERROR", "message": "Checkout failed for order 55171: tax quote unavailable (circuit open)"}
+{"timestamp": "2026-06-20T16:18:44Z", "service": "payments-service", "level": "WARN", "message": "Circuit breaker for tax-api HALF-OPEN: probe timed out after 5000ms"}
+{"timestamp": "2026-06-20T16:24:09Z", "service": "payments-service", "level": "ERROR", "message": "Checkout failed for order 55190: tax quote unavailable (circuit open)"}
+{"timestamp": "2026-06-20T16:29:52Z", "service": "payments-service", "level": "INFO", "message": "Card authorization path healthy: charge_card p95 182ms"}
+{"timestamp": "2026-06-20T16:36:18Z", "service": "payments-service", "level": "WARN", "message": "Circuit breaker for tax-api HALF-OPEN: probe timed out after 5000ms"}
+{"timestamp": "2026-06-20T16:41:33Z", "service": "payments-service", "level": "ERROR", "message": "Checkout failed for order 55214: tax quote unavailable (circuit open)"}

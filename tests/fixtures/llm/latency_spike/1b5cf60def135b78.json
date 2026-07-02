@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nALERT\nid: alert_001\ntitle: High p95 latency on booking-service POST /book\nservice: booking-service\ntriggered_at: 2026-06-01T14:35:00+00:00\nmonitoring severity label: critical\nsignal: p95_latency_ms\nthreshold: 1000.0\nobserved value at trigger: 2100.0\ndescription: p95 latency on the appointment booking endpoint exceeded the 1000ms threshold for 5 consecutive minutes.\n\nDETERMINISTIC TIMELINE (25 events)\n2026-05-30T09:15:00+00:00 [deploys] notifications-service: deploy 2026.05.30-0915 on notifications-service: Reminder template copy update\n2026-06-01T14:20:00+00:00 [deploys] booking-service: deploy 2026.06.01-1420 on booking-service: Enable payment eligibility enrichment in the booking flow (gated by feature flag payment_enrichment)\n2026-06-01T14:25:00+00:00 [metrics] booking-queue: queue_depth first deviated >=2.0x from baseline (12.0 messages -> 35.0 messages)\n2026-06-01T14:25:00+00:00 [metrics] booking-service: error_rate_pct first deviated >=2.0x from baseline (0.3 % -> 0.7 %)\n2026-06-01T14:26:02+00:00 [logs] booking-service: WARN: Payment eligibility check slow: 1480ms (threshold 500ms)\n2026-06-01T14:27:39+00:00 [logs] payment-service: WARN: Eligibility enrichment query exceeded slow query threshold: 1210ms\n2026-06-01T14:29:14+00:00 [logs] booking-service: WARN: Retrying eligibility lookup for booking 84152 (attempt 2 of 5)\n2026-06-01T14:30:00+00:00 [metrics] booking-service: p95_latency_ms first deviated >=2.0x from baseline (450.0 ms -> 900.0 ms)\n2026-06-01T14:30:00+00:00 [metrics] payment-service: p95_latency_ms first deviated >=2.0x from baseline (220.0 ms -> 980.0 ms)\n2026-06-01T14:30:27+00:00 [logs] appointments-db: WARN: Connection pool nearing saturation: 82/100 connections in use\n2026-06-01T14:31:08+00:00 [logs] booking-service: ERROR: Eligibility lookup timed out after 2000ms for booking 84158 (attempt 3 of 5)\n2026-06-01T14:32:36+00:00 [logs] booking-service: WARN: Retrying eligibility lookup for booking 84158 (attempt 4 of 5)\n2026-06-01T14:33:21+00:00 [logs] payment-service: ERROR: Eligibility enrichment query timed out after 2000ms\n2026-06-01T14:34:44+00:00 [logs] appointments-db: WARN: Connection pool saturated: 97/100 connections in use\n2026-06-01T14:35:00+00:00 [alert] booking-service: Alert fired: High p95 latency on booking-service POST /book\n2026-06-01T14:35:00+00:00 [metrics] appointments-db: cpu_pct first deviated >=2.0x from baseline (38.0 % -> 84.0 %)\n2026-06-01T14:35:52+00:00 [logs] booking-service: ERROR: Booking failed for appointment 84163: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:36:30+00:00 [logs] booking-service: WARN: Booking queue depth 260 exceeds normal operating range\n2026-06-01T14:38:09+00:00 [logs] booking-service: ERROR: Booking failed for appointment 84170: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:39:05+00:00 [traces] booking-service: Trace trace_incident_01: POST /book failed after 3180ms\n2026-06-01T14:40:51+00:00 [logs] appointments-db: WARN: Slow query: SELECT plan_rules FROM eligibility_rules WHERE plan_group = $1 took 2350ms\n2026-06-01T14:45:17+00:00 [logs] booking-service: ERROR: Booking failed for appointment 84181: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:50:33+00:00 [logs] booking-service: WARN: Retrying eligibility lookup for booking 84190 (attempt 2 of 5)\n2026-06-01T14:52:31+00:00 [traces] booking-service: Trace trace_incident_02: POST /book failed after 3320ms\n2026-06-01T14:55:46+00:00 [logs] payment-service: ERROR: Eligibility enrichment query timed out after 2000ms\n\nRUNBOOK (verbatim)\n# Runbook: appointment booking latency\n\n## Service overview\n\n`booking-service` handles appointment booking for the telemedicine platform.\nCritical path: `POST /book` -> payment eligibility check (`payment-service`)\n-> slot reservation (`appointments-db`). Bookings are patient-facing; treat\nsustained degradation as high urgency.\n\n## Known failure modes\n\n1. **appointments-db saturation.** Symptoms: db CPU > 85%, connection pool\n   near 100/100, slow `eligibility_query` / `reserve_slot` spans. Booking and\n   payment both degrade together because they share the database.\n2. **Retry amplification after payment changes.** The booking flow retries\n   eligibility lookups up to 5 times with no backoff. A slow eligibility path\n   multiplies load on `payment-service` and `appointments-db` roughly 5x.\n   Past incident: 2025-11-12 eligibility cache regression.\n3. **Queue backlog.** `booking-queue` depth above ~200 delays confirmation\n   processing; notifications are unaffected (separate consumer).\n\n## Checks\n\n- Compare booking-service error rate and latency before/after the most recent\n  release; correlate deploy time with symptom onset.\n- Inspect `appointments-db` connection pool and slow query log.\n- Check whether eligibility retries are bounded and whether they back off.\n\n## Safe mitigations (human approval required)\n\n- Disable feature flag `payment_enrichment` (safe: booking falls back to the\n  pre-enrichment eligibility path; verified in staging 2026-05-28).\n- Roll back the latest `booking-service` release.\n- Increase booking worker concurrency **only if** queue pressure remains high\n  after the database recovers; adding workers during db saturation makes the\n  saturation worse.\n\n## Escalation\n\n- Primary: booking team on-call. Secondary: platform on-call.\n- Page the data team if `appointments-db` CPU stays > 90% for 15 minutes.\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: runbook investigator.\nInput: the service runbook verbatim, the alert, and the deterministic\ntimeline of observed events.\n\nReport as findings:\n- known failure modes from the runbook whose documented symptoms match\n  observed timeline events (quote both sides)\n- runbook checks relevant to what is being observed\n- operational constraints and warnings the runbook states (e.g. when an\n  action is documented as unsafe)\n- mismatches: observed behavior no runbook failure mode covers\nThe runbook is guidance written in advance, not evidence of current state;\nframe findings as \"the runbook documents X, which matches observed Y\".",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"runbook failure mode 'retry amplification after payment changes' matches observed retry warnings\",\"timestamp\":null,\"service\":\"booking-service\",\"signal\":null,\"value\":null}],\"gaps\":[\"runbook does not cover queue consumer scaling\"],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

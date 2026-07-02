@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nLOG RECORDS (20 total)\n2026-06-01T14:02:11+00:00 INFO booking-service Booking confirmed for appointment 84121 in 412ms\n2026-06-01T14:10:43+00:00 INFO booking-service Booking confirmed for appointment 84137 in 438ms\n2026-06-01T14:20:05+00:00 INFO booking-service Deployment 2026.06.01-1420 rolled out; feature flag payment_enrichment enabled\n2026-06-01T14:23:18+00:00 INFO payment-service Eligibility enrichment lookup took 850ms for plan group medicare-b\n2026-06-01T14:26:02+00:00 WARN booking-service Payment eligibility check slow: 1480ms (threshold 500ms)\n2026-06-01T14:27:39+00:00 WARN payment-service Eligibility enrichment query exceeded slow query threshold: 1210ms\n2026-06-01T14:29:14+00:00 WARN booking-service Retrying eligibility lookup for booking 84152 (attempt 2 of 5)\n2026-06-01T14:30:27+00:00 WARN appointments-db Connection pool nearing saturation: 82/100 connections in use\n2026-06-01T14:31:08+00:00 ERROR booking-service Eligibility lookup timed out after 2000ms for booking 84158 (attempt 3 of 5)\n2026-06-01T14:32:36+00:00 WARN booking-service Retrying eligibility lookup for booking 84158 (attempt 4 of 5)\n2026-06-01T14:33:21+00:00 ERROR payment-service Eligibility enrichment query timed out after 2000ms\n2026-06-01T14:34:44+00:00 WARN appointments-db Connection pool saturated: 97/100 connections in use\n2026-06-01T14:35:52+00:00 ERROR booking-service Booking failed for appointment 84163: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:36:30+00:00 WARN booking-service Booking queue depth 260 exceeds normal operating range\n2026-06-01T14:38:09+00:00 ERROR booking-service Booking failed for appointment 84170: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:40:51+00:00 WARN appointments-db Slow query: SELECT plan_rules FROM eligibility_rules WHERE plan_group = $1 took 2350ms\n2026-06-01T14:45:17+00:00 ERROR booking-service Booking failed for appointment 84181: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:50:33+00:00 WARN booking-service Retrying eligibility lookup for booking 84190 (attempt 2 of 5)\n2026-06-01T14:55:46+00:00 ERROR payment-service Eligibility enrichment query timed out after 2000ms\n2026-06-01T14:58:20+00:00 INFO notifications-service Reminder batch sent: 1200 notifications in 3.1s",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: logs investigator.\nInput: structured log records (timestamp, level, service, message) and the\nincident window.\n\nReport as findings, each citing concrete records via timestamp and service:\n- error and warning patterns: what fails, where, starting when\n- repetition and escalation (e.g. retries per operation, attempt counts,\n  whether retry behavior is bounded)\n- resource saturation messages (pools, queues, limits) with their numbers\n- the first log record that departs from routine, and what changed at that\n  moment\n- notable silences: services logging normally through the window\nQuote key message fragments verbatim inside interpretations.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"eligibility retries escalate to exhaustion starting 14:29\",\"timestamp\":\"2026-06-01T14:29:14Z\",\"service\":\"booking-service\",\"signal\":null,\"value\":null}],\"gaps\":[],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

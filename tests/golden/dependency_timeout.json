@@ -1,0 +1,481 @@
+{
+  "incident_id": "dependency_timeout",
+  "summary": {
+    "what_happened": "Checkout latency saturated near the tax-api client timeout and error rate rose to ~6% starting 15:53; the incident is ongoing.",
+    "affected_services": [
+      "payments-service",
+      "tax-api"
+    ],
+    "customer_impact": "A meaningful share of checkouts fail or take over 5 seconds.",
+    "incident_window": {
+      "start": "2026-06-20T15:40:00Z",
+      "end": null,
+      "rule": "alert.triggered_at (2026-06-20T16:10:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing"
+    }
+  },
+  "severity": {
+    "level": "SEV-2",
+    "explanation": "checkout error rate 6.1% (>1% on a revenue-critical flow) with p95 latency pinned near the 5000ms client timeout, ongoing at window end",
+    "confidence": "high"
+  },
+  "timeline": [
+    {
+      "id": "timeline_2ea633b149",
+      "timestamp": "2026-06-15T09:30:00Z",
+      "source": "deploys",
+      "service": "payments-service",
+      "description": "deploy 2026.06.15-0930 on payments-service: Routine dependency bump; no checkout-path changes"
+    },
+    {
+      "id": "timeline_5052aafc15",
+      "timestamp": "2026-06-20T15:53:41Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "WARN: tax-api response slow: 1840ms (p50 normally 90ms)"
+    },
+    {
+      "id": "timeline_1e7b23b924",
+      "timestamp": "2026-06-20T15:55:00Z",
+      "source": "metrics",
+      "service": "tax-api",
+      "description": "p95_latency_ms first deviated >=2.0x from baseline (150.0 ms -> 1900.0 ms)"
+    },
+    {
+      "id": "timeline_36478f2c67",
+      "timestamp": "2026-06-20T15:55:00Z",
+      "source": "metrics",
+      "service": "payments-service",
+      "description": "error_rate_pct first deviated >=2.0x from baseline (0.4 % -> 1.8 %)"
+    },
+    {
+      "id": "timeline_f9d6b5eaaf",
+      "timestamp": "2026-06-20T15:55:00Z",
+      "source": "metrics",
+      "service": "payments-service",
+      "description": "p95_latency_ms first deviated >=2.0x from baseline (380.0 ms -> 980.0 ms)"
+    },
+    {
+      "id": "timeline_185fa80563",
+      "timestamp": "2026-06-20T15:57:02Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "ERROR: TimeoutError: tax-api did not respond within 5000ms (order 55148, attempt 1 of 3)"
+    },
+    {
+      "id": "timeline_6f00ddb1a5",
+      "timestamp": "2026-06-20T15:58:15Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "WARN: Retrying tax quote for order 55148 (attempt 2 of 3)"
+    },
+    {
+      "id": "timeline_40450c687e",
+      "timestamp": "2026-06-20T16:03:27Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "ERROR: TimeoutError: tax-api did not respond within 5000ms (order 55153, attempt 3 of 3); checkout failed"
+    },
+    {
+      "id": "timeline_07cbfc4f00",
+      "timestamp": "2026-06-20T16:07:12Z",
+      "source": "traces",
+      "service": "payments-service",
+      "description": "Trace trace_incident_05: POST /checkout failed after 5600ms"
+    },
+    {
+      "id": "timeline_41ca630663",
+      "timestamp": "2026-06-20T16:08:55Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "WARN: Circuit breaker for tax-api OPEN after 12 consecutive timeouts"
+    },
+    {
+      "id": "timeline_ba1e3d9a3b",
+      "timestamp": "2026-06-20T16:10:00Z",
+      "source": "alert",
+      "service": "payments-service",
+      "description": "Alert fired: Checkout latency and error rate elevated on payments-service"
+    },
+    {
+      "id": "timeline_b733ff19e1",
+      "timestamp": "2026-06-20T16:12:31Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "ERROR: Checkout failed for order 55171: tax quote unavailable (circuit open)"
+    },
+    {
+      "id": "timeline_7425e31911",
+      "timestamp": "2026-06-20T16:18:44Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "WARN: Circuit breaker for tax-api HALF-OPEN: probe timed out after 5000ms"
+    },
+    {
+      "id": "timeline_abaced27be",
+      "timestamp": "2026-06-20T16:24:09Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "ERROR: Checkout failed for order 55190: tax quote unavailable (circuit open)"
+    },
+    {
+      "id": "timeline_8fe5809003",
+      "timestamp": "2026-06-20T16:26:48Z",
+      "source": "traces",
+      "service": "payments-service",
+      "description": "Trace trace_incident_06: POST /checkout failed after 5480ms"
+    },
+    {
+      "id": "timeline_3de1f14760",
+      "timestamp": "2026-06-20T16:36:18Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "WARN: Circuit breaker for tax-api HALF-OPEN: probe timed out after 5000ms"
+    },
+    {
+      "id": "timeline_6e0760f1e5",
+      "timestamp": "2026-06-20T16:41:33Z",
+      "source": "logs",
+      "service": "payments-service",
+      "description": "ERROR: Checkout failed for order 55214: tax quote unavailable (circuit open)"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_e997c522f5",
+      "source": "deploys",
+      "interpretation": "the only change in the package is a routine payments-service deploy on 06-15, five days before onset with no checkout-path changes - timing misaligned, internal change ruled out as the trigger",
+      "timestamp": "2026-06-15T09:30:00Z",
+      "service": "payments-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_37fbec7da2",
+      "source": "logs",
+      "interpretation": "first slow tax-api warning at 15:53:41 (1840ms vs ~90ms p50), escalating to 5000ms TimeoutErrors by 15:57",
+      "timestamp": "2026-06-20T15:53:41Z",
+      "service": "payments-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_f88863a358",
+      "source": "logs",
+      "interpretation": "circuit breaker for tax-api opened at 16:08:55 after 12 consecutive timeouts and never closed; probes keep timing out",
+      "timestamp": "2026-06-20T16:08:55Z",
+      "service": "payments-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_a27af82dca",
+      "source": "logs",
+      "interpretation": "card authorization path reported healthy at 16:29 (charge_card p95 182ms)",
+      "timestamp": "2026-06-20T16:29:52Z",
+      "service": "payments-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_2e097662c6",
+      "source": "metrics",
+      "interpretation": "payments p95 rose 380ms -> 5400ms and plateaued at the 5000ms client timeout ceiling, first crossing 2x baseline at 15:55",
+      "timestamp": "2026-06-20T15:55:00Z",
+      "service": "payments-service",
+      "signal": "p95_latency_ms",
+      "value": 980.0
+    },
+    {
+      "id": "evidence_79c00ab62e",
+      "source": "metrics",
+      "interpretation": "tax-api p95 pinned at exactly 5000 from 16:05 onward - a flat ceiling characteristic of client-side timeout truncation, not load",
+      "timestamp": "2026-06-20T16:05:00Z",
+      "service": "tax-api",
+      "signal": "p95_latency_ms",
+      "value": 5000.0
+    },
+    {
+      "id": "evidence_9281b71649",
+      "source": "metrics",
+      "interpretation": "checkout-db CPU stayed at baseline (41-46%), ruling out the database",
+      "timestamp": null,
+      "service": "checkout-db",
+      "signal": "cpu_pct",
+      "value": null
+    },
+    {
+      "id": "evidence_977891ad61",
+      "source": "runbook",
+      "interpretation": "runbook failure mode 'tax-api degradation (third party)' matches: spans pinned at the 5000ms timeout, circuit breaker opening, healthy card path",
+      "timestamp": null,
+      "service": "payments-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_4d4dbbc4a9",
+      "source": "runbook",
+      "interpretation": "runbook explicitly warns against harder retries during vendor timeouts (retry amplification)",
+      "timestamp": null,
+      "service": "payments-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_11424e5699",
+      "source": "traces",
+      "interpretation": "quote_tax accounts for 5001ms of the 5600ms failing checkout root; charge_card stays at 175ms - degradation isolated to the tax dependency",
+      "timestamp": "2026-06-20T16:07:12Z",
+      "service": "tax-api",
+      "signal": "duration_ms",
+      "value": 5001.0
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hypothesis_2f19983ba2",
+      "title": "Third-party tax-api degradation saturating checkout",
+      "statement": "tax-api stopped answering within the 5000ms client timeout from ~15:53, pinning checkout latency at the timeout ceiling and failing ~6% of checkouts; no internal change aligns with onset, consistent with a vendor-side degradation.",
+      "confidence": "high",
+      "rubric": {
+        "aligned_signals": 5,
+        "timing_alignment": "aligned",
+        "conflicting_evidence_count": 0
+      },
+      "supporting_evidence_ids": [
+        "evidence_e997c522f5",
+        "evidence_37fbec7da2",
+        "evidence_2e097662c6",
+        "evidence_977891ad61",
+        "evidence_11424e5699"
+      ],
+      "conflicting_evidence_ids": [],
+      "assumptions": [
+        "telemetry in the package is complete for the window"
+      ],
+      "recommended_checks": [
+        "check the tax-api vendor status page and error rates from a second region",
+        "verify quote_tax durations are pinned at the client timeout rather than spread"
+      ]
+    }
+  ],
+  "missing_data": [
+    {
+      "id": "missing_6dc5332aa3",
+      "description": "runbook_investigator: vendor status page state at incident time is not in the package",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    },
+    {
+      "id": "missing_8ef7865a96",
+      "description": "triage: no direct telemetry from inside the vendor's infrastructure",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    }
+  ],
+  "recommended_next_steps": [
+    {
+      "id": "next_step_df96e7b761",
+      "description": "check the tax-api vendor status page and error rates from a second region",
+      "source_hypothesis_ids": [
+        "hypothesis_2f19983ba2"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_86bb8dd0d7",
+      "description": "verify quote_tax durations are pinned at the client timeout rather than spread",
+      "source_hypothesis_ids": [
+        "hypothesis_2f19983ba2"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_0e1b271ef1",
+      "description": "Investigate open question: runbook_investigator: vendor status page state at incident time is not in the package",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_6dc5332aa3"
+      ]
+    },
+    {
+      "id": "next_step_b856e780e5",
+      "description": "Investigate open question: triage: no direct telemetry from inside the vendor's infrastructure",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_8ef7865a96"
+      ]
+    }
+  ],
+  "safe_mitigation_options": [
+    {
+      "id": "mitigation_be2aea3a83",
+      "action": "Enable the cached_tax_rates fallback flag",
+      "rationale": "runbook documents it as verified safe for up to 24h staleness with finance sign-off; bypasses the degraded vendor",
+      "risks": [
+        "tax rates up to 24h stale",
+        "finance must be notified"
+      ],
+      "requires_human_approval": true
+    },
+    {
+      "id": "mitigation_b905fffea1",
+      "action": "Reduce the tax-api client timeout to 1500ms only together with the cached-rates fallback",
+      "rationale": "fail fast instead of holding checkouts at 5000ms",
+      "risks": [
+        "without the fallback this only makes checkouts fail faster"
+      ],
+      "requires_human_approval": true
+    }
+  ],
+  "safety_review": {
+    "checks": [
+      {
+        "check": "overconfidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "evidence_grounding",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "action_safety",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "uncertainty",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "hypotheses_cite_resolvable_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "no_hypothesis_without_supporting_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "mitigations_require_human_approval",
+        "result": "pass",
+        "detail": "2 mitigation option(s) checked"
+      },
+      {
+        "check": "no_executed_action_phrasing",
+        "result": "pass",
+        "detail": null
+      }
+    ],
+    "notes": null
+  },
+  "communication_drafts": {
+    "internal_update": "SEV-2, ongoing: checkout is degraded - about 6% of checkouts fail and p95 is pinned near 5 seconds. Evidence points at the third-party tax-api timing out (high confidence); database and card paths are healthy and no recent internal change aligns. Next: vendor status check and a second-region probe. No remediation has been executed; the cached-tax-rates fallback awaits human approval."
+  },
+  "postmortem_draft": {
+    "title": "Postmortem draft: checkout degradation via tax-api 2026-06-20",
+    "summary": "The third-party tax-api stopped responding within our 5000ms timeout; checkout latency saturated at the timeout and ~6% of checkouts failed. The circuit breaker opened and remained open through the window.",
+    "impact": "Ongoing at window end: checkout p95 5400ms (baseline 380ms), error rate 6.1% (baseline 0.4%) - direct revenue impact.",
+    "contributing_factors": [
+      "likely: vendor-side degradation of tax-api",
+      "possibly: 5000ms timeout too generous for a checkout-path dependency, amplifying user-visible latency"
+    ],
+    "open_questions": [
+      "vendor root cause and timeline",
+      "why no cached-rates fallback was enabled automatically"
+    ],
+    "action_items": [
+      "open a P1 with the tax-api vendor with trace exemplars",
+      "evaluate automatic fallback to cached tax rates on circuit-open"
+    ]
+  },
+  "reasoning_trace": [
+    {
+      "stage": "deploy_correlation",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_e997c522f5"
+      ]
+    },
+    {
+      "stage": "logs_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_37fbec7da2",
+        "evidence_f88863a358",
+        "evidence_a27af82dca"
+      ]
+    },
+    {
+      "stage": "metrics_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_2e097662c6",
+        "evidence_79c00ab62e",
+        "evidence_9281b71649"
+      ]
+    },
+    {
+      "stage": "runbook_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_977891ad61",
+        "evidence_4d4dbbc4a9"
+      ]
+    },
+    {
+      "stage": "trace_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_11424e5699"
+      ]
+    },
+    {
+      "stage": "triage",
+      "summary": "applied documented severity rules to the revenue-path degradation",
+      "input_ids": []
+    },
+    {
+      "stage": "hypothesis_ranker",
+      "summary": "combined aligned findings across sources | timing: 'Third-party tax-api degradation saturating checkout': tax-api slowness 15:53 immediately precedes checkout degradation 15:55; the only internal change is five days old",
+      "input_ids": [
+        "hypothesis_2f19983ba2"
+      ]
+    },
+    {
+      "stage": "safety_critic",
+      "summary": "statements stay within what the cited evidence shows (4 checks, 0 non-pass)",
+      "input_ids": []
+    },
+    {
+      "stage": "recommendation_builder",
+      "summary": "aggregated 4 next steps deterministically (2 from hypothesis checks, 2 from missing data)",
+      "input_ids": [
+        "next_step_df96e7b761",
+        "next_step_86bb8dd0d7",
+        "next_step_0e1b271ef1",
+        "next_step_b856e780e5"
+      ]
+    },
+    {
+      "stage": "reporter",
+      "summary": "drafted from the reviewed third-party-degradation narrative (2 mitigation option(s) proposed)",
+      "input_ids": [
+        "mitigation_be2aea3a83",
+        "mitigation_b905fffea1"
+      ]
+    },
+    {
+      "stage": "safety_linter",
+      "summary": "deterministic lint: 5 checks (total review: 0 blocked, 0 warning)",
+      "input_ids": []
+    }
+  ]
+}

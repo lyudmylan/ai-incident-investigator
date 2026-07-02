@@ -1,0 +1,13 @@
+{"timestamp": "2026-06-15T09:31:04Z", "service": "notifications-service", "level": "INFO", "message": "Send batch complete: 240 notifications, 0 failures"}
+{"timestamp": "2026-06-15T09:40:12Z", "service": "notifications-service", "level": "INFO", "message": "Feature flag rich_templates enabled (config change cfg_774)"}
+{"timestamp": "2026-06-15T09:42:38Z", "service": "notifications-service", "level": "ERROR", "message": "TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2"}
+{"timestamp": "2026-06-15T09:44:51Z", "service": "notifications-service", "level": "ERROR", "message": "TemplateRenderError: unknown placeholder 'patient_name' in template reminder_v2"}
+{"timestamp": "2026-06-15T09:47:20Z", "service": "notifications-service", "level": "WARN", "message": "Send failure ratio above 4% over last 5m; failing sends are all rich-template renders"}
+{"timestamp": "2026-06-15T09:52:33Z", "service": "notifications-service", "level": "ERROR", "message": "TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2"}
+{"timestamp": "2026-06-15T09:58:07Z", "service": "notifications-service", "level": "ERROR", "message": "TemplateRenderError: unknown placeholder 'clinic_address' in template confirmation_v2"}
+{"timestamp": "2026-06-15T10:03:44Z", "service": "email-gateway", "level": "INFO", "message": "Gateway healthy: acceptance rate 99.9%, no throttling"}
+{"timestamp": "2026-06-15T10:06:15Z", "service": "notifications-service", "level": "ERROR", "message": "TemplateRenderError: unknown placeholder 'patient_name' in template welcome_v2"}
+{"timestamp": "2026-06-15T10:12:29Z", "service": "notifications-service", "level": "WARN", "message": "Dead-letter queue growing: 1,204 undeliverable render failures queued for retry"}
+{"timestamp": "2026-06-15T10:20:05Z", "service": "notifications-service", "level": "INFO", "message": "Feature flag rich_templates disabled by on-call (config change cfg_775)"}
+{"timestamp": "2026-06-15T10:24:41Z", "service": "notifications-service", "level": "INFO", "message": "Send batch complete: 231 notifications, 1 failure; legacy template path active"}
+{"timestamp": "2026-06-15T10:31:17Z", "service": "notifications-service", "level": "INFO", "message": "Dead-letter retry drain started for 1,204 queued notifications"}

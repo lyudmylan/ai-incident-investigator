@@ -1,0 +1,90 @@
+{
+  "series": [
+    {
+      "service": "payments-service",
+      "signal": "p95_latency_ms",
+      "baseline": 380,
+      "unit": "ms",
+      "points": [
+        {"timestamp": "2026-06-20T15:30:00Z", "value": 375},
+        {"timestamp": "2026-06-20T15:35:00Z", "value": 380},
+        {"timestamp": "2026-06-20T15:40:00Z", "value": 390},
+        {"timestamp": "2026-06-20T15:45:00Z", "value": 385},
+        {"timestamp": "2026-06-20T15:50:00Z", "value": 410},
+        {"timestamp": "2026-06-20T15:55:00Z", "value": 980},
+        {"timestamp": "2026-06-20T16:00:00Z", "value": 2600},
+        {"timestamp": "2026-06-20T16:05:00Z", "value": 4900},
+        {"timestamp": "2026-06-20T16:10:00Z", "value": 5400},
+        {"timestamp": "2026-06-20T16:15:00Z", "value": 5350},
+        {"timestamp": "2026-06-20T16:20:00Z", "value": 5400},
+        {"timestamp": "2026-06-20T16:25:00Z", "value": 5380},
+        {"timestamp": "2026-06-20T16:30:00Z", "value": 5390},
+        {"timestamp": "2026-06-20T16:35:00Z", "value": 5410},
+        {"timestamp": "2026-06-20T16:40:00Z", "value": 5395},
+        {"timestamp": "2026-06-20T16:45:00Z", "value": 5400}
+      ]
+    },
+    {
+      "service": "payments-service",
+      "signal": "error_rate_pct",
+      "baseline": 0.4,
+      "unit": "%",
+      "points": [
+        {"timestamp": "2026-06-20T15:30:00Z", "value": 0.4},
+        {"timestamp": "2026-06-20T15:35:00Z", "value": 0.3},
+        {"timestamp": "2026-06-20T15:40:00Z", "value": 0.4},
+        {"timestamp": "2026-06-20T15:45:00Z", "value": 0.5},
+        {"timestamp": "2026-06-20T15:50:00Z", "value": 0.6},
+        {"timestamp": "2026-06-20T15:55:00Z", "value": 1.8},
+        {"timestamp": "2026-06-20T16:00:00Z", "value": 3.9},
+        {"timestamp": "2026-06-20T16:05:00Z", "value": 5.2},
+        {"timestamp": "2026-06-20T16:10:00Z", "value": 6.1},
+        {"timestamp": "2026-06-20T16:15:00Z", "value": 6.0},
+        {"timestamp": "2026-06-20T16:20:00Z", "value": 6.2},
+        {"timestamp": "2026-06-20T16:25:00Z", "value": 5.9},
+        {"timestamp": "2026-06-20T16:30:00Z", "value": 6.1},
+        {"timestamp": "2026-06-20T16:35:00Z", "value": 6.0},
+        {"timestamp": "2026-06-20T16:40:00Z", "value": 6.1},
+        {"timestamp": "2026-06-20T16:45:00Z", "value": 6.2}
+      ]
+    },
+    {
+      "service": "tax-api",
+      "signal": "p95_latency_ms",
+      "baseline": 150,
+      "unit": "ms",
+      "points": [
+        {"timestamp": "2026-06-20T15:30:00Z", "value": 148},
+        {"timestamp": "2026-06-20T15:35:00Z", "value": 152},
+        {"timestamp": "2026-06-20T15:40:00Z", "value": 150},
+        {"timestamp": "2026-06-20T15:45:00Z", "value": 155},
+        {"timestamp": "2026-06-20T15:50:00Z", "value": 160},
+        {"timestamp": "2026-06-20T15:55:00Z", "value": 1900},
+        {"timestamp": "2026-06-20T16:00:00Z", "value": 4200},
+        {"timestamp": "2026-06-20T16:05:00Z", "value": 5000},
+        {"timestamp": "2026-06-20T16:10:00Z", "value": 5000},
+        {"timestamp": "2026-06-20T16:15:00Z", "value": 5000},
+        {"timestamp": "2026-06-20T16:20:00Z", "value": 5000},
+        {"timestamp": "2026-06-20T16:25:00Z", "value": 5000},
+        {"timestamp": "2026-06-20T16:30:00Z", "value": 5000},
+        {"timestamp": "2026-06-20T16:35:00Z", "value": 5000},
+        {"timestamp": "2026-06-20T16:40:00Z", "value": 5000},
+        {"timestamp": "2026-06-20T16:45:00Z", "value": 5000}
+      ]
+    },
+    {
+      "service": "checkout-db",
+      "signal": "cpu_pct",
+      "baseline": 42,
+      "unit": "%",
+      "points": [
+        {"timestamp": "2026-06-20T15:30:00Z", "value": 41},
+        {"timestamp": "2026-06-20T15:45:00Z", "value": 43},
+        {"timestamp": "2026-06-20T16:00:00Z", "value": 44},
+        {"timestamp": "2026-06-20T16:15:00Z", "value": 46},
+        {"timestamp": "2026-06-20T16:30:00Z", "value": 45},
+        {"timestamp": "2026-06-20T16:45:00Z", "value": 44}
+      ]
+    }
+  ]
+}
