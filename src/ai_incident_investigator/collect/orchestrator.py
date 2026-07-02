@@ -51,7 +51,10 @@ class SourceStatus(BaseModel):
 class CollectionReport(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    package_dir: str
+    package_dir: str = Field(
+        description="directory NAME, not a path - the report is machine-portable "
+        "and lives inside that directory as a sidecar"
+    )
     sources: list[SourceStatus]
 
 
@@ -176,6 +179,6 @@ def collect_package(
     except PackageLoadError as exc:  # pragma: no cover - guards future regressions
         raise CollectError(f"collected package failed the loader self-check: {exc}") from exc
 
-    report = CollectionReport(package_dir=str(out_dir), sources=statuses)
+    report = CollectionReport(package_dir=out_dir.name, sources=statuses)
     (out_dir / REPORT_FILENAME).write_text(report.model_dump_json(indent=2) + "\n")
     return report

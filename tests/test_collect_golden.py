@@ -31,13 +31,11 @@ def test_collection_reproduces_the_committed_package_byte_for_byte(tmp_path: Pat
     report = collect_package(alert_source, adapters, out, config.collection)
     assert all(s.status == "ok" for s in report.sources)
 
+    # the report is machine-portable (package_dir is a name, not a path),
+    # so the whole package compares byte-for-byte, sidecar included
     fresh = {p.name: p.read_bytes() for p in out.iterdir() if p.is_file()}
     committed = {p.name: p.read_bytes() for p in COMMITTED.iterdir() if p.is_file()}
-    # collection_report.json embeds the output path; compare it separately
-    fresh_report = fresh.pop("collection_report.json").decode()
-    committed_report = committed.pop("collection_report.json").decode()
     assert fresh == committed, (
         "collected package drifted from examples/incidents/collected_demo; "
         "regenerate with scripts/bootstrap_fixtures.py"
     )
-    assert fresh_report.replace(str(out), str(COMMITTED)) == committed_report

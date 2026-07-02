@@ -1,5 +1,5 @@
 {
-  "package_dir": "/Users/lyudmylan/Documents/Work/Projects/ai-incident-investigator/examples/incidents/collected_demo",
+  "package_dir": "collected_demo",
   "sources": [
     {
       "name": "sentry",
