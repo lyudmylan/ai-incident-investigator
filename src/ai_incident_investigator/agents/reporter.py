@@ -26,13 +26,25 @@ from ai_incident_investigator.ids import stable_id
 from ai_incident_investigator.llm import LLMClient
 from ai_incident_investigator.models.report import (
     CommunicationDrafts,
+    JiraTicketDraft,
     MitigationOption,
     PostmortemDraft,
     ReasoningStep,
+    SlackUpdateDraft,
+    StatusPageDraft,
 )
 from ai_incident_investigator.state import InvestigationState, StateUpdate
 
 REPORTER_NAME = "reporter"
+
+# docs/assumptions.md: a documented mapping, not a judgment call.
+JIRA_PRIORITY_BY_SEVERITY = {
+    "SEV-1": "Highest",
+    "SEV-2": "High",
+    "SEV-3": "Medium",
+    "SEV-4": "Low",
+}
+DEFAULT_JIRA_PRIORITY = "Medium"
 
 REPORTER_PROMPT = """\
 Role: reporter. You produce three deliverables from the reviewed
@@ -66,7 +78,26 @@ Postmortem draft (blameless, honest about uncertainty):
   ("likely", "possibly" for medium/low); never assert an unproven cause
 - open_questions: what the investigation could not establish
 - action_items: follow-ups grounded in the recommended next steps you were
-  given, plus durable improvements the evidence supports"""
+  given, plus durable improvements the evidence supports
+
+External drafts (a human copies these out; the tool never posts anything):
+- jira_ticket: summary is one imperative line; description is grounded in
+  the cited evidence with hypothesis confidence qualifiers, and includes
+  the incident window and affected services; labels are short slugs
+  (e.g. "incident"). Do not include a priority - it is derived in code
+  from severity.
+- slack_update: skimmable incident-channel text - severity, user impact,
+  leading hypothesis with confidence, what is being checked. It MUST state
+  explicitly that no remediation has been executed and options await
+  human approval.
+- status_page: customer-facing and held to strict rules. NO internal
+  service, system, or tool names of any kind; NO speculation language
+  ("we believe", "likely", "appears to be"); NO root-cause claims - those
+  belong to the postmortem. Say what users experience, that the team is
+  on it, and where updates appear. phase: "monitoring" once recovery is
+  observed, "identified" only when a mitigation path is in hand,
+  otherwise "investigating".
+- omit any external draft (null) rather than write one you cannot ground."""
 
 
 def _reporter_input(state: InvestigationState) -> str:
@@ -125,9 +156,45 @@ def make_reporter(llm: LLMClient, depends_on: frozenset[str]) -> FunctionAgent:
             for draft in parsed.mitigation_options
         }
         mitigations = list(mitigations_by_id.values())
+        gaps = list(parsed.gaps)
+
+        jira: JiraTicketDraft | None = None
+        if parsed.jira_ticket is not None:
+            if state.severity is not None:
+                priority = JIRA_PRIORITY_BY_SEVERITY.get(
+                    state.severity.level, DEFAULT_JIRA_PRIORITY
+                )
+            else:
+                priority = DEFAULT_JIRA_PRIORITY
+                gaps.append(
+                    "severity unavailable; Jira priority suggestion defaulted to "
+                    f"{DEFAULT_JIRA_PRIORITY}"
+                )
+            jira = JiraTicketDraft(
+                summary=parsed.jira_ticket.summary,
+                description=parsed.jira_ticket.description,
+                priority_suggestion=priority,
+                labels=parsed.jira_ticket.labels,
+            )
+        slack = (
+            SlackUpdateDraft(text=parsed.slack_update.text)
+            if parsed.slack_update is not None
+            else None
+        )
+        status_page = (
+            StatusPageDraft(phase=parsed.status_page.phase, text=parsed.status_page.text)
+            if parsed.status_page is not None
+            else None
+        )
+
         return StateUpdate(
             safe_mitigation_options=mitigations,
-            communication_drafts=CommunicationDrafts(internal_update=parsed.internal_update),
+            communication_drafts=CommunicationDrafts(
+                internal_update=parsed.internal_update,
+                jira_ticket=jira,
+                slack_update=slack,
+                status_page=status_page,
+            ),
             postmortem_draft=PostmortemDraft(
                 title=parsed.postmortem_title,
                 summary=parsed.postmortem_summary,
@@ -136,7 +203,7 @@ def make_reporter(llm: LLMClient, depends_on: frozenset[str]) -> FunctionAgent:
                 open_questions=parsed.open_questions,
                 action_items=parsed.action_items,
             ),
-            missing_data=gaps_to_missing_data(REPORTER_NAME, list(parsed.gaps)),
+            missing_data=gaps_to_missing_data(REPORTER_NAME, gaps),
             reasoning_trace=[
                 ReasoningStep(
                     stage=REPORTER_NAME,
