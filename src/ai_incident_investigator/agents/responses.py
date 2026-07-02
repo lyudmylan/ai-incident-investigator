@@ -14,6 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from ai_incident_investigator.models.common import CheckResult
+
 
 class ResponseModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -46,5 +48,38 @@ class TriageResponse(ResponseModel):
     what_happened: str
     affected_services: list[str]
     customer_impact: str
+    gaps: list[str]
+    reasoning: str
+
+
+class HypothesisDraft(ResponseModel):
+    """One candidate explanation. Note: no confidence field - the label is
+    derived in code from the citations below (rubric.py)."""
+
+    title: str
+    statement: str
+    supporting_evidence_ids: list[str]
+    conflicting_evidence_ids: list[str]
+    timing_alignment: Literal["aligned", "misaligned", "unknown"]
+    timing_justification: str
+    assumptions: list[str]
+    recommended_checks: list[str]
+
+
+class RankerResponse(ResponseModel):
+    hypotheses: list[HypothesisDraft]
+    gaps: list[str]
+    reasoning: str
+
+
+class CriticCheck(ResponseModel):
+    check: str
+    result: CheckResult
+    detail: str | None
+
+
+class CriticResponse(ResponseModel):
+    checks: list[CriticCheck]
+    notes: str | None
     gaps: list[str]
     reasoning: str

@@ -5,9 +5,7 @@ Unlike the source investigators it does not emit evidence; it sets the
 documented severity rules verbatim (docs/assumptions.md).
 """
 
-from pydantic import ValidationError
-
-from ai_incident_investigator.agents.base import GROUNDING_PREAMBLE, gaps_to_missing_data
+from ai_incident_investigator.agents.base import complete_typed, gaps_to_missing_data
 from ai_incident_investigator.agents.rendering import (
     render_alert,
     render_metrics,
@@ -17,7 +15,7 @@ from ai_incident_investigator.agents.rendering import (
 )
 from ai_incident_investigator.agents.responses import TriageResponse
 from ai_incident_investigator.graph import FunctionAgent
-from ai_incident_investigator.llm import LLMClient, LLMError, LLMMessage, LLMRequest
+from ai_incident_investigator.llm import LLMClient
 from ai_incident_investigator.models.common import Confidence, SeverityLevel
 from ai_incident_investigator.models.report import ReasoningStep, SeverityAssessment, Summary
 from ai_incident_investigator.state import InvestigationState, StateUpdate
@@ -63,17 +61,7 @@ def _triage_input(state: InvestigationState) -> str:
 
 def make_triage(llm: LLMClient) -> FunctionAgent:
     def run(state: InvestigationState) -> StateUpdate:
-        request = LLMRequest(
-            system=f"{GROUNDING_PREAMBLE}\n{TRIAGE_PROMPT}",
-            messages=[LLMMessage(role="user", content=_triage_input(state))],
-            json_schema=TriageResponse.model_json_schema(),
-        )
-        response = llm.complete(request)
-        try:
-            parsed = TriageResponse.model_validate_json(response.text)
-        except ValidationError as exc:
-            raise LLMError(f"triage returned JSON not matching its schema: {exc}") from exc
-
+        parsed = complete_typed(llm, "triage", TRIAGE_PROMPT, _triage_input(state), TriageResponse)
         return StateUpdate(
             severity=SeverityAssessment(
                 level=SeverityLevel(parsed.severity_level),

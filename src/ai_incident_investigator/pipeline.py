@@ -1,5 +1,9 @@
 """Investigation pipeline assembly: deterministic facts in, agent graph out.
 
+Graph shape (docs/architecture.md): investigators fan out in parallel, the
+ranker fans in, the critic reviews the ranker, and the deterministic safety
+linter always runs last - its checks hold even when every LLM agent failed.
+
 Investigators whose source is absent are skipped (the loader already
 recorded the missing file); the skip is noted in the reasoning trace so the
 report explains why a source went uninvestigated.
@@ -10,6 +14,8 @@ from pathlib import Path
 from typing import Literal
 
 from ai_incident_investigator.agents import build_investigators
+from ai_incident_investigator.agents.critic import CRITIC_NAME, make_critic
+from ai_incident_investigator.agents.ranker import RANKER_NAME, make_ranker
 from ai_incident_investigator.graph import run_graph
 from ai_incident_investigator.llm import (
     AnthropicClient,
@@ -19,6 +25,7 @@ from ai_incident_investigator.llm import (
 )
 from ai_incident_investigator.loading import LoadedPackage
 from ai_incident_investigator.models.report import ReasoningStep
+from ai_incident_investigator.safety import make_safety_linter
 from ai_incident_investigator.state import InvestigationState, StateUpdate, apply_update
 from ai_incident_investigator.timeline import build_timeline
 from ai_incident_investigator.window import DEFAULT_LOOKBACK, incident_window
@@ -50,6 +57,10 @@ def run_investigation(
     state: InvestigationState, llm: LLMClient, max_workers: int = 6
 ) -> InvestigationState:
     agents, skipped = build_investigators(llm, state)
+    investigator_names = frozenset(agent.name for agent in agents)
+    agents.append(make_ranker(llm, depends_on=investigator_names))
+    agents.append(make_critic(llm, depends_on=frozenset({RANKER_NAME})))
+    agents.append(make_safety_linter(depends_on=frozenset({CRITIC_NAME})))
     if skipped:
         state = apply_update(
             state,

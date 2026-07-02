@@ -63,10 +63,12 @@ hypothesis as `rubric`:
 | Label | Requires |
 | --- | --- |
 | high | >= 3 aligned signals AND timing `aligned` AND 0 conflicts |
-| medium | exactly 2 aligned signals AND timing not `misaligned` AND <= 1 conflict |
-| low | everything else (single signal, missing data, conflicts, timing misaligned or unknown) |
+| medium | (when not high) >= 2 aligned signals AND timing not `misaligned` AND <= 1 conflict |
+| low | everything else (single signal, conflicts > 1, timing misaligned) |
 
-Wording strength never raises confidence; only evidence does. Root cause is
+The label is **derived in code** from these inputs (`rubric.py`); the ranker
+agent cites evidence and judges timing but cannot choose the label, so
+wording strength never raises confidence; only evidence does. Root cause is
 never "confirmed" by this tool — the strongest claim is a high-confidence
 hypothesis.
 

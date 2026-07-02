@@ -14,7 +14,12 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
-from ai_incident_investigator.models.common import Confidence, SeverityLevel, Source
+from ai_incident_investigator.models.common import (
+    CheckResult,
+    Confidence,
+    SeverityLevel,
+    Source,
+)
 
 
 class ReportModel(BaseModel):
@@ -103,7 +108,7 @@ class MitigationOption(ReportModel):
 
 class SafetyCheck(ReportModel):
     check: str
-    result: Literal["pass", "warning", "blocked"]
+    result: CheckResult
     detail: str | None = None
 
 

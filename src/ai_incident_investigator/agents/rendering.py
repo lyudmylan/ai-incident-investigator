@@ -6,7 +6,15 @@ byte-stable for a given package so record/replay fixture keys stay stable.
 """
 
 from ai_incident_investigator.models.package import IncidentPackage, LogRecord, Span
-from ai_incident_investigator.models.report import IncidentWindow, TimelineEntry
+from ai_incident_investigator.models.report import (
+    EvidenceItem,
+    Hypothesis,
+    IncidentWindow,
+    MissingData,
+    SeverityAssessment,
+    Summary,
+    TimelineEntry,
+)
 
 MAX_LOG_RECORDS = 300
 MAX_TIMELINE_ENTRIES = 40
@@ -119,6 +127,67 @@ def render_runbook(package: IncidentPackage) -> str:
     if len(text) > MAX_RUNBOOK_CHARS:
         text = text[:MAX_RUNBOOK_CHARS] + "\n... (runbook truncated) ..."
     return f"RUNBOOK (verbatim)\n{text}"
+
+
+def render_evidence(evidence: list[EvidenceItem]) -> str:
+    if not evidence:
+        return "EVIDENCE: none collected"
+    lines = ["EVIDENCE (cite items by their exact id)"]
+    for item in evidence:
+        parts = [f"[{item.source.value}]"]
+        if item.service:
+            parts.append(f"service={item.service}")
+        if item.signal:
+            parts.append(f"signal={item.signal}")
+        if item.value is not None:
+            parts.append(f"value={item.value}")
+        if item.timestamp:
+            parts.append(f"at {item.timestamp.isoformat()}")
+        lines.append(f"- {item.id} {' '.join(parts)}: {item.interpretation}")
+    return "\n".join(lines)
+
+
+def render_missing_data(items: list[MissingData]) -> str:
+    if not items:
+        return "KNOWN DATA GAPS: none recorded"
+    lines = ["KNOWN DATA GAPS"]
+    lines.extend(f"- {item.description} (impact: {item.impact})" for item in items)
+    return "\n".join(lines)
+
+
+def render_assessment(summary: Summary | None, severity: SeverityAssessment | None) -> str:
+    lines = ["TRIAGE ASSESSMENT"]
+    if summary is None and severity is None:
+        return "TRIAGE ASSESSMENT: unavailable (triage did not run or failed)"
+    if severity is not None:
+        lines.append(
+            f"severity: {severity.level.value} (confidence {severity.confidence.value}) "
+            f"- {severity.explanation}"
+        )
+    if summary is not None:
+        lines.append(f"what happened: {summary.what_happened}")
+        lines.append(f"affected services: {', '.join(summary.affected_services) or 'unknown'}")
+        lines.append(f"customer impact: {summary.customer_impact}")
+    return "\n".join(lines)
+
+
+def render_hypotheses(hypotheses: list[Hypothesis]) -> str:
+    if not hypotheses:
+        return "HYPOTHESES: none produced"
+    blocks = ["RANKED HYPOTHESES (with code-derived confidence)"]
+    for hypothesis in hypotheses:
+        rubric = hypothesis.rubric
+        blocks.append(
+            f"- {hypothesis.id} [{hypothesis.confidence.value}] {hypothesis.title}\n"
+            f"  statement: {hypothesis.statement}\n"
+            f"  rubric: aligned_signals={rubric.aligned_signals} "
+            f"timing={rubric.timing_alignment} conflicts={rubric.conflicting_evidence_count}\n"
+            f"  supporting: {', '.join(hypothesis.supporting_evidence_ids) or '(none)'}\n"
+            f"  conflicting: {', '.join(hypothesis.conflicting_evidence_ids) or '(none)'}\n"
+            f"  assumptions: {'; '.join(hypothesis.assumptions) or '(none)'}\n"
+            f"  recommended checks: {'; '.join(hypothesis.recommended_checks) or '(none)'}"
+        )
+    return "\n".join(blocks)
 
 
 def render_timeline(timeline: list[TimelineEntry]) -> str:
