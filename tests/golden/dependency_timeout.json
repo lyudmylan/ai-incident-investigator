@@ -363,7 +363,36 @@
       "owner_role": "payments on-call"
     }
   ],
-  "recovery_verification": null,
+  "recovery_verification": {
+    "mode": "watch_for_recovery",
+    "signals": [
+      {
+        "service": "payments-service",
+        "signal": "error_rate_pct",
+        "baseline": 0.4,
+        "recovered_when": "within 10% of baseline 0.4 % for >= 3 consecutive points",
+        "watch_minutes": 100
+      },
+      {
+        "service": "payments-service",
+        "signal": "p95_latency_ms",
+        "baseline": 380.0,
+        "recovered_when": "within 10% of baseline 380 ms for >= 3 consecutive points",
+        "watch_minutes": 100
+      },
+      {
+        "service": "tax-api",
+        "signal": "p95_latency_ms",
+        "baseline": 150.0,
+        "recovered_when": "within 10% of baseline 150 ms for >= 3 consecutive points",
+        "watch_minutes": 100
+      }
+    ],
+    "log_patterns_should_stop": [
+      "Checkout failed for order N: tax quote unavailable (circuit open)"
+    ],
+    "re_alert_condition": "error_rate_pct on payments-service crosses the alert threshold 1 again"
+  },
   "safety_review": {
     "checks": [
       {
@@ -472,6 +501,11 @@
         "evidence_79c00ab62e",
         "evidence_9281b71649"
       ]
+    },
+    {
+      "stage": "recovery_builder",
+      "summary": "derived from 3 deviated series and 1 recurring error pattern(s); mode=watch_for_recovery per the incident window rule",
+      "input_ids": []
     },
     {
       "stage": "runbook_investigator",

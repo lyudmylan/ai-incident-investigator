@@ -311,7 +311,22 @@
       "owner_role": "messaging team on-call"
     }
   ],
-  "recovery_verification": null,
+  "recovery_verification": {
+    "mode": "confirm_sustained_recovery",
+    "signals": [
+      {
+        "service": "notifications-service",
+        "signal": "error_rate_pct",
+        "baseline": 0.2,
+        "recovered_when": "within 10% of baseline 0.2 % for >= 3 consecutive points",
+        "watch_minutes": 70
+      }
+    ],
+    "log_patterns_should_stop": [
+      "TemplateRenderError: unknown placeholder 'patient_name' in template welcome_vN"
+    ],
+    "re_alert_condition": "error_rate_pct on notifications-service crosses the alert threshold 2 again"
+  },
   "safety_review": {
     "checks": [
       {
@@ -418,6 +433,11 @@
         "evidence_2e97fc1ea6",
         "evidence_b060aa91f4"
       ]
+    },
+    {
+      "stage": "recovery_builder",
+      "summary": "derived from 1 deviated series and 1 recurring error pattern(s); mode=confirm_sustained_recovery per the incident window rule",
+      "input_ids": []
     },
     {
       "stage": "runbook_investigator",

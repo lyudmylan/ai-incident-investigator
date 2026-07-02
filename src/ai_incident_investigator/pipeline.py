@@ -28,6 +28,7 @@ from ai_incident_investigator.llm import (
 from ai_incident_investigator.loading import LoadedPackage
 from ai_incident_investigator.models.report import ReasoningStep
 from ai_incident_investigator.recommendations import BUILDER_NAME, make_recommendation_builder
+from ai_incident_investigator.recovery import make_recovery_builder
 from ai_incident_investigator.safety import make_safety_linter
 from ai_incident_investigator.state import InvestigationState, StateUpdate, apply_update
 from ai_incident_investigator.timeline import build_timeline
@@ -61,6 +62,9 @@ def run_investigation(
 ) -> InvestigationState:
     agents, skipped = build_investigators(llm, state)
     investigator_names = frozenset(agent.name for agent in agents)
+    # Deterministic, package-facts-only: runs alongside the investigators and
+    # cannot be affected by any LLM failure.
+    agents.append(make_recovery_builder())
     agents.append(make_ranker(llm, depends_on=investigator_names))
     agents.append(make_critic(llm, depends_on=frozenset({RANKER_NAME})))
     agents.append(make_recommendation_builder(depends_on=frozenset({CRITIC_NAME})))
