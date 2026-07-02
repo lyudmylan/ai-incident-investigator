@@ -29,10 +29,12 @@ ANTHROPIC_API_KEY=... uv run python -m ai_incident_investigator \
   --incident examples/incidents/latency_spike --llm live --output report.json
 ```
 
-Three example incidents ship with fixtures, so the replay demo works out of
+Four example incidents ship with fixtures, so the replay demo works out of
 the box: `latency_spike` (deploy-driven retry amplification), `error_rate_spike`
-(feature flag breaks template rendering; recovers in-window), and
-`dependency_timeout` (third-party API degradation, no internal change).
+(feature flag breaks template rendering; recovers in-window),
+`dependency_timeout` (third-party API degradation, no internal change), and
+`collected_demo` (the same booking scenario as gathered by the `collect`
+command below - byte-for-byte reproducible from the committed HTTP fixtures).
 
 ## Collecting packages from live sources (v2)
 

@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:52+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:52+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nMETRIC SERIES (each with pre-incident baseline)\n- service=booking-service signal=p95_latency_ms baseline=450.0 ms\n  2026-06-01T14:05:52+00:00  450.0 ms\n  2026-06-01T14:10:52+00:00  450.0 ms\n  2026-06-01T14:15:52+00:00  450.0 ms\n  2026-06-01T14:20:52+00:00  450.0 ms\n  2026-06-01T14:25:52+00:00  3200.0 ms\n  2026-06-01T14:30:52+00:00  3200.0 ms\n  2026-06-01T14:35:52+00:00  3200.0 ms\n  2026-06-01T14:40:52+00:00  3200.0 ms\n  2026-06-01T14:45:52+00:00  3200.0 ms\n  2026-06-01T14:50:52+00:00  3200.0 ms\n  2026-06-01T14:55:52+00:00  3200.0 ms\n  2026-06-01T15:00:52+00:00  3200.0 ms\n  2026-06-01T15:05:52+00:00  3200.0 ms\n- service=booking-service signal=error_rate_pct baseline=0.3 %\n  2026-06-01T14:05:52+00:00  0.3 %\n  2026-06-01T14:10:52+00:00  0.3 %\n  2026-06-01T14:15:52+00:00  0.3 %\n  2026-06-01T14:20:52+00:00  0.3 %\n  2026-06-01T14:25:52+00:00  4.8 %\n  2026-06-01T14:30:52+00:00  4.8 %\n  2026-06-01T14:35:52+00:00  4.8 %\n  2026-06-01T14:40:52+00:00  4.8 %\n  2026-06-01T14:45:52+00:00  4.8 %\n  2026-06-01T14:50:52+00:00  4.8 %\n  2026-06-01T14:55:52+00:00  4.8 %\n  2026-06-01T15:00:52+00:00  4.8 %\n  2026-06-01T15:05:52+00:00  4.8 %",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: metrics investigator.\nInput: metric series with pre-incident baselines, plus the incident window.\nThe documented deviation rule (docs/assumptions.md): a value is anomalous at\n>= 2x baseline or <= 0.5x baseline; with a zero baseline any nonzero value\nis anomalous.\n\nReport as findings, each tied to a concrete series and timestamp:\n- for each series that deviates: when it first crossed, how far it peaked\n  relative to baseline, and whether it recovered inside the window\n- ordering between deviating series (which moved first)\n- series that stayed at baseline - unaffected services are evidence too\n- suspicious shapes the rule misses (steady climb, step change, plateau)\nDo not speculate about causes in other sources; describe metric behavior.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"p95 latency first crossed 2x baseline at 14:30\",\"timestamp\":\"2026-06-01T14:30:00Z\",\"service\":\"booking-service\",\"signal\":\"p95_latency_ms\",\"value\":900.0},{\"interpretation\":\"notifications-service stayed at baseline throughout the window\",\"timestamp\":null,\"service\":\"notifications-service\",\"signal\":\"p95_latency_ms\",\"value\":null}],\"gaps\":[],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

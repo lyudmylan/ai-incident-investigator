@@ -111,15 +111,39 @@ def regenerate_http_fixtures() -> None:
     print(f"combined {len(list(combined.glob('*.json')))} HTTP fixtures -> {combined}")
 
 
+def regenerate_collected_example() -> None:
+    """Re-collect examples/incidents/collected_demo from the committed HTTP
+    fixtures - the package that proves collection determinism end-to-end."""
+    from ai_incident_investigator.collect import (
+        ReplayHTTPClient,
+        collect_package,
+        load_sources_config,
+    )
+    from ai_incident_investigator.collect.registry import build_sources
+    from sentry_stub import DEMO_ISSUE_ID
+
+    out = ROOT / "examples" / "incidents" / "collected_demo"
+    shutil.rmtree(out, ignore_errors=True)
+    config = load_sources_config(ROOT / "examples" / "collect" / "sources.toml")
+    http = ReplayHTTPClient(ROOT / "tests" / "fixtures" / "http" / "demo_collect")
+    alert_source, adapters = build_sources(config, http, DEMO_ISSUE_ID)
+    report = collect_package(alert_source, adapters, out, config.collection)
+    failed = [s.name for s in report.sources if s.status != "ok"]
+    if failed:
+        raise SystemExit(f"collected_demo regeneration had failed sources: {failed}")
+    print(f"collected example package -> {out}")
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     goldens_only = "--goldens-only" in sys.argv
     if "--http" in sys.argv:
         regenerate_http_fixtures()
         return
+    regenerate_http_fixtures()
+    regenerate_collected_example()
     for incident_id in args or sorted(SCRIPTED_INCIDENTS):
         regenerate(incident_id, goldens_only)
-    regenerate_http_fixtures()
 
 
 if __name__ == "__main__":

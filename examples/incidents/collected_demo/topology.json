@@ -1,0 +1,43 @@
+{
+  "services": [
+    {
+      "name": "booking-service",
+      "kind": "service",
+      "depends_on": [
+        "payment-service",
+        "appointments-db",
+        "booking-queue"
+      ]
+    },
+    {
+      "name": "payment-service",
+      "kind": "service",
+      "depends_on": [
+        "appointments-db",
+        "stripe-api"
+      ]
+    },
+    {
+      "name": "notifications-service",
+      "kind": "service",
+      "depends_on": [
+        "booking-queue"
+      ]
+    },
+    {
+      "name": "appointments-db",
+      "kind": "database",
+      "depends_on": []
+    },
+    {
+      "name": "booking-queue",
+      "kind": "queue",
+      "depends_on": []
+    },
+    {
+      "name": "stripe-api",
+      "kind": "third_party",
+      "depends_on": []
+    }
+  ]
+}
