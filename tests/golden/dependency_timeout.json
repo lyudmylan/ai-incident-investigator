@@ -326,7 +326,43 @@
       "requires_human_approval": true
     }
   ],
-  "remediation_plans": [],
+  "remediation_plans": [
+    {
+      "id": "plan_23b3650328",
+      "kind": "mitigation",
+      "title": "Consider enabling the cached_tax_rates fallback",
+      "hypothesis_id": "hypothesis_2f19983ba2",
+      "mitigation_id": "mitigation_be2aea3a83",
+      "preconditions": [
+        "finance sign-off for cached rates (documented, up to 24h staleness)",
+        "cached rates dataset is fresher than 24 hours"
+      ],
+      "steps": [
+        {
+          "kind": "read_only",
+          "action": "check the tax-api vendor status page and open a P1 with them",
+          "verification": "vendor case id recorded in the incident channel"
+        },
+        {
+          "kind": "state_changing",
+          "action": "enable the cached_tax_rates fallback flag",
+          "verification": "checkout error rate falls below 1% and p95 leaves the 5000ms timeout ceiling within 10 minutes",
+          "requires_human_approval": true
+        },
+        {
+          "kind": "state_changing",
+          "action": "reduce the tax-api client timeout to 1500ms",
+          "verification": "no new checkout failures attributable to the timeout",
+          "requires_human_approval": true
+        }
+      ],
+      "abort_conditions": [
+        "checkout error rate rises after the flag change",
+        "finance flags a rate-accuracy problem"
+      ],
+      "owner_role": "payments on-call"
+    }
+  ],
   "recovery_verification": null,
   "safety_review": {
     "checks": [
@@ -362,6 +398,16 @@
       },
       {
         "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "plans_reference_existing_items",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "state_changing_steps_verified_and_approved",
         "result": "pass",
         "detail": null
       },
@@ -478,8 +524,15 @@
       ]
     },
     {
+      "stage": "planner",
+      "summary": "structured the reviewed options into guided plans (1 plan(s), 2 state-changing step(s), all requiring approval)",
+      "input_ids": [
+        "plan_23b3650328"
+      ]
+    },
+    {
       "stage": "safety_linter",
-      "summary": "deterministic lint: 5 checks (total review: 0 blocked, 0 warning)",
+      "summary": "deterministic lint: 7 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
   ]

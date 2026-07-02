@@ -1,0 +1,158 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "PlanDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "abort_conditions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Abort Conditions",
+              "type": "array"
+            },
+            "hypothesis_id": {
+              "title": "Hypothesis Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "mitigation",
+                "rollback"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "mitigation_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mitigation Id"
+            },
+            "owner_role": {
+              "title": "Owner Role",
+              "type": "string"
+            },
+            "preconditions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Preconditions",
+              "type": "array"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/PlanStepDraft"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "title",
+            "hypothesis_id",
+            "mitigation_id",
+            "preconditions",
+            "steps",
+            "abort_conditions",
+            "owner_role"
+          ],
+          "title": "PlanDraft",
+          "type": "object"
+        },
+        "PlanStepDraft": {
+          "additionalProperties": false,
+          "description": "verification is a required key but nullable; the converter drops any\nplan whose state-changing step arrives without one (documented invariant).",
+          "properties": {
+            "action": {
+              "title": "Action",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "read_only",
+                "state_changing"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "verification": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verification"
+            }
+          },
+          "required": [
+            "kind",
+            "action",
+            "verification"
+          ],
+          "title": "PlanStepDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "plans": {
+          "items": {
+            "$ref": "#/$defs/PlanDraft"
+          },
+          "title": "Plans",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plans",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "PlannerResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:52+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:52+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nTRIAGE ASSESSMENT\nseverity: SEV-2 (confidence high) - error rate 4.8% and p95 latency 7x baseline on the booking flow\nwhat happened: Appointment booking latency and errors rose sharply.\naffected services: booking-service, payment-service, appointments-db\ncustomer impact: Patients experience slow or failed appointment booking.\n\nRANKED HYPOTHESES (with code-derived confidence)\n- hypothesis_314fcf61a4 [high] Deploy-driven eligibility retries saturating appointments-db\n  statement: The 14:20 booking-service deploy enabled payment eligibility enrichment whose slow queries and unbounded-looking retries saturated appointments-db, consistent with the latency and error escalation from 14:25.\n  rubric: aligned_signals=4 timing=aligned conflicts=0\n  supporting: evidence_3c8acc4730, evidence_209616c3b2, evidence_52ceb7a3c8, evidence_77e12ef58e\n  conflicting: (none)\n  assumptions: telemetry in the package is complete for the window\n  recommended checks: compare booking error rates before and after release 2026.06.01-1420; inspect payment eligibility retry bounds and backoff\n\nSAFE MITIGATION OPTIONS (cite by id when structuring into plans)\n- mitigation_d4c3eb7cd4: Consider disabling feature flag payment_enrichment - the runbook documents it as a verified safe fallback (risks: eligibility enrichment unavailable while disabled)\n\nEVIDENCE (cite items by their exact id)\n- evidence_3c8acc4730 [deploys] service=booking-service at 2026-06-01T14:20:00+00:00: booking-service deploy 2026.06.01-1420 landed 11 minutes before latency crossed 2x baseline; timing aligned\n- evidence_209616c3b2 [logs] service=booking-service at 2026-06-01T14:29:14+00:00: eligibility retries escalate to exhaustion starting 14:29\n- evidence_52ceb7a3c8 [metrics] service=booking-service signal=p95_latency_ms value=900.0 at 2026-06-01T14:30:00+00:00: p95 latency first crossed 2x baseline at 14:30\n- evidence_56f3a09f3e [metrics] service=notifications-service signal=p95_latency_ms: notifications-service stayed at baseline throughout the window\n- evidence_77e12ef58e [runbook] service=booking-service: runbook failure mode 'retry amplification after payment changes' matches observed retry warnings\n\nDEPLOYS AND CHANGES (chronological)\n- release_booking-service_2026.06.01-1420 deploy service=booking-service version=2026.06.01-1420 at 2026-06-01T14:20:00+00:00: Enable payment eligibility enrichment\n- deployment_booking-service_7001 deploy service=booking-service version=2026.06.01-1420 at 2026-06-01T14:20:30+00:00: deployment to production: automated deploy\n\nRUNBOOK (verbatim)\n# Runbook: appointment booking latency\n\n## Service overview\n\n`booking-service` handles appointment booking for the telemedicine platform.\nCritical path: `POST /book` -> payment eligibility check (`payment-service`)\n-> slot reservation (`appointments-db`). Bookings are patient-facing; treat\nsustained degradation as high urgency.\n\n## Known failure modes\n\n1. **appointments-db saturation.** Symptoms: db CPU > 85%, connection pool\n   near 100/100, slow `eligibility_query` / `reserve_slot` spans. Booking and\n   payment both degrade together because they share the database.\n2. **Retry amplification after payment changes.** The booking flow retries\n   eligibility lookups up to 5 times with no backoff. A slow eligibility path\n   multiplies load on `payment-service` and `appointments-db` roughly 5x.\n   Past incident: 2025-11-12 eligibility cache regression.\n3. **Queue backlog.** `booking-queue` depth above ~200 delays confirmation\n   processing; notifications are unaffected (separate consumer).\n\n## Checks\n\n- Compare booking-service error rate and latency before/after the most recent\n  release; correlate deploy time with symptom onset.\n- Inspect `appointments-db` connection pool and slow query log.\n- Check whether eligibility retries are bounded and whether they back off.\n\n## Safe mitigations (human approval required)\n\n- Disable feature flag `payment_enrichment` (safe: booking falls back to the\n  pre-enrichment eligibility path; verified in staging 2026-05-28).\n- Roll back the latest `booking-service` release.\n- Increase booking worker concurrency **only if** queue pressure remains high\n  after the database recovers; adding workers during db saturation makes the\n  saturation worse.\n\n## Escalation\n\n- Primary: booking team on-call. Secondary: platform on-call.\n- Page the data team if `appointments-db` CPU stays > 90% for 15 minutes.\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: remediation planner. You structure the reviewed mitigation options\ninto guided, human-approved plans - and produce a rollback checklist when\na deploy- or flag-correlated hypothesis exists.\n\nRules for every plan:\n- cite the hypothesis it addresses by exact id from RANKED HYPOTHESES, and\n  the mitigation option it structures by exact id when one exists\n- only structure options that are well-grounded in the runbook or evidence;\n  an empty plans list is correct when nothing qualifies\n- steps are ordered; each is read_only (observe) or state_changing. Every\n  state_changing step MUST carry verification: how a human confirms it\n  worked before continuing. If you cannot state a verification, do not\n  propose the step.\n- preconditions: what must already be true before starting, from observed\n  state or documented runbook constraints\n- abort_conditions: observable signals (from the EVIDENCE) that mean stop\n  and back out; at least one per plan\n- owner_role: who realistically drives this (e.g. \"on-call engineer\")\n\nRollback checklist (kind=rollback), when a deploy/flag hypothesis exists:\n- name the exact release version or flag from DEPLOYS AND CHANGES; never\n  guess a version\n- pre-checks first: does the release include data migrations or schema\n  changes (ask, as a read_only step, if unknown); flag interactions\n- the rollback itself is state_changing with verification; post-checks\n  confirm the symptom signals recover\n\nPlans are options for a human. Never present a plan or step as chosen,\nscheduled, in progress, or done.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"plans\":[{\"kind\":\"mitigation\",\"title\":\"Consider disabling the payment_enrichment feature flag\",\"hypothesis_id\":\"hypothesis_314fcf61a4\",\"mitigation_id\":\"mitigation_d4c3eb7cd4\",\"preconditions\":[\"staging fallback verification from 2026-05-28 still applies\"],\"steps\":[{\"kind\":\"read_only\",\"action\":\"confirm current payment_enrichment flag state and rollout scope\",\"verification\":\"flag console shows the expected current state\"},{\"kind\":\"state_changing\",\"action\":\"disable the payment_enrichment feature flag\",\"verification\":\"eligibility retry warnings stop within 5 minutes and booking p95 trends toward the 450ms baseline\"}],\"abort_conditions\":[\"booking error rate rises further within 10 minutes of the flag change\"],\"owner_role\":\"on-call engineer\"},{\"kind\":\"rollback\",\"title\":\"Rollback checklist for booking-service release 2026.06.01-1420\",\"hypothesis_id\":\"hypothesis_314fcf61a4\",\"mitigation_id\":null,\"preconditions\":[\"previous release 2026.05.28 artifacts still deployable\"],\"steps\":[{\"kind\":\"read_only\",\"action\":\"check whether release 2026.06.01-1420 shipped data migrations or schema changes\",\"verification\":\"release notes and migration directory reviewed\"},{\"kind\":\"state_changing\",\"action\":\"roll booking-service back to the previous release\",\"verification\":\"deployed version reports the previous release and appointments-db CPU falls below 60%\"}],\"abort_conditions\":[\"rollback pods crash-loop or error rate exceeds 10%\"],\"owner_role\":\"on-call engineer\"}],\"gaps\":[],\"reasoning\":\"structured the reviewed options into guided plans\"}"
+  }
+}

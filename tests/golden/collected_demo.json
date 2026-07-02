@@ -236,7 +236,62 @@
       "requires_human_approval": true
     }
   ],
-  "remediation_plans": [],
+  "remediation_plans": [
+    {
+      "id": "plan_830b92fa73",
+      "kind": "mitigation",
+      "title": "Consider disabling the payment_enrichment feature flag",
+      "hypothesis_id": "hypothesis_314fcf61a4",
+      "mitigation_id": "mitigation_d4c3eb7cd4",
+      "preconditions": [
+        "staging fallback verification from 2026-05-28 still applies"
+      ],
+      "steps": [
+        {
+          "kind": "read_only",
+          "action": "confirm current payment_enrichment flag state and rollout scope",
+          "verification": "flag console shows the expected current state"
+        },
+        {
+          "kind": "state_changing",
+          "action": "disable the payment_enrichment feature flag",
+          "verification": "eligibility retry warnings stop within 5 minutes and booking p95 trends toward the 450ms baseline",
+          "requires_human_approval": true
+        }
+      ],
+      "abort_conditions": [
+        "booking error rate rises further within 10 minutes of the flag change"
+      ],
+      "owner_role": "on-call engineer"
+    },
+    {
+      "id": "plan_8b001e4bc5",
+      "kind": "rollback",
+      "title": "Rollback checklist for booking-service release 2026.06.01-1420",
+      "hypothesis_id": "hypothesis_314fcf61a4",
+      "mitigation_id": null,
+      "preconditions": [
+        "previous release 2026.05.28 artifacts still deployable"
+      ],
+      "steps": [
+        {
+          "kind": "read_only",
+          "action": "check whether release 2026.06.01-1420 shipped data migrations or schema changes",
+          "verification": "release notes and migration directory reviewed"
+        },
+        {
+          "kind": "state_changing",
+          "action": "roll booking-service back to the previous release",
+          "verification": "deployed version reports the previous release and appointments-db CPU falls below 60%",
+          "requires_human_approval": true
+        }
+      ],
+      "abort_conditions": [
+        "rollback pods crash-loop or error rate exceeds 10%"
+      ],
+      "owner_role": "on-call engineer"
+    }
+  ],
   "recovery_verification": null,
   "safety_review": {
     "checks": [
@@ -272,6 +327,16 @@
       },
       {
         "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "plans_reference_existing_items",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "state_changing_steps_verified_and_approved",
         "result": "pass",
         "detail": null
       },
@@ -378,8 +443,16 @@
       ]
     },
     {
+      "stage": "planner",
+      "summary": "structured the reviewed options into guided plans (2 plan(s), 2 state-changing step(s), all requiring approval)",
+      "input_ids": [
+        "plan_830b92fa73",
+        "plan_8b001e4bc5"
+      ]
+    },
+    {
       "stage": "safety_linter",
-      "summary": "deterministic lint: 5 checks (total review: 0 blocked, 0 warning)",
+      "summary": "deterministic lint: 7 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
   ]

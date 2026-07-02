@@ -1,0 +1,158 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "PlanDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "abort_conditions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Abort Conditions",
+              "type": "array"
+            },
+            "hypothesis_id": {
+              "title": "Hypothesis Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "mitigation",
+                "rollback"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "mitigation_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mitigation Id"
+            },
+            "owner_role": {
+              "title": "Owner Role",
+              "type": "string"
+            },
+            "preconditions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Preconditions",
+              "type": "array"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/PlanStepDraft"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "title",
+            "hypothesis_id",
+            "mitigation_id",
+            "preconditions",
+            "steps",
+            "abort_conditions",
+            "owner_role"
+          ],
+          "title": "PlanDraft",
+          "type": "object"
+        },
+        "PlanStepDraft": {
+          "additionalProperties": false,
+          "description": "verification is a required key but nullable; the converter drops any\nplan whose state-changing step arrives without one (documented invariant).",
+          "properties": {
+            "action": {
+              "title": "Action",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "read_only",
+                "state_changing"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "verification": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verification"
+            }
+          },
+          "required": [
+            "kind",
+            "action",
+            "verification"
+          ],
+          "title": "PlanStepDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "plans": {
+          "items": {
+            "$ref": "#/$defs/PlanDraft"
+          },
+          "title": "Plans",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plans",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "PlannerResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-15T09:25:00+00:00\nend: 2026-06-15T10:25:00+00:00\nrule: alert.triggered_at (2026-06-15T09:55:00+00:00) minus 30m lookback; end = start of sustained recovery across all deviated series\n\nTRIAGE ASSESSMENT\nseverity: SEV-3 (confidence high) - send error rate peaked at 9.1% but notifications are retried from a dead-letter queue and are not on the booking critical path; latency stayed at baseline and the incident recovered within the window\nwhat happened: Notification sends began failing at 09:42 with template rendering errors; the error rate recovered after 10:20.\naffected services: notifications-service\ncustomer impact: Patient notifications were delayed (queued for retry); no booking functionality was affected.\n\nRANKED HYPOTHESES (with code-derived confidence)\n- hypothesis_89b86e30b8 [high] rich_templates flag enabled templates with unprovided placeholders\n  statement: Enabling rich_templates at 09:40 activated templates referencing placeholders the send context does not provide, failing renders fast; disabling the flag at 10:20 restored sends, consistent with the flag being the trigger.\n  rubric: aligned_signals=5 timing=aligned conflicts=0\n  supporting: evidence_2ca9bbe04b, evidence_852b8daaa4, evidence_48afad1f79, evidence_68d3f4ccfc, evidence_f89726647f\n  conflicting: (none)\n  assumptions: telemetry in the package is complete for the window\n  recommended checks: diff welcome_v2/reminder_v2 placeholders against the send context fields; confirm dead-letter retry drain completed without duplicate sends\n\nSAFE MITIGATION OPTIONS (cite by id when structuring into plans)\n- mitigation_c6d43f7ed2: Keep rich_templates disabled until template placeholders are reconciled with the send context - the flag flip is the aligned trigger; legacy path is healthy (risks: rich template features unavailable until fixed)\n- mitigation_cb90395a98: Drain the dead-letter queue in batches during business hours - runbook documents batch drain to avoid duplicate-send spikes (risks: notifications delivered late; duplicate sends if drained too fast)\n\nEVIDENCE (cite items by their exact id)\n- evidence_2ca9bbe04b [deploys] service=notifications-service at 2026-06-15T09:40:00+00:00: feature_flag rich_templates@on at 09:40 precedes first errors by ~2 minutes; flag@off at 10:20 precedes recovery by ~5 minutes - alignment in both directions\n- evidence_c343a6dab5 [deploys] service=notifications-service at 2026-06-13T11:05:00+00:00: the 06-13 deploy shipped the rendering engine dormant behind the flag, so the code change predates the incident but its activation does not\n- evidence_852b8daaa4 [logs] service=notifications-service at 2026-06-15T09:42:38+00:00: TemplateRenderError for placeholder 'patient_name' appears at 09:42:38, two minutes after the rich_templates flag was enabled at 09:40:12\n- evidence_bd6d4a8c6d [logs] service=notifications-service at 2026-06-15T10:20:05+00:00: flag disabled by on-call at 10:20:05; the next send batch at 10:24:41 succeeded on the legacy template path\n- evidence_48afad1f79 [metrics] service=notifications-service signal=error_rate_pct value=4.8 at 2026-06-15T09:45:00+00:00: error_rate_pct first crossed the 2x-baseline rule at 09:45 (0.2% -> 4.8%), peaked at 9.1%, and returned to baseline from 10:25\n- evidence_2e97fc1ea6 [metrics] service=notifications-service signal=p95_latency_ms: p95 latency stayed at baseline throughout - failures are fast, pointing away from a capacity or dependency problem\n- evidence_b060aa91f4 [metrics] service=email-gateway signal=error_rate_pct: email-gateway error rate stayed at baseline, ruling the gateway out\n- evidence_68d3f4ccfc [runbook] service=notifications-service: runbook failure mode 'template rendering errors after template or flag changes' matches: TemplateRenderError with flat latency\n- evidence_f89726647f [traces] service=notifications-service signal=duration_ms value=9.0 at 2026-06-15T09:58:42+00:00: failing sends error inside render_template in ~10ms; the email-gateway deliver span is absent from failing traces - failures never reach the gateway\n\nDEPLOYS AND CHANGES (chronological)\n- deploy_014 deploy service=notifications-service version=2026.06.13-1105 at 2026-06-13T11:05:00+00:00: Add rich template rendering engine (dormant behind rich_templates flag)\n- change_002 feature_flag service=notifications-service version=flags/rich_templates@on at 2026-06-15T09:40:00+00:00: Enable rich_templates: new placeholder-based template rendering for patient notifications\n- change_003 feature_flag service=notifications-service version=flags/rich_templates@off at 2026-06-15T10:20:00+00:00: Disable rich_templates (on-call rollback of cfg_774)\n\nRUNBOOK (verbatim)\n# Runbook: notification send failures\n\n## Service overview\n\n`notifications-service` renders and sends patient notifications (email) via\n`email-gateway`. Templates live in `template-store`. Notifications are not on\nthe booking critical path; failed sends are retried from a dead-letter queue,\nso patient impact is delayed rather than immediate.\n\n## Known failure modes\n\n1. **Template rendering errors after template or flag changes.** Symptoms:\n   `TemplateRenderError` in logs, error rate up while latency stays flat\n   (failures are fast). Almost always caused by templates referencing\n   placeholders the calling context does not provide.\n2. **email-gateway throttling.** Symptoms: elevated latency AND errors,\n   gateway acceptance rate below 99%, `429` responses in logs.\n3. **Dead-letter queue overflow.** Above ~50k queued messages, retry drain\n   can delay notifications by hours.\n\n## Checks\n\n- Correlate error onset with the most recent template, flag, or config\n  change; compare failing template names against the change.\n- Check email-gateway acceptance rate to rule the gateway in or out.\n- Check dead-letter queue depth and drain rate after recovery.\n\n## Safe mitigations (human approval required)\n\n- Disable the `rich_templates` feature flag (verified safe fallback: sends\n  use the legacy template path).\n- Re-drain the dead-letter queue during business hours only, in batches,\n  to avoid duplicate-send spikes.\n\n## Escalation\n\n- Primary: messaging team on-call. Gateway issues: escalate to vendor\n  support with acceptance-rate graphs attached.\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: remediation planner. You structure the reviewed mitigation options\ninto guided, human-approved plans - and produce a rollback checklist when\na deploy- or flag-correlated hypothesis exists.\n\nRules for every plan:\n- cite the hypothesis it addresses by exact id from RANKED HYPOTHESES, and\n  the mitigation option it structures by exact id when one exists\n- only structure options that are well-grounded in the runbook or evidence;\n  an empty plans list is correct when nothing qualifies\n- steps are ordered; each is read_only (observe) or state_changing. Every\n  state_changing step MUST carry verification: how a human confirms it\n  worked before continuing. If you cannot state a verification, do not\n  propose the step.\n- preconditions: what must already be true before starting, from observed\n  state or documented runbook constraints\n- abort_conditions: observable signals (from the EVIDENCE) that mean stop\n  and back out; at least one per plan\n- owner_role: who realistically drives this (e.g. \"on-call engineer\")\n\nRollback checklist (kind=rollback), when a deploy/flag hypothesis exists:\n- name the exact release version or flag from DEPLOYS AND CHANGES; never\n  guess a version\n- pre-checks first: does the release include data migrations or schema\n  changes (ask, as a read_only step, if unknown); flag interactions\n- the rollback itself is state_changing with verification; post-checks\n  confirm the symptom signals recover\n\nPlans are options for a human. Never present a plan or step as chosen,\nscheduled, in progress, or done.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"plans\":[{\"kind\":\"mitigation\",\"title\":\"Consider a guarded re-enable process for rich_templates\",\"hypothesis_id\":\"hypothesis_89b86e30b8\",\"mitigation_id\":\"mitigation_c6d43f7ed2\",\"preconditions\":[\"operator flag revert at 10:20 is holding (error rate at baseline)\"],\"steps\":[{\"kind\":\"read_only\",\"action\":\"diff template placeholders against send-context fields\",\"verification\":\"every placeholder resolves against the context schema\"},{\"kind\":\"state_changing\",\"action\":\"drain the dead-letter queue in business-hours batches\",\"verification\":\"queue depth decreases batch by batch with no duplicate-send reports\"}],\"abort_conditions\":[\"duplicate notifications reported during the drain\"],\"owner_role\":\"messaging team on-call\"}],\"gaps\":[],\"reasoning\":\"structured the reviewed options into guided plans\"}"
+  }
+}

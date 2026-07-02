@@ -98,6 +98,41 @@ def lint_state(state: InvestigationState) -> list[SafetyCheck]:
         )
     )
 
+    hypothesis_ids = {h.id for h in state.hypotheses}
+    mitigation_ids = {m.id for m in state.safe_mitigation_options}
+    dangling_plans = [
+        f"{plan.id} -> {plan.hypothesis_id}"
+        for plan in state.remediation_plans
+        if plan.hypothesis_id not in hypothesis_ids
+    ]
+    dangling_plans += [
+        f"{plan.id} -> {plan.mitigation_id}"
+        for plan in state.remediation_plans
+        if plan.mitigation_id is not None and plan.mitigation_id not in mitigation_ids
+    ]
+    checks.append(
+        SafetyCheck(
+            check="plans_reference_existing_items",
+            result="blocked" if dangling_plans else "pass",
+            detail=f"dangling: {', '.join(dangling_plans)}" if dangling_plans else None,
+        )
+    )
+
+    unverified_steps = [
+        f"{plan.id}: {step.action!r}"
+        for plan in state.remediation_plans
+        for step in plan.steps
+        if step.kind == "state_changing"
+        and (not step.verification or step.requires_human_approval is not True)
+    ]
+    checks.append(
+        SafetyCheck(
+            check="state_changing_steps_verified_and_approved",
+            result="blocked" if unverified_steps else "pass",
+            detail="; ".join(unverified_steps) if unverified_steps else None,
+        )
+    )
+
     unapproved = [
         option.id
         for option in state.safe_mitigation_options
