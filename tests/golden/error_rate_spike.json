@@ -282,6 +282,8 @@
       "requires_human_approval": true
     }
   ],
+  "remediation_plans": [],
+  "recovery_verification": null,
   "safety_review": {
     "checks": [
       {
@@ -333,7 +335,10 @@
     "notes": null
   },
   "communication_drafts": {
-    "internal_update": "SEV-3, recovered: notification sends failed at up to 9% between 09:42 and 10:20 due to template rendering errors after the rich_templates flag was enabled; on-call disabled the flag and sends recovered. 1,204 notifications are queued for retry. No remediation beyond the already-performed operator flag revert has been executed; queue-drain options await human approval."
+    "internal_update": "SEV-3, recovered: notification sends failed at up to 9% between 09:42 and 10:20 due to template rendering errors after the rich_templates flag was enabled; on-call disabled the flag and sends recovered. 1,204 notifications are queued for retry. No remediation beyond the already-performed operator flag revert has been executed; queue-drain options await human approval.",
+    "jira_ticket": null,
+    "slack_update": null,
+    "status_page": null
   },
   "postmortem_draft": {
     "title": "Postmortem draft: notification send failures 2026-06-15",

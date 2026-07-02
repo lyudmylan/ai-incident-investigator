@@ -236,6 +236,8 @@
       "requires_human_approval": true
     }
   ],
+  "remediation_plans": [],
+  "recovery_verification": null,
   "safety_review": {
     "checks": [
       {
@@ -287,7 +289,10 @@
     "notes": null
   },
   "communication_drafts": {
-    "internal_update": "SEV-2: appointment booking degraded. No remediation has been executed; mitigation options await human approval."
+    "internal_update": "SEV-2: appointment booking degraded. No remediation has been executed; mitigation options await human approval.",
+    "jira_ticket": null,
+    "slack_update": null,
+    "status_page": null
   },
   "postmortem_draft": {
     "title": "Postmortem draft: booking latency 2026-06-01",

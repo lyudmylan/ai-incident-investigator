@@ -5,7 +5,37 @@ Section order mirrors how an on-call engineer reads: what/how bad first,
 then why we think so, then what to do about it, then the paper trail.
 """
 
-from ai_incident_investigator.models.report import Hypothesis, InvestigationReport
+from ai_incident_investigator.models.report import (
+    Hypothesis,
+    InvestigationReport,
+    RemediationPlan,
+)
+
+
+def _plan_block(plan: RemediationPlan) -> str:
+    lines = [
+        f"### {plan.title} ({plan.kind})",
+        "",
+        "> **Human approval required before any step of this plan is acted on.**",
+        "",
+        f"- addresses hypothesis: `{plan.hypothesis_id}`"
+        + (f", mitigation `{plan.mitigation_id}`" if plan.mitigation_id else ""),
+        f"- suggested owner: {plan.owner_role}",
+    ]
+    if plan.preconditions:
+        lines.append("- preconditions: " + "; ".join(plan.preconditions))
+    lines.append("")
+    for number, step in enumerate(plan.steps, start=1):
+        if step.kind == "state_changing":
+            lines.append(f"{number}. **[STATE-CHANGING - approval required]** {step.action}")
+            lines.append(f"   - verify: {step.verification}")
+        else:
+            lines.append(f"{number}. [read-only] {step.action}")
+            if step.verification:
+                lines.append(f"   - verify: {step.verification}")
+    lines.append("")
+    lines.append("**Abort if:** " + "; ".join(plan.abort_conditions))
+    return "\n".join(lines)
 
 
 def _hypothesis_block(hypothesis: Hypothesis, rank: int) -> str:
@@ -79,6 +109,34 @@ def render_markdown(report: InvestigationReport) -> str:
                 lines.append(f"  - risks: {'; '.join(option.risks)}")
         sections.append("## Safe mitigation options\n\n" + "\n".join(lines))
 
+    if report.remediation_plans:
+        blocks = [_plan_block(plan) for plan in report.remediation_plans]
+        sections.append("## Remediation plans (guided, human-approved)\n\n" + "\n\n".join(blocks))
+
+    if report.recovery_verification is not None:
+        verification = report.recovery_verification
+        mode_text = (
+            "confirm the observed recovery is sustained"
+            if verification.mode == "confirm_sustained_recovery"
+            else "watch for recovery"
+        )
+        lines = [f"Mode: {mode_text}.", ""]
+        for signal in verification.signals:
+            lines.append(
+                f"- `{signal.service}` / `{signal.signal}` (baseline {signal.baseline}): "
+                f"{signal.recovered_when} - watch for {signal.watch_minutes} minutes"
+            )
+        if verification.log_patterns_should_stop:
+            lines.append("")
+            lines.append(
+                "Log patterns that should stop appearing: "
+                + "; ".join(f"`{p}`" for p in verification.log_patterns_should_stop)
+            )
+        if verification.re_alert_condition:
+            lines.append("")
+            lines.append(f"Re-alert if: {verification.re_alert_condition}")
+        sections.append("## Recovery verification plan\n\n" + "\n".join(lines))
+
     non_pass = [c for c in report.safety_review.checks if c.result != "pass"]
     review_lines = [
         f"- [{check.result}] **{check.check}**" + (f": {check.detail}" if check.detail else "")
@@ -93,6 +151,24 @@ def render_markdown(report: InvestigationReport) -> str:
         sections.append("## Missing data\n\n" + "\n".join(lines))
 
     sections.append("## Internal update draft\n\n" + report.communication_drafts.internal_update)
+
+    drafts = report.communication_drafts
+    if drafts.jira_ticket is not None:
+        ticket = drafts.jira_ticket
+        sections.append(
+            "## Jira ticket draft\n\n"
+            f"**Summary:** {ticket.summary}\n\n"
+            f"**Priority suggestion:** {ticket.priority_suggestion}"
+            + (f" — labels: {', '.join(ticket.labels)}" if ticket.labels else "")
+            + f"\n\n{ticket.description}"
+        )
+    if drafts.slack_update is not None:
+        sections.append("## Slack update draft\n\n" + drafts.slack_update.text)
+    if drafts.status_page is not None:
+        sections.append(
+            "## Status-page draft (customer-safe)\n\n"
+            f"**Phase:** {drafts.status_page.phase}\n\n{drafts.status_page.text}"
+        )
 
     postmortem = report.postmortem_draft
     postmortem_lines = [

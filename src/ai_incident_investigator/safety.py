@@ -48,6 +48,12 @@ def _recommendation_texts(state: InvestigationState) -> list[tuple[str, str]]:
         (f"mitigation {option.id} action", option.action)
         for option in state.safe_mitigation_options
     )
+    for plan in state.remediation_plans:
+        texts.append((f"plan {plan.id} title", plan.title))
+        texts.extend((f"plan {plan.id} step", step.action) for step in plan.steps)
+        texts.extend(
+            (f"plan {plan.id} precondition", condition) for condition in plan.preconditions
+        )
     return texts
 
 

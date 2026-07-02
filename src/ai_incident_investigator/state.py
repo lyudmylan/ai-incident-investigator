@@ -25,6 +25,8 @@ from ai_incident_investigator.models.report import (
     NextStep,
     PostmortemDraft,
     ReasoningStep,
+    RecoveryVerificationPlan,
+    RemediationPlan,
     SafetyReview,
     SeverityAssessment,
     Summary,
@@ -53,11 +55,13 @@ class InvestigationState(BaseModel):
     hypotheses: list[Hypothesis] = Field(default_factory=list)
     recommended_next_steps: list[NextStep] = Field(default_factory=list)
     safe_mitigation_options: list[MitigationOption] = Field(default_factory=list)
+    remediation_plans: list[RemediationPlan] = Field(default_factory=list)
     reasoning_trace: list[ReasoningStep] = Field(default_factory=list)
     failures: list[AgentFailure] = Field(default_factory=list)
 
     summary: Summary | None = None
     severity: SeverityAssessment | None = None
+    recovery_verification: RecoveryVerificationPlan | None = None
     safety_review: SafetyReview | None = None
     communication_drafts: CommunicationDrafts | None = None
     postmortem_draft: PostmortemDraft | None = None
@@ -73,10 +77,12 @@ class StateUpdate(BaseModel):
     hypotheses: list[Hypothesis] = Field(default_factory=list)
     recommended_next_steps: list[NextStep] = Field(default_factory=list)
     safe_mitigation_options: list[MitigationOption] = Field(default_factory=list)
+    remediation_plans: list[RemediationPlan] = Field(default_factory=list)
     reasoning_trace: list[ReasoningStep] = Field(default_factory=list)
 
     summary: Summary | None = None
     severity: SeverityAssessment | None = None
+    recovery_verification: RecoveryVerificationPlan | None = None
     safety_review: SafetyReview | None = None
     communication_drafts: CommunicationDrafts | None = None
     postmortem_draft: PostmortemDraft | None = None

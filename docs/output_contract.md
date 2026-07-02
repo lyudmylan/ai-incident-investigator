@@ -18,6 +18,39 @@ confidence label carries the rubric inputs that justify it
         "internal_update": {
           "title": "Internal Update",
           "type": "string"
+        },
+        "jira_ticket": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JiraTicketDraft"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "slack_update": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SlackUpdateDraft"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "status_page": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatusPageDraft"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -241,6 +274,38 @@ confidence label carries the rubric inputs that justify it
       "title": "IncidentWindow",
       "type": "object"
     },
+    "JiraTicketDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "priority_suggestion": {
+          "description": "mapped from severity per docs/assumptions.md",
+          "title": "Priority Suggestion",
+          "type": "string"
+        },
+        "labels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "description",
+        "priority_suggestion"
+      ],
+      "title": "JiraTicketDraft",
+      "type": "object"
+    },
     "MissingData": {
       "additionalProperties": false,
       "properties": {
@@ -383,6 +448,40 @@ confidence label carries the rubric inputs that justify it
       "title": "PostmortemDraft",
       "type": "object"
     },
+    "ReadOnlyStep": {
+      "additionalProperties": false,
+      "description": "A plan step that observes without changing anything.",
+      "properties": {
+        "kind": {
+          "const": "read_only",
+          "title": "Kind",
+          "type": "string"
+        },
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "verification": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "what confirms this check told you what you needed",
+          "title": "Verification"
+        }
+      },
+      "required": [
+        "kind",
+        "action"
+      ],
+      "title": "ReadOnlyStep",
+      "type": "object"
+    },
     "ReasoningStep": {
       "additionalProperties": false,
       "description": "One entry of the reasoning trace: why a stage concluded what it did.",
@@ -411,6 +510,146 @@ confidence label carries the rubric inputs that justify it
         "summary"
       ],
       "title": "ReasoningStep",
+      "type": "object"
+    },
+    "RecoveryVerificationPlan": {
+      "additionalProperties": false,
+      "description": "What to watch to call the incident recovered (docs/assumptions.md rules).",
+      "properties": {
+        "mode": {
+          "enum": [
+            "watch_for_recovery",
+            "confirm_sustained_recovery"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "signals": {
+          "items": {
+            "$ref": "#/$defs/WatchedSignal"
+          },
+          "title": "Signals",
+          "type": "array"
+        },
+        "log_patterns_should_stop": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Log Patterns Should Stop",
+          "type": "array"
+        },
+        "re_alert_condition": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Re Alert Condition"
+        }
+      },
+      "required": [
+        "mode",
+        "signals"
+      ],
+      "title": "RecoveryVerificationPlan",
+      "type": "object"
+    },
+    "RemediationPlan": {
+      "additionalProperties": false,
+      "description": "A guided, human-approved plan (docs/assumptions.md, plan invariants).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "mitigation",
+            "rollback"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "hypothesis_id": {
+          "description": "the hypothesis this plan addresses; must exist",
+          "title": "Hypothesis Id",
+          "type": "string"
+        },
+        "mitigation_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the mitigation option this plan structures, when one exists",
+          "title": "Mitigation Id"
+        },
+        "preconditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Preconditions",
+          "type": "array"
+        },
+        "steps": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "read_only": "#/$defs/ReadOnlyStep",
+                "state_changing": "#/$defs/StateChangingStep"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ReadOnlyStep"
+              },
+              {
+                "$ref": "#/$defs/StateChangingStep"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        },
+        "abort_conditions": {
+          "description": "mandatory: when to stop and back out",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Abort Conditions",
+          "type": "array"
+        },
+        "owner_role": {
+          "description": "who should drive this, e.g. 'on-call engineer'",
+          "title": "Owner Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "hypothesis_id",
+        "steps",
+        "abort_conditions",
+        "owner_role"
+      ],
+      "title": "RemediationPlan",
       "type": "object"
     },
     "SafetyCheck": {
@@ -512,6 +751,20 @@ confidence label carries the rubric inputs that justify it
       "title": "SeverityLevel",
       "type": "string"
     },
+    "SlackUpdateDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "SlackUpdateDraft",
+      "type": "object"
+    },
     "Source": {
       "description": "Where a piece of information originated inside the incident package.",
       "enum": [
@@ -525,6 +778,65 @@ confidence label carries the rubric inputs that justify it
       ],
       "title": "Source",
       "type": "string"
+    },
+    "StateChangingStep": {
+      "additionalProperties": false,
+      "description": "A plan step that changes system state - never pre-approved, always verified.",
+      "properties": {
+        "kind": {
+          "const": "state_changing",
+          "title": "Kind",
+          "type": "string"
+        },
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "verification": {
+          "description": "required: how a human confirms this step worked before continuing",
+          "title": "Verification",
+          "type": "string"
+        },
+        "requires_human_approval": {
+          "const": true,
+          "default": true,
+          "description": "schema-enforced: a state change can never be pre-approved",
+          "title": "Requires Human Approval",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "action",
+        "verification"
+      ],
+      "title": "StateChangingStep",
+      "type": "object"
+    },
+    "StatusPageDraft": {
+      "additionalProperties": false,
+      "description": "Customer-facing: held to the customer-safe wording rules (lintable).",
+      "properties": {
+        "phase": {
+          "enum": [
+            "investigating",
+            "identified",
+            "monitoring"
+          ],
+          "title": "Phase",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "phase",
+        "text"
+      ],
+      "title": "StatusPageDraft",
+      "type": "object"
     },
     "Summary": {
       "additionalProperties": false,
@@ -597,6 +909,41 @@ confidence label carries the rubric inputs that justify it
       ],
       "title": "TimelineEntry",
       "type": "object"
+    },
+    "WatchedSignal": {
+      "additionalProperties": false,
+      "properties": {
+        "service": {
+          "title": "Service",
+          "type": "string"
+        },
+        "signal": {
+          "title": "Signal",
+          "type": "string"
+        },
+        "baseline": {
+          "title": "Baseline",
+          "type": "number"
+        },
+        "recovered_when": {
+          "description": "the documented recovery rule, spelled out",
+          "title": "Recovered When",
+          "type": "string"
+        },
+        "watch_minutes": {
+          "title": "Watch Minutes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "service",
+        "signal",
+        "baseline",
+        "recovered_when",
+        "watch_minutes"
+      ],
+      "title": "WatchedSignal",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -653,6 +1000,25 @@ confidence label carries the rubric inputs that justify it
       "title": "Safe Mitigation Options",
       "type": "array"
     },
+    "remediation_plans": {
+      "items": {
+        "$ref": "#/$defs/RemediationPlan"
+      },
+      "title": "Remediation Plans",
+      "type": "array"
+    },
+    "recovery_verification": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecoveryVerificationPlan"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "None when no metrics were available to derive it from"
+    },
     "safety_review": {
       "$ref": "#/$defs/SafetyReview"
     },
@@ -680,6 +1046,7 @@ confidence label carries the rubric inputs that justify it
     "missing_data",
     "recommended_next_steps",
     "safe_mitigation_options",
+    "remediation_plans",
     "safety_review",
     "communication_drafts",
     "postmortem_draft",

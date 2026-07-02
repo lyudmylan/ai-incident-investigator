@@ -86,6 +86,43 @@ wording strength never raises confidence; only evidence does. Root cause is
 never "confirmed" by this tool — the strongest claim is a high-confidence
 hypothesis.
 
+## Remediation plan invariants (v3)
+
+Plans are guidance for a human, never an execution script. Enforced
+structurally and by the deterministic linter:
+
+- Every **state-changing** step carries `requires_human_approval: true`
+  (schema-enforced, like mitigation options) and a **required** verification
+  describing how a human confirms it worked before continuing.
+- `abort_conditions` is mandatory and non-empty: a plan must say when to
+  stop and back out.
+- A plan must reference an existing hypothesis; a rollback plan should
+  reference the deploy-correlated one.
+- Plans use option language ("consider", "if approved"); executed-action
+  phrasing is linted.
+- An empty plan list is valid when nothing is well-grounded.
+
+## Customer-safe wording rules (status-page draft, v3)
+
+The status-page draft is the only customer-facing text the tool produces.
+Rules (lintable; the deterministic linter and the safety critic both check):
+
+- **No internal service names** - checkable mechanically against the
+  topology's service list.
+- **No speculation or hypothesis language**: no "we believe", "likely
+  caused by", "appears to be" - customers get established facts and impact.
+- **No root-cause claims** during the incident; root cause belongs to the
+  postmortem after human review.
+- No blame (vendors included), no employee names, no internal tooling names.
+- Plain impact-and-status language: what users experience, what state the
+  incident is in (investigating / identified / monitoring), where updates
+  will appear.
+
+## Jira priority mapping (v3)
+
+Suggested priority is a documented mapping, not a judgment call:
+SEV-1 -> Highest, SEV-2 -> High, SEV-3 -> Medium, SEV-4 -> Low.
+
 ## Safety assumptions
 
 - The tool investigates and recommends; it never executes. No rollback,
