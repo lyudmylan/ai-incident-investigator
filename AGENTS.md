@@ -21,6 +21,14 @@ uv run python -m ai_incident_investigator.contracts   # regenerate contract docs
 from the Pydantic models; a test fails CI if they drift. After changing any
 model, regenerate them in the same PR.
 
+Record LLM fixtures for an example incident (the only step needing an API key;
+CI and tests replay from `tests/fixtures/llm/<incident-id>/`):
+
+```
+ANTHROPIC_API_KEY=... uv run python -m ai_incident_investigator \
+  --incident examples/incidents/latency_spike --llm record
+```
+
 All four checks must pass locally before pushing.
 
 ## Workflow

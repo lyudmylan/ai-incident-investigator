@@ -16,7 +16,6 @@ import tempfile
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
-import anthropic
 from pydantic import BaseModel, ConfigDict, Field
 
 DEFAULT_MODEL = "claude-opus-4-8"
@@ -78,9 +77,17 @@ _OK_STOP_REASONS = ("end_turn", "stop_sequence")
 
 
 class AnthropicClient:
-    """Live Claude API client (thin adapter over the official SDK)."""
+    """Live Claude API client (thin adapter over the official SDK).
+
+    The SDK import is deliberately deferred to construction: replay mode and
+    the test suite must work without the SDK being importable at all (it is
+    a live-mode-only dependency, and importing it costs startup time).
+    """
 
     def __init__(self) -> None:
+        import anthropic
+
+        self._anthropic = anthropic
         self._client = anthropic.Anthropic()
 
     def complete(self, request: LLMRequest) -> LLMResponse:
@@ -99,7 +106,7 @@ class AnthropicClient:
 
         try:
             message = self._client.messages.create(**kwargs)
-        except anthropic.APIError as exc:
+        except self._anthropic.APIError as exc:
             raise LLMError(f"Claude API call failed: {exc}") from exc
 
         # Anything but a clean finish is an error: refusal, max_tokens

@@ -2,8 +2,11 @@
 
 Exit codes: 0 success, 1 investigation failure, 2 usage error.
 
-Until the agentic pipeline lands (epics #4-#7), a run produces the
-deterministic facts only: incident window, timeline, and missing data.
+--llm off (default) emits the deterministic facts only. The other modes run
+the investigator agents: live (Claude API), record (live + save fixtures),
+replay (serve saved fixtures; no network, no keys). Individual agent
+failures degrade the report and are visible in missing_data/failures;
+they do not fail the run.
 """
 
 import argparse
@@ -12,11 +15,18 @@ import sys
 from collections.abc import Sequence
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 from ai_incident_investigator import __version__
 from ai_incident_investigator.loading import PackageLoadError, load_package
-from ai_incident_investigator.timeline import build_timeline
-from ai_incident_investigator.window import DEFAULT_LOOKBACK, incident_window
+from ai_incident_investigator.pipeline import (
+    DEFAULT_FIXTURES_ROOT,
+    initial_state,
+    make_client,
+    run_investigation,
+)
+from ai_incident_investigator.state import InvestigationState
+from ai_incident_investigator.window import DEFAULT_LOOKBACK
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,8 +46,41 @@ def build_parser() -> argparse.ArgumentParser:
         default=int(DEFAULT_LOOKBACK.total_seconds() // 60),
         help="incident window lookback before the alert trigger (docs/assumptions.md)",
     )
+    parser.add_argument(
+        "--llm",
+        choices=["off", "live", "record", "replay"],
+        default="off",
+        help="off: deterministic facts only; live: Claude API; "
+        "record: live + save fixtures; replay: saved fixtures, no network",
+    )
+    parser.add_argument(
+        "--fixtures-dir",
+        type=Path,
+        default=None,
+        help="fixture directory for record/replay "
+        f"(default: {DEFAULT_FIXTURES_ROOT}/<incident-id>)",
+    )
     parser.add_argument("--version", action="version", version=__version__)
     return parser
+
+
+def _facts(state: InvestigationState) -> dict[str, Any]:
+    return {
+        "incident_id": state.package.incident_id,
+        "incident_window": state.window.model_dump(mode="json"),
+        "timeline": [entry.model_dump(mode="json") for entry in state.timeline],
+        "missing_data": [item.model_dump(mode="json") for item in state.missing_data],
+    }
+
+
+def _investigation(state: InvestigationState) -> dict[str, Any]:
+    return {
+        "summary": state.summary.model_dump(mode="json") if state.summary else None,
+        "severity": state.severity.model_dump(mode="json") if state.severity else None,
+        "evidence": [item.model_dump(mode="json") for item in state.evidence],
+        "reasoning_trace": [step.model_dump(mode="json") for step in state.reasoning_trace],
+        "agent_failures": [failure.model_dump(mode="json") for failure in state.failures],
+    }
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -52,20 +95,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
-    window = incident_window(loaded.package, timedelta(minutes=args.lookback_minutes))
-    timeline = build_timeline(loaded.package)
+    state = initial_state(loaded, timedelta(minutes=args.lookback_minutes))
+    output = _facts(state)
 
-    facts = {
-        "incident_id": loaded.package.incident_id,
-        "incident_window": window.model_dump(mode="json"),
-        "timeline": [entry.model_dump(mode="json") for entry in timeline],
-        "missing_data": [item.model_dump(mode="json") for item in loaded.missing_data],
-        "note": (
-            "Deterministic facts only; the agentic investigation report "
-            "is not implemented yet (see the v1 milestone)."
-        ),
-    }
-    print(json.dumps(facts, indent=2))
+    if args.llm == "off":
+        output["note"] = (
+            "Deterministic facts only; run with --llm live|record|replay "
+            "to include the agentic investigation."
+        )
+    else:
+        fixtures_dir = args.fixtures_dir or DEFAULT_FIXTURES_ROOT / state.package.incident_id
+        try:
+            client = make_client(args.llm, fixtures_dir)
+        except Exception as exc:
+            print(f"error: could not create the LLM client: {exc}", file=sys.stderr)
+            return 1
+        state = run_investigation(state, client)
+        output = _facts(state)  # missing_data may have grown during investigation
+        output.update(_investigation(state))
+        output["note"] = (
+            "Partial investigation: hypotheses, safety review, and drafts arrive with epics #6-#7."
+        )
+
+    print(json.dumps(output, indent=2))
     return 0
 
 

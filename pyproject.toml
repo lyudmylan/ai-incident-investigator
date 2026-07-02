@@ -46,3 +46,6 @@ files = ["src", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# Import the package from src/ directly: test collection must not depend on
+# the editable-install .pth hook, which has proven flaky on macOS venvs.
+pythonpath = ["src"]
