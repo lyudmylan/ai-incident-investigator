@@ -78,6 +78,10 @@ def _investigation(state: InvestigationState) -> dict[str, Any]:
         "summary": state.summary.model_dump(mode="json") if state.summary else None,
         "severity": state.severity.model_dump(mode="json") if state.severity else None,
         "evidence": [item.model_dump(mode="json") for item in state.evidence],
+        "hypotheses": [h.model_dump(mode="json") for h in state.hypotheses],
+        "safety_review": state.safety_review.model_dump(mode="json")
+        if state.safety_review
+        else None,
         "reasoning_trace": [step.model_dump(mode="json") for step in state.reasoning_trace],
         "agent_failures": [failure.model_dump(mode="json") for failure in state.failures],
     }
@@ -114,7 +118,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         output = _facts(state)  # missing_data may have grown during investigation
         output.update(_investigation(state))
         output["note"] = (
-            "Partial investigation: hypotheses, safety review, and drafts arrive with epics #6-#7."
+            "Partial investigation: next steps, mitigation options, and drafts arrive with epic #7."
         )
 
     print(json.dumps(output, indent=2))

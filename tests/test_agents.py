@@ -7,8 +7,11 @@ from ai_incident_investigator.agents import build_investigators
 from ai_incident_investigator.agents.base import make_investigator
 from ai_incident_investigator.agents.investigators import SOURCE_SPECS
 from ai_incident_investigator.agents.responses import (
+    CriticCheck,
+    CriticResponse,
     Finding,
     InvestigatorResponse,
+    RankerResponse,
     TriageResponse,
 )
 from ai_incident_investigator.agents.triage import make_triage
@@ -80,6 +83,17 @@ def _state() -> InvestigationState:
 def _default_script() -> dict[str, str | Exception]:
     return {
         "Role: triage": TRIAGE_JSON,
+        # Synthesis agents (epic #6): benign defaults so full-graph runs succeed;
+        # ranker/critic behavior has its own tests in test_ranker_critic_safety.py.
+        "Role: hypothesis ranker": RankerResponse(
+            hypotheses=[], gaps=[], reasoning="no combination assessed in this scripted run"
+        ).model_dump_json(),
+        "Role: safety critic": CriticResponse(
+            checks=[CriticCheck(check="overconfidence", result="pass", detail=None)],
+            notes=None,
+            gaps=[],
+            reasoning="reviewed scripted output",
+        ).model_dump_json(),
         "Role: metrics investigator": _investigator_json(
             _finding(
                 "p95 latency first crossed 2x baseline at 14:30",
