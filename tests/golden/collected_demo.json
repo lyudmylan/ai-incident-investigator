@@ -1,0 +1,381 @@
+{
+  "incident_id": "collected_demo",
+  "summary": {
+    "what_happened": "Appointment booking latency and errors rose sharply.",
+    "affected_services": [
+      "booking-service",
+      "payment-service",
+      "appointments-db"
+    ],
+    "customer_impact": "Patients experience slow or failed appointment booking.",
+    "incident_window": {
+      "start": "2026-06-01T14:05:52Z",
+      "end": null,
+      "rule": "alert.triggered_at (2026-06-01T14:35:52+00:00) minus 30m lookback; deviated series not recovered -> ongoing"
+    }
+  },
+  "severity": {
+    "level": "SEV-2",
+    "explanation": "error rate 4.8% and p95 latency 7x baseline on the booking flow",
+    "confidence": "high"
+  },
+  "timeline": [
+    {
+      "id": "timeline_9c6adeed26",
+      "timestamp": "2026-06-01T14:20:00Z",
+      "source": "deploys",
+      "service": "booking-service",
+      "description": "deploy 2026.06.01-1420 on booking-service: Enable payment eligibility enrichment"
+    },
+    {
+      "id": "timeline_742b38f8ed",
+      "timestamp": "2026-06-01T14:20:30Z",
+      "source": "deploys",
+      "service": "booking-service",
+      "description": "deploy 2026.06.01-1420 on booking-service: deployment to production: automated deploy"
+    },
+    {
+      "id": "timeline_2caf023011",
+      "timestamp": "2026-06-01T14:25:52Z",
+      "source": "metrics",
+      "service": "booking-service",
+      "description": "error_rate_pct first deviated >=2.0x from baseline (0.3 % -> 4.8 %)"
+    },
+    {
+      "id": "timeline_d7d22350fc",
+      "timestamp": "2026-06-01T14:25:52Z",
+      "source": "metrics",
+      "service": "booking-service",
+      "description": "p95_latency_ms first deviated >=2.0x from baseline (450.0 ms -> 3200.0 ms)"
+    },
+    {
+      "id": "timeline_b2187522f2",
+      "timestamp": "2026-06-01T14:27:39Z",
+      "source": "logs",
+      "service": "payment-service",
+      "description": "WARN: warning: slow eligibility enrichment 1210ms"
+    },
+    {
+      "id": "timeline_84562dba3b",
+      "timestamp": "2026-06-01T14:29:14Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "WARN: WARN retrying eligibility lookup (attempt 2 of 5)"
+    },
+    {
+      "id": "timeline_b0ec4ddd54",
+      "timestamp": "2026-06-01T14:31:08Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "ERROR: ERROR eligibility lookup timed out after 2000ms"
+    },
+    {
+      "id": "timeline_96b0772a63",
+      "timestamp": "2026-06-01T14:33:21Z",
+      "source": "logs",
+      "service": "payment-service",
+      "description": "ERROR: eligibility enrichment query timed out"
+    },
+    {
+      "id": "timeline_811f4da4ed",
+      "timestamp": "2026-06-01T14:35:44Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "WARN: [retry] eligibility lookup retry (attempt 4 of 5)"
+    },
+    {
+      "id": "timeline_a5a685b04d",
+      "timestamp": "2026-06-01T14:35:50Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "FATAL: giving up after 5 attempts"
+    },
+    {
+      "id": "timeline_d9ec4cad64",
+      "timestamp": "2026-06-01T14:35:52Z",
+      "source": "alert",
+      "service": "booking-service",
+      "description": "Alert fired: EligibilityTimeout: eligibility lookup timed out after 2000ms"
+    },
+    {
+      "id": "timeline_fa6b7f2186",
+      "timestamp": "2026-06-01T14:35:52Z",
+      "source": "logs",
+      "service": "booking-service",
+      "description": "ERROR: EligibilityTimeout: eligibility lookup timed out after 2000ms"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_3c8acc4730",
+      "source": "deploys",
+      "interpretation": "booking-service deploy 2026.06.01-1420 landed 11 minutes before latency crossed 2x baseline; timing aligned",
+      "timestamp": "2026-06-01T14:20:00Z",
+      "service": "booking-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_209616c3b2",
+      "source": "logs",
+      "interpretation": "eligibility retries escalate to exhaustion starting 14:29",
+      "timestamp": "2026-06-01T14:29:14Z",
+      "service": "booking-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_52ceb7a3c8",
+      "source": "metrics",
+      "interpretation": "p95 latency first crossed 2x baseline at 14:30",
+      "timestamp": "2026-06-01T14:30:00Z",
+      "service": "booking-service",
+      "signal": "p95_latency_ms",
+      "value": 900.0
+    },
+    {
+      "id": "evidence_56f3a09f3e",
+      "source": "metrics",
+      "interpretation": "notifications-service stayed at baseline throughout the window",
+      "timestamp": null,
+      "service": "notifications-service",
+      "signal": "p95_latency_ms",
+      "value": null
+    },
+    {
+      "id": "evidence_77e12ef58e",
+      "source": "runbook",
+      "interpretation": "runbook failure mode 'retry amplification after payment changes' matches observed retry warnings",
+      "timestamp": null,
+      "service": "booking-service",
+      "signal": null,
+      "value": null
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hypothesis_314fcf61a4",
+      "title": "Deploy-driven eligibility retries saturating appointments-db",
+      "statement": "The 14:20 booking-service deploy enabled payment eligibility enrichment whose slow queries and unbounded-looking retries saturated appointments-db, consistent with the latency and error escalation from 14:25.",
+      "confidence": "high",
+      "rubric": {
+        "aligned_signals": 4,
+        "timing_alignment": "aligned",
+        "conflicting_evidence_count": 0
+      },
+      "supporting_evidence_ids": [
+        "evidence_3c8acc4730",
+        "evidence_209616c3b2",
+        "evidence_52ceb7a3c8",
+        "evidence_77e12ef58e"
+      ],
+      "conflicting_evidence_ids": [],
+      "assumptions": [
+        "telemetry in the package is complete for the window"
+      ],
+      "recommended_checks": [
+        "compare booking error rates before and after release 2026.06.01-1420",
+        "inspect payment eligibility retry bounds and backoff"
+      ]
+    }
+  ],
+  "missing_data": [
+    {
+      "id": "missing_4e3a18b794",
+      "description": "traces.json not provided",
+      "impact": "cannot identify slow spans or failing dependencies"
+    },
+    {
+      "id": "missing_0034287bba",
+      "description": "runbook_investigator: runbook does not cover queue consumer scaling",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    }
+  ],
+  "recommended_next_steps": [
+    {
+      "id": "next_step_3cab0921f5",
+      "description": "compare booking error rates before and after release 2026.06.01-1420",
+      "source_hypothesis_ids": [
+        "hypothesis_314fcf61a4"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_5de3bc61b8",
+      "description": "inspect payment eligibility retry bounds and backoff",
+      "source_hypothesis_ids": [
+        "hypothesis_314fcf61a4"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_52f265f8f2",
+      "description": "Provide or repair the package data: traces.json not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_4e3a18b794"
+      ]
+    },
+    {
+      "id": "next_step_e401e2f72a",
+      "description": "Investigate open question: runbook_investigator: runbook does not cover queue consumer scaling",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_0034287bba"
+      ]
+    }
+  ],
+  "safe_mitigation_options": [
+    {
+      "id": "mitigation_d4c3eb7cd4",
+      "action": "Consider disabling feature flag payment_enrichment",
+      "rationale": "the runbook documents it as a verified safe fallback",
+      "risks": [
+        "eligibility enrichment unavailable while disabled"
+      ],
+      "requires_human_approval": true
+    }
+  ],
+  "safety_review": {
+    "checks": [
+      {
+        "check": "overconfidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "evidence_grounding",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "action_safety",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "uncertainty",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "hypotheses_cite_resolvable_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "no_hypothesis_without_supporting_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "mitigations_require_human_approval",
+        "result": "pass",
+        "detail": "1 mitigation option(s) checked"
+      },
+      {
+        "check": "no_executed_action_phrasing",
+        "result": "pass",
+        "detail": null
+      }
+    ],
+    "notes": null
+  },
+  "communication_drafts": {
+    "internal_update": "SEV-2: appointment booking degraded. No remediation has been executed; mitigation options await human approval."
+  },
+  "postmortem_draft": {
+    "title": "Postmortem draft: booking latency 2026-06-01",
+    "summary": "Booking latency and errors rose after a deploy.",
+    "impact": "p95 rose 450ms to 3200ms; errors 0.3% to 4.8%.",
+    "contributing_factors": [
+      "likely: deploy-driven retry amplification"
+    ],
+    "open_questions": [
+      "whether retries are bounded"
+    ],
+    "action_items": [
+      "compare error rates before and after the deploy"
+    ]
+  },
+  "reasoning_trace": [
+    {
+      "stage": "trace_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "deploy_correlation",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_3c8acc4730"
+      ]
+    },
+    {
+      "stage": "logs_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_209616c3b2"
+      ]
+    },
+    {
+      "stage": "metrics_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_52ceb7a3c8",
+        "evidence_56f3a09f3e"
+      ]
+    },
+    {
+      "stage": "runbook_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_77e12ef58e"
+      ]
+    },
+    {
+      "stage": "triage",
+      "summary": "applied documented severity rules to observed impact",
+      "input_ids": []
+    },
+    {
+      "stage": "hypothesis_ranker",
+      "summary": "combined aligned findings across sources | timing: 'Deploy-driven eligibility retries saturating appointments-db': deploy 14:20 precedes first metric deviation 14:25",
+      "input_ids": [
+        "hypothesis_314fcf61a4"
+      ]
+    },
+    {
+      "stage": "safety_critic",
+      "summary": "statements stay within what the cited evidence shows (4 checks, 0 non-pass)",
+      "input_ids": []
+    },
+    {
+      "stage": "recommendation_builder",
+      "summary": "aggregated 4 next steps deterministically (2 from hypothesis checks, 2 from missing data)",
+      "input_ids": [
+        "next_step_3cab0921f5",
+        "next_step_5de3bc61b8",
+        "next_step_52f265f8f2",
+        "next_step_e401e2f72a"
+      ]
+    },
+    {
+      "stage": "reporter",
+      "summary": "drafted from reviewed investigation output (1 mitigation option(s) proposed)",
+      "input_ids": [
+        "mitigation_d4c3eb7cd4"
+      ]
+    },
+    {
+      "stage": "safety_linter",
+      "summary": "deterministic lint: 5 checks (total review: 0 blocked, 0 warning)",
+      "input_ids": []
+    }
+  ]
+}

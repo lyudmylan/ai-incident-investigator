@@ -1,0 +1,53 @@
+{
+  "package_dir": "collected_demo",
+  "sources": [
+    {
+      "name": "sentry",
+      "status": "ok",
+      "files": [
+        "alert.json"
+      ],
+      "detail": null
+    },
+    {
+      "name": "prometheus",
+      "status": "ok",
+      "files": [
+        "metrics.json"
+      ],
+      "detail": null
+    },
+    {
+      "name": "loki",
+      "status": "ok",
+      "files": [
+        "logs.jsonl"
+      ],
+      "detail": null
+    },
+    {
+      "name": "github",
+      "status": "ok",
+      "files": [
+        "deploys.json"
+      ],
+      "detail": "acme/booking-service: 1 draft/unpublished release(s) skipped"
+    },
+    {
+      "name": "runbook",
+      "status": "ok",
+      "files": [
+        "runbook.md"
+      ],
+      "detail": null
+    },
+    {
+      "name": "topology",
+      "status": "ok",
+      "files": [
+        "topology.json"
+      ],
+      "detail": null
+    }
+  ]
+}

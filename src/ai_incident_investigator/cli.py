@@ -266,7 +266,7 @@ def _collect_main(argv: Sequence[str]) -> int:
         if status.detail:
             line += f" ({status.detail})"
         print(line, file=sys.stderr)
-    print(f"collected package: {report.package_dir}", file=sys.stderr)
+    print(f"collected package: {args.output}", file=sys.stderr)
 
     if not args.then_investigate:
         print(report.model_dump_json(indent=2))

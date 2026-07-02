@@ -1,0 +1,20 @@
+{
+  "deploys": [
+    {
+      "id": "release_booking-service_2026.06.01-1420",
+      "service": "booking-service",
+      "version": "2026.06.01-1420",
+      "deployed_at": "2026-06-01T14:20:00Z",
+      "change_type": "deploy",
+      "description": "Enable payment eligibility enrichment"
+    },
+    {
+      "id": "deployment_booking-service_7001",
+      "service": "booking-service",
+      "version": "2026.06.01-1420",
+      "deployed_at": "2026-06-01T14:20:30Z",
+      "change_type": "deploy",
+      "description": "deployment to production: automated deploy"
+    }
+  ]
+}

@@ -412,12 +412,21 @@ def dependency_timeout_script() -> dict[str, ScriptEntry]:
     }
 
 
+def collected_demo_script() -> dict[str, ScriptEntry]:
+    """The collected_demo example is the booking scenario as gathered by the
+    collect CLI from the stub sources (no traces source exists in v2), so the
+    latency_spike responses fit; the trace-investigator entry simply goes
+    unused because that investigator is skipped for this package."""
+    return latency_spike_script()
+
+
 ScriptFactory = Callable[[], dict[str, ScriptEntry]]
 
 SCRIPTED_INCIDENTS: dict[str, ScriptFactory] = {
     "latency_spike": latency_spike_script,
     "error_rate_spike": error_rate_spike_script,
     "dependency_timeout": dependency_timeout_script,
+    "collected_demo": collected_demo_script,
 }
 
 

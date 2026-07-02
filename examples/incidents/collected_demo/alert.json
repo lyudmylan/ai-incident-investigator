@@ -1,0 +1,11 @@
+{
+  "id": "sentry_9101",
+  "title": "EligibilityTimeout: eligibility lookup timed out after 2000ms",
+  "service": "booking-service",
+  "triggered_at": "2026-06-01T14:35:52Z",
+  "severity": "error",
+  "description": "eligibility lookup timed out | culprit: booking.eligibility.check_eligibility | https://sentry.stub.local/organizations/acme/issues/9101/",
+  "signal": null,
+  "threshold": null,
+  "observed_value": null
+}

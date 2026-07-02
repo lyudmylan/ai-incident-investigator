@@ -1,0 +1,9 @@
+{"timestamp":"2026-06-01T14:20:05Z","service":"booking-service","level":"INFO","message":"INFO deployment 2026.06.01-1420 rolled out"}
+{"timestamp":"2026-06-01T14:27:39Z","service":"payment-service","level":"WARN","message":"warning: slow eligibility enrichment 1210ms"}
+{"timestamp":"2026-06-01T14:29:14Z","service":"booking-service","level":"WARN","message":"WARN retrying eligibility lookup (attempt 2 of 5)"}
+{"timestamp":"2026-06-01T14:31:08Z","service":"booking-service","level":"ERROR","message":"ERROR eligibility lookup timed out after 2000ms"}
+{"timestamp":"2026-06-01T14:33:21Z","service":"payment-service","level":"ERROR","message":"eligibility enrichment query timed out"}
+{"timestamp":"2026-06-01T14:35:40Z","service":"booking-service","level":"INFO","message":"[query] eligibility lookup started for booking 84163"}
+{"timestamp":"2026-06-01T14:35:44Z","service":"booking-service","level":"WARN","message":"[retry] eligibility lookup retry (attempt 4 of 5)"}
+{"timestamp":"2026-06-01T14:35:50Z","service":"booking-service","level":"FATAL","message":"giving up after 5 attempts"}
+{"timestamp":"2026-06-01T14:35:52Z","service":"booking-service","level":"ERROR","message":"EligibilityTimeout: eligibility lookup timed out after 2000ms"}
