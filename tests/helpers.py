@@ -8,7 +8,9 @@ from ai_incident_investigator.agents.responses import (
     CriticResponse,
     Finding,
     InvestigatorResponse,
+    MitigationDraft,
     RankerResponse,
+    ReporterResponse,
     TriageResponse,
 )
 from ai_incident_investigator.ids import stable_id
@@ -90,6 +92,27 @@ def default_script() -> dict[str, str | Exception]:
             notes=None,
             gaps=[],
             reasoning="reviewed scripted output",
+        ).model_dump_json(),
+        "Role: reporter": ReporterResponse(
+            mitigation_options=[
+                MitigationDraft(
+                    action="Consider disabling feature flag payment_enrichment",
+                    rationale="the runbook documents it as a verified safe fallback",
+                    risks=["eligibility enrichment unavailable while disabled"],
+                )
+            ],
+            internal_update=(
+                "SEV-2: appointment booking degraded. No remediation has been "
+                "executed; mitigation options await human approval."
+            ),
+            postmortem_title="Postmortem draft: booking latency 2026-06-01",
+            postmortem_summary="Booking latency and errors rose after a deploy.",
+            postmortem_impact="p95 rose 450ms to 3200ms; errors 0.3% to 4.8%.",
+            contributing_factors=["likely: deploy-driven retry amplification"],
+            open_questions=["whether retries are bounded"],
+            action_items=["compare error rates before and after the deploy"],
+            gaps=[],
+            reasoning="drafted from reviewed investigation output",
         ).model_dump_json(),
         "Role: metrics investigator": investigator_json(
             make_finding(

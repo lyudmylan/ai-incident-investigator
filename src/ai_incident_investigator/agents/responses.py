@@ -72,6 +72,29 @@ class RankerResponse(ResponseModel):
     reasoning: str
 
 
+class MitigationDraft(ResponseModel):
+    """A mitigation to CONSIDER; approval is enforced by the contract, not here."""
+
+    action: str
+    rationale: str
+    risks: list[str]
+
+
+class ReporterResponse(ResponseModel):
+    """Mitigation options plus the two drafts, in one grounded call."""
+
+    mitigation_options: list[MitigationDraft]
+    internal_update: str
+    postmortem_title: str
+    postmortem_summary: str
+    postmortem_impact: str
+    contributing_factors: list[str]
+    open_questions: list[str]
+    action_items: list[str]
+    gaps: list[str]
+    reasoning: str
+
+
 class CriticCheck(ResponseModel):
     check: str
     result: CheckResult
