@@ -137,6 +137,17 @@ class ReplayHTTPClient:
         return HTTPResponse.model_validate(data["response"])
 
 
+def make_http_client(mode: str, fixtures_dir: Path | None) -> HTTPClient:
+    """CLI helper: live network, or record/replay against a fixtures dir."""
+    if mode == "live":
+        return LiveHTTPClient()
+    if fixtures_dir is None:
+        raise HTTPClientError(f"--http {mode} requires --http-fixtures-dir")
+    if mode == "replay":
+        return ReplayHTTPClient(fixtures_dir)
+    return RecordingHTTPClient(LiveHTTPClient(), fixtures_dir)
+
+
 class RecordingHTTPClient:
     """Wraps a client and saves a replayable fixture per request (atomically).
 

@@ -34,6 +34,34 @@ the box: `latency_spike` (deploy-driven retry amplification), `error_rate_spike`
 (feature flag breaks template rendering; recovers in-window), and
 `dependency_timeout` (third-party API degradation, no internal change).
 
+## Collecting packages from live sources (v2)
+
+Instead of hand-authoring a package, `collect` gathers one from read-only
+sources — a Sentry-like issue (the anchor), Prometheus-like metrics,
+Loki-like logs, GitHub releases/deployments, and configured runbooks — and
+writes an ordinary package directory (the snapshot doubles as preserved
+incident evidence). Configure endpoints in a `sources.toml`
+(`examples/collect/sources.toml` is a template); credentials are read-only
+tokens referenced by env var name, never values in config.
+
+```sh
+# Offline demo against committed HTTP fixtures - no credentials:
+uv run python -m ai_incident_investigator collect \
+  --sources examples/collect/sources.toml --issue 9101 \
+  --output /tmp/collected-incident \
+  --http replay --http-fixtures-dir tests/fixtures/http/demo_collect \
+  --then-investigate --format markdown
+
+# Real use: point sources.toml at your services, export the *_env tokens,
+# then the same command with --http live (and --llm live for the report).
+```
+
+Collection degrades per source (a down source becomes a gap the
+investigation reports) and fails outright only when the alert anchor is
+unusable. Adapters can only GET — writes are structurally impossible
+(`docs/architecture.md`, collection layer; mappings in
+`docs/collection_sources.md`).
+
 ## How it works
 
 ```

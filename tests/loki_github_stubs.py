@@ -4,6 +4,7 @@ The demo scenario continues latency_spike as those systems would report it,
 anchored on the Sentry demo event time.
 """
 
+import base64
 import json
 from datetime import datetime
 
@@ -107,6 +108,9 @@ class LokiStubHTTP:
         return HTTPResponse(status=200, body=json.dumps(payload))
 
 
+RUNBOOK_REMOTE_TEXT = "# Runbook: booking latency (remote copy)\n\nSee checks below.\n"
+
+
 class GitHubStubHTTP:
     def __init__(self) -> None:
         self.calls: list[tuple[HTTPRequest, EnvBearerAuth | None]] = []
@@ -117,4 +121,10 @@ class GitHubStubHTTP:
             return HTTPResponse(status=200, body=json.dumps(RELEASES_PAYLOAD))
         if request.url.endswith("/repos/acme/booking-service/deployments"):
             return HTTPResponse(status=200, body=json.dumps(DEPLOYMENTS_PAYLOAD))
+        if request.url.endswith("/repos/acme/runbooks/contents/booking.md"):
+            payload = {
+                "content": base64.b64encode(RUNBOOK_REMOTE_TEXT.encode()).decode(),
+                "encoding": "base64",
+            }
+            return HTTPResponse(status=200, body=json.dumps(payload))
         return HTTPResponse(status=404, body=f"no stub route for {request.url}")

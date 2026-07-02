@@ -1,0 +1,63 @@
+# Demo collection config: points every adapter at the local test stubs, so
+#   collect --http replay --http-fixtures-dir tests/fixtures/http/demo_collect
+# works offline with no credentials. For real use, swap base_urls for your
+# services and set the *_env variables to your read-only tokens (never paste
+# token values here - the loader rejects them).
+
+[collection]
+services = ["booking-service"]
+lookback_minutes = 30
+change_lookback_days = 7
+
+[sentry]
+base_url = "https://sentry.stub.local/api/0"
+service_tag = "service"
+# token_env = "SENTRY_TOKEN"          # read-only issue scope
+
+[prometheus]
+base_url = "https://prom.stub.local"
+step_seconds = 300
+post_minutes = 30
+# token_env = "PROM_TOKEN"
+
+[[prometheus.queries]]
+service = "booking-service"
+signal = "p95_latency_ms"
+query = 'p95_latency_ms{service="booking-service"}'
+unit = "ms"
+
+[[prometheus.queries]]
+service = "booking-service"
+signal = "error_rate_pct"
+query = 'error_rate_pct{service="booking-service"}'
+unit = "%"
+
+[loki]
+base_url = "https://loki.stub.local"
+limit = 500
+# token_env = "LOKI_TOKEN"
+
+[[loki.streams]]
+service = "booking-service"
+selector = '{app="booking-service"}'
+
+[[loki.streams]]
+service = "payment-service"
+selector = '{app="payment-service"}'
+
+[github]
+base_url = "https://github.stub.local/api/v3"
+# token_env = "GITHUB_TOKEN"          # fine-grained PAT, Contents: read-only
+
+[[github.repos]]
+repo = "acme/booking-service"
+service = "booking-service"
+environment = "production"
+
+[runbook]
+[[runbook.documents]]
+service = "booking-service"
+file = "../incidents/latency_spike/runbook.md"
+
+[topology]
+file = "../incidents/latency_spike/topology.json"

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "params": {
+      "environment": "production",
+      "per_page": "50"
+    },
+    "url": "https://github.stub.local/api/v3/repos/acme/booking-service/deployments"
+  },
+  "response": {
+    "body": "[{\"id\": 7001, \"ref\": \"2026.06.01-1420\", \"sha\": \"abc123def456\", \"environment\": \"production\", \"created_at\": \"2026-06-01T14:20:30Z\", \"description\": \"automated deploy\"}]",
+    "status": 200
+  }
+}

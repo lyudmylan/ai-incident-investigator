@@ -99,6 +99,17 @@ def regenerate_http_fixtures() -> None:
     ).collect(demo_collection_context())
     print(f"recorded {len(list(github_dir.glob('*.json')))} HTTP fixtures -> {github_dir}")
 
+    # Combined dir: every demo fixture in one place, so the CLI's single
+    # --http-fixtures-dir can replay a full multi-source collection
+    # (README demo and the #22 end-to-end goldens).
+    combined = http_root / "demo_collect"
+    shutil.rmtree(combined, ignore_errors=True)
+    combined.mkdir(parents=True)
+    for source_dir in (sentry_dir, prom_dir, loki_dir, github_dir):
+        for fixture in source_dir.glob("*.json"):
+            shutil.copy(fixture, combined / fixture.name)
+    print(f"combined {len(list(combined.glob('*.json')))} HTTP fixtures -> {combined}")
+
 
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
