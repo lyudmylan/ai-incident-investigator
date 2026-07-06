@@ -129,6 +129,63 @@ class AnthropicClient:
         )
 
 
+# $ per million tokens (input, output), prefix-matched on the model name.
+# Update from https://docs.claude.com/en/docs/about-claude/pricing when it
+# drifts; an unknown model simply gets no cost estimate, never a wrong one.
+PRICING_PER_MTOK = {
+    "claude-opus-4-8": (15.0, 75.0),
+    "claude-sonnet-5": (3.0, 15.0),
+    "claude-haiku-4-5": (1.0, 5.0),
+}
+
+
+def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float | None:
+    for prefix, (price_in, price_out) in PRICING_PER_MTOK.items():
+        if model.startswith(prefix):
+            return input_tokens / 1e6 * price_in + output_tokens / 1e6 * price_out
+    return None
+
+
+class UsageTracker:
+    """Wraps any client and sums the usage its responses report.
+
+    Purely observational - requests pass through untouched. Responses that
+    report no usage (scripted fakes, fixtures recorded before usage was
+    captured) are counted separately so totals are never silently partial.
+    """
+
+    def __init__(self, inner: LLMClient) -> None:
+        self._inner = inner
+        self.calls = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
+        self.unmeasured_calls = 0
+        self.model = ""
+
+    def complete(self, request: LLMRequest) -> LLMResponse:
+        response = self._inner.complete(request)
+        self.calls += 1
+        self.model = response.model
+        if response.input_tokens or response.output_tokens:
+            self.input_tokens += response.input_tokens
+            self.output_tokens += response.output_tokens
+        else:
+            self.unmeasured_calls += 1
+        return response
+
+    def summary(self) -> str:
+        line = (
+            f"llm usage: {self.calls} calls, {self.input_tokens:,} input + "
+            f"{self.output_tokens:,} output tokens"
+        )
+        cost = estimate_cost(self.model, self.input_tokens, self.output_tokens)
+        if cost is not None:
+            line += f" (~${cost:.2f})"
+        if self.unmeasured_calls:
+            line += f"; {self.unmeasured_calls} call(s) reported no usage"
+        return line
+
+
 class ReplayClient:
     """Serves recorded fixtures keyed by request content. Never calls the network."""
 
