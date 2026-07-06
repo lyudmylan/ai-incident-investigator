@@ -28,33 +28,47 @@ PRICING = {
 THINKING_ALLOWANCE = 5  # real output incl. adaptive thinking vs scripted sizes
 
 
-def estimate(example: Path) -> tuple[int, int, int]:
-    calls, tokens_in, tokens_out = 0, 0, 0
+def estimate(example: Path) -> tuple[int, int, int, int]:
+    """(calls, input, output, measured_calls); recorded usage beats the heuristic."""
+    calls, tokens_in, tokens_out, measured = 0, 0, 0, 0
     for fixture in sorted(example.glob("*.json")):
         data = json.loads(fixture.read_text())
         request, response = data["request"], data["response"]
+        calls += 1
+        recorded_in = response.get("input_tokens", 0)
+        recorded_out = response.get("output_tokens", 0)
+        if recorded_in or recorded_out:
+            tokens_in += recorded_in
+            tokens_out += recorded_out
+            measured += 1
+            continue
         chars = len(request.get("system", "")) + sum(len(m["content"]) for m in request["messages"])
         if request.get("json_schema"):
             chars += len(json.dumps(request["json_schema"]))
         tokens_in += chars // 4
         tokens_out += len(response["text"]) // 4
-        calls += 1
-    return calls, tokens_in, tokens_out
+    return calls, tokens_in, tokens_out, measured
 
 
 def main() -> None:
     names = sys.argv[1:] or sorted(p.name for p in FIXTURES.iterdir() if p.is_dir())
-    total_in = total_out = 0
+    total_in = total_measured_out = total_estimated_out = 0
     for name in names:
-        calls, tokens_in, tokens_out = estimate(FIXTURES / name)
+        calls, tokens_in, tokens_out, measured = estimate(FIXTURES / name)
         total_in += tokens_in
-        total_out += tokens_out
-        print(f"{name}: {calls} calls, ~{tokens_in:,} in, ~{tokens_out:,} out (scripted sizes)")
+        label = f"{measured}/{calls} measured" if measured else "scripted sizes"
+        if measured == calls:
+            total_measured_out += tokens_out
+        else:
+            total_estimated_out += tokens_out
+        print(f"{name}: {calls} calls, ~{tokens_in:,} in, ~{tokens_out:,} out ({label})")
 
-    projected_out = total_out * THINKING_ALLOWANCE
+    # the thinking allowance applies only to heuristic estimates; recorded
+    # usage already includes thinking tokens
+    projected_out = total_measured_out + total_estimated_out * THINKING_ALLOWANCE
     print(
         f"\nTotal: ~{total_in:,} input tokens; projected live output incl. "
-        f"thinking ~{projected_out:,} ({THINKING_ALLOWANCE}x allowance)"
+        f"thinking ~{projected_out:,} ({THINKING_ALLOWANCE}x allowance on estimated calls)"
     )
     for model, (price_in, price_out) in PRICING.items():
         cost = total_in / 1e6 * price_in + projected_out / 1e6 * price_out

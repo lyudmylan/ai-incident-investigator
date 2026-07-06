@@ -205,6 +205,7 @@ def _run_and_emit(
         _emit(text, output)
         return 0
 
+    from ai_incident_investigator.llm import UsageTracker
     from ai_incident_investigator.pipeline import LLMMode
 
     fixtures_dir = llm_fixtures_dir or DEFAULT_FIXTURES_ROOT / state.package.incident_id
@@ -214,7 +215,11 @@ def _run_and_emit(
         print(f"error: could not create the LLM client: {exc}", file=sys.stderr)
         return 1
 
-    state = run_investigation(state, client)
+    # Replay is free and stays silent; live/record runs report what they cost.
+    tracker = UsageTracker(client) if llm_mode in ("live", "record") else None
+    state = run_investigation(state, tracker if tracker is not None else client)
+    if tracker is not None and tracker.calls:
+        print(tracker.summary(), file=sys.stderr)
     report = build_report(state)
     text = (
         render_markdown(report) if output_format == "markdown" else report.model_dump_json(indent=2)
