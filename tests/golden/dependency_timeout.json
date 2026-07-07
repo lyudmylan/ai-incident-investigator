@@ -451,6 +451,11 @@
         "detail": null
       },
       {
+        "check": "severity_not_above_numeric_ceiling",
+        "result": "pass",
+        "detail": "SEV-2 is within the numeric ceiling (SEV-2)"
+      },
+      {
         "check": "status_page_customer_safe",
         "result": "pass",
         "detail": "checked against the wording rules"
@@ -590,7 +595,7 @@
     },
     {
       "stage": "safety_linter",
-      "summary": "deterministic lint: 9 checks (total review: 0 blocked, 0 warning)",
+      "summary": "deterministic lint: 10 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
   ]

@@ -41,6 +41,50 @@ ROOT_CAUSE_PATTERN = re.compile(r"\b(?:root\s+cause|caused\s+by)\b", re.IGNORECA
 _NO_EXECUTION_DISCLAIMER = re.compile(r"\bno\s+remediation\b", re.IGNORECASE)
 
 
+# Severity numeric bands (docs/assumptions.md severity rules): the ceiling
+# is the most severe level the observed metrics can numerically justify.
+# Judgment components (flow criticality, workarounds, the documented
+# patient-safety +1 bias) can lower a claim below the ceiling - never
+# raise it above, which is why only overstatement is flagged (issue #45:
+# the observed live failure mode).
+_SEVERITY_RANK = {"SEV-1": 1, "SEV-2": 2, "SEV-3": 3, "SEV-4": 4}
+
+
+def _severity_ceiling(state: InvestigationState) -> tuple[str, str] | None:
+    """(ceiling level, evidence text), or None when nothing is checkable."""
+    metrics = state.package.metrics
+    if metrics is None:
+        return None
+    max_error_pct: float | None = None
+    max_latency_ratio: float | None = None
+    for series in metrics.series:
+        peak = max(point.value for point in series.points)
+        if "error_rate" in series.signal:
+            max_error_pct = peak if max_error_pct is None else max(max_error_pct, peak)
+        elif "latency" in series.signal and series.baseline > 0:
+            ratio = peak / series.baseline
+            max_latency_ratio = (
+                ratio if max_latency_ratio is None else max(max_latency_ratio, ratio)
+            )
+    if max_error_pct is None and max_latency_ratio is None:
+        return None
+
+    observed: list[str] = []
+    if max_error_pct is not None:
+        observed.append(f"max error rate {max_error_pct:g}%")
+    if max_latency_ratio is not None:
+        observed.append(f"max latency {max_latency_ratio:.1f}x baseline")
+    evidence = ", ".join(observed)
+
+    if max_error_pct is not None and max_error_pct > 25:
+        return "SEV-1", evidence
+    if (max_error_pct is not None and max_error_pct >= 1) or (
+        max_latency_ratio is not None and max_latency_ratio > 4
+    ):
+        return "SEV-2", evidence
+    return "SEV-3", evidence
+
+
 def _internal_names(state: InvestigationState) -> set[str]:
     """Names a customer must never see: every service the package knows of."""
     names = {state.package.alert.service}
@@ -196,6 +240,32 @@ def lint_state(state: InvestigationState) -> list[SafetyCheck]:
             check="no_executed_action_phrasing",
             result="warning" if phrased else "pass",
             detail="; ".join(phrased) if phrased else None,
+        )
+    )
+
+    ceiling = _severity_ceiling(state)
+    overstated: str | None = None
+    if state.severity is not None and ceiling is not None:
+        ceiling_level, observed = ceiling
+        if _SEVERITY_RANK[state.severity.level] < _SEVERITY_RANK[ceiling_level]:
+            overstated = (
+                f"claimed {state.severity.level} but the observed metrics "
+                f"({observed}) numerically support at most {ceiling_level}; "
+                "judgment may lower a level, not raise it (docs/assumptions.md)"
+            )
+    if state.severity is None:
+        ceiling_detail = "no severity assessed"
+    elif ceiling is None:
+        ceiling_detail = "no numeric signals to check the claimed level against"
+    elif overstated is None:
+        ceiling_detail = f"{state.severity.level} is within the numeric ceiling ({ceiling[0]})"
+    else:
+        ceiling_detail = overstated
+    checks.append(
+        SafetyCheck(
+            check="severity_not_above_numeric_ceiling",
+            result="warning" if overstated else "pass",
+            detail=ceiling_detail,
         )
     )
 
