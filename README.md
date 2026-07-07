@@ -98,8 +98,9 @@ uv run python -m ai_incident_investigator collect \
   --http replay --http-fixtures-dir tests/fixtures/http/demo_collect \
   --then-investigate --format markdown
 
-# Real use: point sources.toml at your services, export the *_env tokens,
-# then the same command with --http live (and --llm live for the report).
+# Real use: point sources.toml at your services, put tokens in the
+# gitignored .env (see docs/testing_and_demo.md), then the same command
+# with `uv run --env-file .env` + --http live (and --llm live for the report).
 ```
 
 Collection degrades per source (a down source becomes a gap the
