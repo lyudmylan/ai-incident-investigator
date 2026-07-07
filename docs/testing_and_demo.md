@@ -16,14 +16,16 @@ purpose, what each costs, and the guardrails that keep spend intentional.
 | Degradation demo | delete a file from a package copy, replay/off | **zero** |
 | New demo scenario | author package + scripted responses, `bootstrap_fixtures.py` | **zero** |
 | Cost preflight | `python scripts/estimate_tokens.py` | **zero** |
-| Live smoke (plumbing against the real API) | `AI_INCIDENT_INVESTIGATOR_MODEL=claude-haiku-4-5-20251001` + `--llm record` on ONE example | ~17k in / ~10k out ≈ **$0.05-0.10** |
-| Live quality run (the real model) | `--llm record` on ONE example, default Opus | ≈ **$1** |
+| Live smoke (plumbing against the real API) | `AI_INCIDENT_INVESTIGATOR_MODEL=claude-haiku-4-5-20251001` + `--llm record` on ONE example | measured: **$0.27** |
+| Live quality run (the real model) | `--llm record` on ONE example, default Opus | projected **$4-5** at measured token volume |
 
-Measured baseline (from `scripts/estimate_tokens.py`, which reads the
-committed fixtures - the exact requests a live run would send): a full
-investigation is **10 LLM calls, ~17k input tokens**, with scripted-size
-outputs ~2k (real output with adaptive thinking runs longer; the script
-projects with a 5x allowance).
+Measured baseline - **from a real run** (2026-07-07 Haiku smoke, all ten
+agents succeeding): a full investigation is **10 calls, 77k input +
+39k output tokens = $0.27 on Haiku 4.5**. At Opus 4.8 pricing the same
+token volume is **~$4-5** (Opus likely thinks longer). Calibration note:
+the chars/4 heuristic in `scripts/estimate_tokens.py` under-counts real
+input ~4.5x (schema tokens + denser tokenization of structured content);
+prefer fixtures with recorded usage, which the script uses automatically.
 
 ## Rules of thumb
 
