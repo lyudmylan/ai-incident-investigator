@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nTRACE SPANS (grouped by trace, chronological)\ntrace trace_pre_01\n  s1 booking-service POST /book start=2026-06-01T14:08:12+00:00 duration_ms=430 status=ok parent=-\n  s2 payment-service check_eligibility start=2026-06-01T14:08:12+00:00 duration_ms=95 status=ok parent=s1\n  s3 appointments-db eligibility_query start=2026-06-01T14:08:12+00:00 duration_ms=40 status=ok parent=s2\n  s4 appointments-db reserve_slot start=2026-06-01T14:08:12+00:00 duration_ms=38 status=ok parent=s1\ntrace trace_incident_01\n  s1 booking-service POST /book start=2026-06-01T14:39:05+00:00 duration_ms=3180 status=error parent=-\n  s2 payment-service check_eligibility start=2026-06-01T14:39:05+00:00 duration_ms=2410 status=error parent=s1\n  s3 appointments-db eligibility_query start=2026-06-01T14:39:05+00:00 duration_ms=2150 status=error parent=s2\n  s4 appointments-db reserve_slot start=2026-06-01T14:39:08+00:00 duration_ms=310 status=ok parent=s1\ntrace trace_incident_02\n  s1 booking-service POST /book start=2026-06-01T14:52:31+00:00 duration_ms=3320 status=error parent=-\n  s2 payment-service check_eligibility start=2026-06-01T14:52:31+00:00 duration_ms=2480 status=error parent=s1\n  s3 appointments-db eligibility_query start=2026-06-01T14:52:31+00:00 duration_ms=2200 status=error parent=s2\n  s4 appointments-db reserve_slot start=2026-06-01T14:52:34+00:00 duration_ms=290 status=ok parent=s1",
+        "role": "user"
+      }
+    ],
+    "model": "claude-sonnet-5",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: trace investigator.\nInput: distributed trace spans (grouped by trace) and the incident window.\n\nReport as findings, each citing trace ids, spans, and durations:\n- where time is spent in slow requests: which span dominates the critical\n  path, and what fraction of the root duration it accounts for\n- error propagation: which spans fail, and whether failures originate deep\n  and surface upward\n- before/after contrast when both healthy and degraded traces exist\n  (same operations, changed durations)\n- operations that stay fast even in degraded traces - they narrow the fault\nUse duration numbers from the input; never estimate.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 2001,
+    "model": "claude-sonnet-5",
+    "output_tokens": 2934,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"In the pre-incident trace, root span POST /book completes in 430ms with all child spans fast: check_eligibility 95ms (22.1% of root), eligibility_query 40ms (9.3% of root), reserve_slot 38ms (8.8% of root). This is the healthy baseline.\",\"timestamp\":\"2026-06-01T14:08:12+00:00\",\"service\":\"booking-service\",\"signal\":\"root_span_duration_ms\",\"value\":430},{\"interpretation\":\"In trace_incident_01, appointments-db eligibility_query (s3) is the dominant contributor to the critical path: 2150ms out of the 3180ms root duration (67.6% of total request time) and 89.2% of its parent check_eligibility span's 2410ms duration.\",\"timestamp\":\"2026-06-01T14:39:05+00:00\",\"service\":\"appointments-db\",\"signal\":\"eligibility_query_duration_ms\",\"value\":2150},{\"interpretation\":\"In trace_incident_02, the same pattern repeats: eligibility_query (s3) takes 2200ms of the 3320ms root duration (66.3% of total) and 88.7% of its parent check_eligibility span's 2480ms duration, confirming eligibility_query as the consistent critical-path bottleneck across degraded traces.\",\"timestamp\":\"2026-06-01T14:52:31+00:00\",\"service\":\"appointments-db\",\"signal\":\"eligibility_query_duration_ms\",\"value\":2200},{\"interpretation\":\"Error propagation in trace_incident_01 flows from deep to shallow: appointments-db eligibility_query (s3) fails with status=error, its parent payment-service check_eligibility (s2) also fails, and the root booking-service POST /book (s1) fails, consistent with a failure originating at the database query level and surfacing upward through the call chain.\",\"timestamp\":\"2026-06-01T14:39:05+00:00\",\"service\":\"appointments-db\",\"signal\":\"status\",\"value\":\"error\"},{\"interpretation\":\"The identical error-propagation pattern (db query error -> payment check_eligibility error -> booking root error) is confirmed in trace_incident_02, strengthening the inference that eligibility_query failures are the origin point rather than an artifact of a single trace.\",\"timestamp\":\"2026-06-01T14:52:31+00:00\",\"service\":\"appointments-db\",\"signal\":\"status\",\"value\":\"error\"},{\"interpretation\":\"Before/after contrast for eligibility_query shows a duration increase from 40ms (healthy, trace_pre_01) to 2150ms (trace_incident_01) and 2200ms (trace_incident_02) - roughly a 54-55x increase for the same operation, the largest relative degradation of any span observed.\",\"timestamp\":null,\"service\":\"appointments-db\",\"signal\":\"eligibility_query_duration_ms\",\"value\":\"40 -> 2150/2200\"},{\"interpretation\":\"Before/after contrast for check_eligibility (payment-service) shows growth from 95ms healthy to 2410ms and 2480ms in the two incident traces - about a 25-26x increase, tracking closely with its child eligibility_query span, consistent with the payment-service span's duration being almost entirely explained by the downstream db call rather than payment-service's own processing.\",\"timestamp\":null,\"service\":\"payment-service\",\"signal\":\"check_eligibility_duration_ms\",\"value\":\"95 -> 2410/2480\"},{\"interpretation\":\"reserve_slot (appointments-db) remains status=ok in both degraded traces despite the root request failing, and its share of the root duration stays small (310/3180=9.7% in trace_incident_01, 290/3320=8.7% in trace_incident_02), narrowing the fault away from the reserve_slot code path and toward eligibility_query/check_eligibility.\",\"timestamp\":null,\"service\":\"appointments-db\",\"signal\":\"reserve_slot_duration_ms\",\"value\":\"38 -> 310/290 (status ok)\"},{\"interpretation\":\"Despite staying healthy (status=ok), reserve_slot's absolute duration still grew roughly 8x from baseline (38ms to 310ms/290ms) even though it is not a child of the failing check_eligibility/eligibility_query branch (parent=s1 in all traces), suggesting some shared resource contention or general service slowdown affecting even unaffected code paths, separate from the dominant eligibility_query bottleneck.\",\"timestamp\":null,\"service\":\"appointments-db\",\"signal\":\"reserve_slot_duration_ms\",\"value\":\"38 -> 310/290\"}],\"gaps\":[\"No trace spans exist below eligibility_query (e.g., internal db lock waits, connection pool waits, or downstream calls) to explain what specifically is consuming the 2150-2200ms inside that query.\",\"No visibility into why reserve_slot, which is not a child of the failing check_eligibility/eligibility_query subtree, still slowed roughly 8x (38ms to ~290-310ms) in degraded traces - insufficient data to determine if this is shared resource contention, connection pool exhaustion, or an unrelated factor.\",\"Only two degraded traces (trace_incident_01, trace_incident_02) and one healthy trace (trace_pre_01) are provided; no data on variance across a larger sample or on traces between 14:08:12 and 14:39:05 to pinpoint exactly when the eligibility_query degradation began within the incident window.\",\"No spans for other services or endpoints are provided, so it cannot be determined whether the eligibility_query slowdown is isolated to the booking POST /book path or affects other operations using appointments-db.\"],\"reasoning\":\"Compared span durations and status fields across the one pre-incident trace and two incident traces for the same POST /book operation. Computed each child span's duration as a fraction of its parent/root duration to identify the dominant contributor to the critical path (eligibility_query, consistently ~66-68% of root and ~89% of its parent). Traced status=error from the deepest failing span (eligibility_query) up through check_eligibility to the root POST /book to establish propagation direction. Contrasted absolute durations of matching operations between the healthy and degraded traces to quantify degradation magnitude. Identified reserve_slot as a span that stays functionally healthy (status=ok) and consumes a small root-duration fraction, narrowing the fault locus, while noting its duration still grew, which is flagged as a gap requiring further data.\"}"
+  }
+}

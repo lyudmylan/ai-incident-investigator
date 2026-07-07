@@ -85,16 +85,23 @@ the repo. Replay/off modes need no key at all.
     re-inspect with replay at zero cost, and (issue #40) prints the
     actual token usage and cost when it finishes.
 
-**The one Opus recording worth paying for** (quality validation):
+**The committed real-model recording** (quality artifact): a full
+Sonnet 5 run of latency_spike lives in `tests/fixtures/llm-live/`
+(recorded 2026-07-07, $1.04 measured, all ten agents). Replay it free:
 
-    uv run --env-file .env python -m ai_incident_investigator investigate \
+    AI_INCIDENT_INVESTIGATOR_MODEL=claude-sonnet-5 \
+      uv run python -m ai_incident_investigator investigate \
       --incident examples/incidents/latency_spike \
-      --llm record --fixtures-dir tests/fixtures/llm-live/latency_spike \
+      --llm replay --fixtures-dir tests/fixtures/llm-live/latency_spike \
       --format markdown
 
-    ~$1. Committing these fixtures makes real-model output replayable by
-    anyone, forever, free - kept separate from tests/fixtures/llm so the
-    deterministic scripted set remains the CI baseline.
+    The model override is required: fixture keys embed the model name.
+    Notable content: the critic BLOCKS triage on a timestamp-precision
+    error and questions the confidence rubric's design - real safety-layer
+    behavior on real model output. Kept separate from tests/fixtures/llm
+    so the deterministic scripted set remains the CI baseline. Re-record
+    on Opus (same command, no override, ~$4-5 at measured volume) after
+    the #45 quality fixes land.
 
 ## What stays scripted on purpose
 
