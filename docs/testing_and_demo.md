@@ -66,21 +66,26 @@ verified working):
     `investigate --incident examples/incidents/<id> --llm replay` works
     with no naming constraint.
 
+**Key setup (once)**: put `ANTHROPIC_API_KEY=sk-ant-...` in the repo-root
+`.env` file (gitignored; `chmod 600`). Live commands load it with uv's
+`--env-file .env` - the key never enters shell history, command lines, or
+the repo. Replay/off modes need no key at all.
+
 **Cheap live smoke** (first thing to run once the API key exists):
 
-    export ANTHROPIC_API_KEY=...
     AI_INCIDENT_INVESTIGATOR_MODEL=claude-haiku-4-5-20251001 \
-      uv run python -m ai_incident_investigator investigate \
+      uv run --env-file .env python -m ai_incident_investigator investigate \
       --incident examples/incidents/latency_spike \
       --llm record --fixtures-dir /tmp/live-smoke --format markdown
 
     Proves auth, structured outputs, stop-reason handling, and the full
-    graph against the real API for ~$0.07, and leaves fixtures you can
-    re-inspect with replay at zero cost.
+    graph against the real API for ~$0.07, leaves fixtures you can
+    re-inspect with replay at zero cost, and (issue #40) prints the
+    actual token usage and cost when it finishes.
 
 **The one Opus recording worth paying for** (quality validation):
 
-    uv run python -m ai_incident_investigator investigate \
+    uv run --env-file .env python -m ai_incident_investigator investigate \
       --incident examples/incidents/latency_spike \
       --llm record --fixtures-dir tests/fixtures/llm-live/latency_spike \
       --format markdown
