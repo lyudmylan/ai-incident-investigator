@@ -1,0 +1,6 @@
+{
+  "services": [
+    {"name": "search-service", "kind": "service", "depends_on": ["search-index"]},
+    {"name": "search-index", "kind": "database", "depends_on": []}
+  ]
+}

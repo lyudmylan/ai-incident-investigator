@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-18T12:56:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-18T13:26:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nALERT\nid: alert_cv_001\ntitle: Consumer lag above 30s on notifications-worker\nservice: notifications-worker\ntriggered_at: 2026-06-18T13:26:00+00:00\nmonitoring severity label: major\nsignal: consumer_lag_seconds\nthreshold: 30.0\nobserved value at trigger: 130.0\ndescription: notification delivery lag growing\n\nDETERMINISTIC TIMELINE (9 events)\n2026-06-18T13:00:00+00:00 [metrics] session-store: evictions_per_sec first deviated >=2.0x from baseline (2.0 keys/s -> 420.0 keys/s)\n2026-06-18T13:01:09+00:00 [logs] session-store: WARN: evicting keys under memory pressure: maxmemory 4gb reached (allkeys-lru)\n2026-06-18T13:05:00+00:00 [metrics] message-broker: queue_depth_msgs first deviated >=2.0x from baseline (150.0 msgs -> 480.0 msgs)\n2026-06-18T13:07:26+00:00 [logs] message-broker: WARN: consumer session lookups failing; redelivery queue growing\n2026-06-18T13:15:00+00:00 [metrics] notifications-worker: consumer_lag_seconds first deviated >=2.0x from baseline (4.0 s -> 22.0 s)\n2026-06-18T13:16:44+00:00 [logs] notifications-worker: ERROR: cannot restore consumer session: key not found in session-store; rejoining group\n2026-06-18T13:21:12+00:00 [logs] notifications-worker: ERROR: cannot restore consumer session: key not found in session-store; rejoining group\n2026-06-18T13:24:58+00:00 [logs] notifications-worker: ERROR: rebalance storm: 14 group rejoins in 5 minutes; throughput collapsed\n2026-06-18T13:26:00+00:00 [alert] notifications-worker: Alert fired: Consumer lag above 30s on notifications-worker\n\nRUNBOOK (verbatim)\n# Runbook: notification delivery lag\n\n## Failure modes\n\n### session-store eviction cascade\nWhen session-store evicts under memory pressure, message-broker consumers\nlose their sessions, rejoin, and rebalance repeatedly; queue depth grows\nwhile workers thrash. Worker lag is the SYMPTOM; the store is the cause.\n\n## Verified mitigations\n\n- Raise session-store maxmemory one step (verified safe; keys are\n  re-derivable) and let consumers re-register.\n- Do NOT scale workers during a rebalance storm: more consumers worsen\n  the rejoin churn.\n\n## Escalation\n\nPage the platform-cache owner if evictions persist above 100 keys/s for\nmore than 30 minutes.\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: runbook investigator.\nInput: the service runbook verbatim, the alert, and the deterministic\ntimeline of observed events.\n\nReport as findings:\n- known failure modes from the runbook whose documented symptoms match\n  observed timeline events (quote both sides)\n- runbook checks relevant to what is being observed\n- operational constraints and warnings the runbook states (e.g. when an\n  action is documented as unsafe)\n- mismatches: observed behavior no runbook failure mode covers\nThe runbook is guidance written in advance, not evidence of current state;\nframe findings as \"the runbook documents X, which matches observed Y\".",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"runbook documents this exact failure mode: 'session-store eviction cascade' - worker lag is named as the symptom, the store the cause; scaling workers during a rebalance storm is explicitly warned against\",\"timestamp\":null,\"service\":\"notifications-worker\",\"signal\":null,\"value\":null}],\"gaps\":[],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

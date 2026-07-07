@@ -1,0 +1,225 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "JiraDraft": {
+          "additionalProperties": false,
+          "description": "No priority field on purpose: the suggestion is mapped from severity\nin code (docs/assumptions.md) - a documented rule, not a model judgment.",
+          "properties": {
+            "description": {
+              "title": "Description",
+              "type": "string"
+            },
+            "labels": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Labels",
+              "type": "array"
+            },
+            "summary": {
+              "title": "Summary",
+              "type": "string"
+            }
+          },
+          "required": [
+            "summary",
+            "description",
+            "labels"
+          ],
+          "title": "JiraDraft",
+          "type": "object"
+        },
+        "MitigationDraft": {
+          "additionalProperties": false,
+          "description": "A mitigation to CONSIDER; approval is enforced by the contract, not here.",
+          "properties": {
+            "action": {
+              "title": "Action",
+              "type": "string"
+            },
+            "rationale": {
+              "title": "Rationale",
+              "type": "string"
+            },
+            "risks": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Risks",
+              "type": "array"
+            }
+          },
+          "required": [
+            "action",
+            "rationale",
+            "risks"
+          ],
+          "title": "MitigationDraft",
+          "type": "object"
+        },
+        "SlackDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "title": "SlackDraft",
+          "type": "object"
+        },
+        "StatusPageResponseDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "phase": {
+              "enum": [
+                "investigating",
+                "identified",
+                "monitoring"
+              ],
+              "title": "Phase",
+              "type": "string"
+            },
+            "text": {
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "phase",
+            "text"
+          ],
+          "title": "StatusPageResponseDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Mitigation options plus all communication drafts, in one grounded call.",
+      "properties": {
+        "action_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Action Items",
+          "type": "array"
+        },
+        "contributing_factors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Contributing Factors",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "internal_update": {
+          "title": "Internal Update",
+          "type": "string"
+        },
+        "jira_ticket": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JiraDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mitigation_options": {
+          "items": {
+            "$ref": "#/$defs/MitigationDraft"
+          },
+          "title": "Mitigation Options",
+          "type": "array"
+        },
+        "open_questions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Open Questions",
+          "type": "array"
+        },
+        "postmortem_impact": {
+          "title": "Postmortem Impact",
+          "type": "string"
+        },
+        "postmortem_summary": {
+          "title": "Postmortem Summary",
+          "type": "string"
+        },
+        "postmortem_title": {
+          "title": "Postmortem Title",
+          "type": "string"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "slack_update": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SlackDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status_page": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatusPageResponseDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "mitigation_options",
+        "internal_update",
+        "jira_ticket",
+        "slack_update",
+        "status_page",
+        "postmortem_title",
+        "postmortem_summary",
+        "postmortem_impact",
+        "contributing_factors",
+        "open_questions",
+        "action_items",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "ReporterResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-10T10:35:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-10T11:05:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nTRIAGE ASSESSMENT\nseverity: SEV-2 (confidence high) - reports-service p95 reached 2400ms against a 300ms baseline, 8x, inside the >4x-latency SEV-2 band; no error-rate series is present to justify SEV-1\nwhat happened: Report generation latency rose from about 10:30 and saturated above 2 seconds; the incident is ongoing.\naffected services: reports-service, reports-db\ncustomer impact: Report pages load slowly or time out.\n\nRANKED HYPOTHESES (with code-derived confidence)\n- hypothesis_b31c2f717b [medium] reports-db disk I/O degradation slowing aggregation queries\n  statement: reports-db io_wait rose from 10:30, slow queries followed, and reports-service latency saturated waiting on the database - consistent with storage-level degradation on reports-db.\n  rubric: aligned_signals=2 timing=aligned conflicts=0\n  supporting: evidence_d68503e295, evidence_246d4c6b34\n  conflicting: (none)\n  assumptions: package telemetry is complete for the window\n  recommended checks: check reports-db host SMART/disk metrics and cloud volume events; compare query plans against last week's for the same aggregation\n- hypothesis_1eff2fd35d [low] Deploy 2026.06.10-1058 caused the latency increase\n  statement: A deploy landed inside the window, but symptoms began 28 minutes before it and the change is a static footer text update - the timing and content both argue against it.\n  rubric: aligned_signals=1 timing=misaligned conflicts=0\n  supporting: evidence_81ff80e182\n  conflicting: (none)\n  assumptions: package telemetry is complete for the window\n  recommended checks: confirm the deploy diff touches no query or pool code\n\nEVIDENCE (cite items by their exact id)\n- evidence_81ff80e182 [deploys] service=reports-service at 2026-06-10T10:58:00+00:00: deploy 2026.06.10-1058 (footer copy, config-only) landed 10:58 - 28 minutes AFTER the io_wait deviation began at 10:30; timing rules it out as the trigger\n- evidence_246d4c6b34 [logs] service=reports-db at 2026-06-10T10:31:12+00:00: reports-db disk I/O latency warning at 10:31 precedes all application symptoms\n- evidence_ff5656d7c1 [logs] service=reports-db at 2026-06-10T10:52:07+00:00: slow aggregation queries escalate 2100ms -> 3900ms between 10:41 and 10:52\n- evidence_5677377c33 [metrics] service=reports-service signal=p95_latency_ms value=780.0 at 2026-06-10T10:40:00+00:00: reports-service p95 first crossed 2x baseline at 10:40 (780ms)\n- evidence_d68503e295 [metrics] service=reports-db signal=io_wait_ms value=18.0 at 2026-06-10T10:30:00+00:00: reports-db io_wait first deviated at 10:30 (18ms vs 5ms baseline) - BEFORE any change in the window\n\nRECOMMENDED NEXT STEPS (aggregated, with back-references)\n- next_step_1870910198: check reports-db host SMART/disk metrics and cloud volume events\n- next_step_e47a495e59: compare query plans against last week's for the same aggregation\n- next_step_c792c358e0: confirm the deploy diff touches no query or pool code\n- next_step_52f265f8f2: Provide or repair the package data: traces.json not provided\n- next_step_6011dabe5c: Provide or repair the package data: runbook.md not provided\n\nSAFETY REVIEW: all 4 checks passed\n\nKNOWN DATA GAPS\n- traces.json not provided (impact: cannot identify slow spans or failing dependencies)\n- runbook.md not provided (impact: no operational guidance or known failure modes available)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: reporter. You produce three deliverables from the reviewed\ninvestigation: safe mitigation OPTIONS, an internal update draft, and a\npostmortem draft.\n\nMitigation options:\n- propose only actions grounded in the evidence and hypotheses you were\n  given (runbook-documented mitigations are the strongest candidates;\n  standard reversible operations are acceptable when clearly relevant)\n- each option needs a rationale tied to a hypothesis and an honest list of\n  risks; note conditions (\"only if X\") in the action wording when the\n  evidence says so\n- these are options for a human to consider - never present one as chosen,\n  scheduled, or done; no option is ever pre-approved\n- an empty list is correct when nothing is well-grounded\n\nInternal update (for the incident channel, written now, mid-incident):\n- lead with status: severity, user impact, affected services\n- current leading hypothesis WITH its confidence label and what conflicts\n  with or limits it; never present a hypothesis as a confirmed cause\n- what is being checked next\n- state explicitly that no remediation has been executed and that\n  mitigation options await human approval\n- plain sentences a stressed on-call engineer can skim; no headings\n\nPostmortem draft (blameless, honest about uncertainty):\n- postmortem_summary: what happened and how it progressed, past tense\n- postmortem_impact: who/what was affected, with the observed numbers\n- contributing_factors: from hypotheses, each qualified by its confidence\n  (\"likely\", \"possibly\" for medium/low); never assert an unproven cause\n- open_questions: what the investigation could not establish\n- action_items: follow-ups grounded in the recommended next steps you were\n  given, plus durable improvements the evidence supports\n\nExternal drafts (a human copies these out; the tool never posts anything):\n- jira_ticket: summary is one imperative line; description is grounded in\n  the cited evidence with hypothesis confidence qualifiers, and includes\n  the incident window and affected services; labels are short slugs\n  (e.g. \"incident\"). Do not include a priority - it is derived in code\n  from severity.\n- slack_update: skimmable incident-channel text - severity, user impact,\n  leading hypothesis with confidence, what is being checked. It MUST state\n  explicitly that no remediation has been executed and options await\n  human approval.\n- status_page: customer-facing and held to strict rules. NO internal\n  service, system, or tool names of any kind; NO speculation language\n  (\"we believe\", \"likely\", \"appears to be\"); NO root-cause claims - those\n  belong to the postmortem. Say what users experience, that the team is\n  on it, and where updates appear. phase: \"monitoring\" once recovery is\n  observed, \"identified\" only when a mitigation path is in hand,\n  otherwise \"investigating\".\n- omit any external draft (null) rather than write one you cannot ground.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"mitigation_options\":[],\"internal_update\":\"SEV-2, ongoing: report generation degraded. Leading hypothesis (medium confidence): disk I/O degradation on reports-db - its io_wait rose 28 minutes before the only deploy in the window, which is a config-only footer change ranked low. No remediation has been executed; options await human approval.\",\"jira_ticket\":null,\"slack_update\":null,\"status_page\":null,\"postmortem_title\":\"Postmortem draft: reports latency 2026-06-10\",\"postmortem_summary\":\"reports-db storage latency degraded from 10:30; aggregation queries slowed and report generation saturated above 2s.\",\"postmortem_impact\":\"Report pages degraded ~50 minutes and ongoing.\",\"contributing_factors\":[\"likely: storage-level I/O degradation on reports-db\",\"ruled unlikely: the 10:58 config-only deploy (postdates onset)\"],\"open_questions\":[\"what degraded the volume - hardware, noisy neighbor?\"],\"action_items\":[\"add io_wait alerting ahead of query latency\"],\"gaps\":[],\"reasoning\":\"drafted from the reviewed investigation output\"}"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "services": [
+    {"name": "auth-service", "kind": "service", "depends_on": ["sso-provider"]},
+    {"name": "sso-provider", "kind": "third_party", "depends_on": []}
+  ]
+}

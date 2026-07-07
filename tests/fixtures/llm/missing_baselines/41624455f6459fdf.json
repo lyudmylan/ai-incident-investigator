@@ -1,0 +1,158 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "PlanDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "abort_conditions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Abort Conditions",
+              "type": "array"
+            },
+            "hypothesis_id": {
+              "title": "Hypothesis Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "mitigation",
+                "rollback"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "mitigation_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mitigation Id"
+            },
+            "owner_role": {
+              "title": "Owner Role",
+              "type": "string"
+            },
+            "preconditions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Preconditions",
+              "type": "array"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/PlanStepDraft"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "title",
+            "hypothesis_id",
+            "mitigation_id",
+            "preconditions",
+            "steps",
+            "abort_conditions",
+            "owner_role"
+          ],
+          "title": "PlanDraft",
+          "type": "object"
+        },
+        "PlanStepDraft": {
+          "additionalProperties": false,
+          "description": "verification is a required key but nullable; the converter drops any\nplan whose state-changing step arrives without one (documented invariant).",
+          "properties": {
+            "action": {
+              "title": "Action",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "read_only",
+                "state_changing"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "verification": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verification"
+            }
+          },
+          "required": [
+            "kind",
+            "action",
+            "verification"
+          ],
+          "title": "PlanStepDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "plans": {
+          "items": {
+            "$ref": "#/$defs/PlanDraft"
+          },
+          "title": "Plans",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plans",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "PlannerResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-15T07:10:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-15T07:40:00+00:00) minus 30m lookback; no metrics available to detect recovery -> ongoing\n\nTRIAGE ASSESSMENT\nseverity: SEV-3 (confidence low) - login failures are confirmed by logs but no metrics are in the package, so failure rate and user share cannot be quantified - SEV-3 as limited-degradation floor, low confidence\nwhat happened: Logins fail intermittently on SSO token-exchange timeouts from about 07:18.\naffected services: auth-service\ncustomer impact: Some users cannot log in on first attempt.\n\nRANKED HYPOTHESES (with code-derived confidence)\n- hypothesis_959f62e325 [low] sso-provider degradation timing out token exchanges\n  statement: Log timeouts against the external SSO provider are consistent with upstream degradation, but with no metrics the scale and onset cannot be corroborated - single-source evidence only.\n  rubric: aligned_signals=1 timing=unknown conflicts=0\n  supporting: evidence_e4fe7ca65a\n  conflicting: (none)\n  assumptions: log sampling did not hide earlier symptoms\n  recommended checks: check the SSO provider status page and error rates from a probe; pull auth-service success-rate metrics from the source system\n\nSAFE MITIGATION OPTIONS: none proposed\n\nEVIDENCE (cite items by their exact id)\n- evidence_4cf33e1fa4 [deploys] service=auth-service: deploys.json is an empty list: change window checked, nothing shipped - internal change ruled out\n- evidence_e4fe7ca65a [logs] service=auth-service at 2026-06-15T07:25:41+00:00: SSO token exchange degrades from slow (1900ms, 07:18) to timeouts (3000ms) causing login failures\n\nDEPLOYS AND CHANGES: none - the change window was checked and no deploys, config changes, or flag flips were found (this is evidence)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: remediation planner. You structure the reviewed mitigation options\ninto guided, human-approved plans - and produce a rollback checklist when\na deploy- or flag-correlated hypothesis exists.\n\nRules for every plan:\n- cite the hypothesis it addresses by exact id from RANKED HYPOTHESES, and\n  the mitigation option it structures by exact id when one exists\n- only structure options that are well-grounded in the runbook or evidence;\n  an empty plans list is correct when nothing qualifies\n- steps are ordered; each is read_only (observe) or state_changing. Every\n  state_changing step MUST carry verification: how a human confirms it\n  worked before continuing. If you cannot state a verification, do not\n  propose the step.\n- preconditions: what must already be true before starting, from observed\n  state or documented runbook constraints\n- abort_conditions: observable signals (from the EVIDENCE) that mean stop\n  and back out; at least one per plan\n- owner_role: who realistically drives this (e.g. \"on-call engineer\")\n\nRollback checklist (kind=rollback), when a deploy/flag hypothesis exists:\n- name the exact release version or flag from DEPLOYS AND CHANGES; never\n  guess a version\n- pre-checks first: does the release include data migrations or schema\n  changes (ask, as a read_only step, if unknown); flag interactions\n- the rollback itself is state_changing with verification; post-checks\n  confirm the symptom signals recover\n\nPlans are options for a human. Never present a plan or step as chosen,\nscheduled, in progress, or done.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"plans\":[],\"gaps\":[],\"reasoning\":\"no runbook-grounded option to structure into a plan\"}"
+  }
+}

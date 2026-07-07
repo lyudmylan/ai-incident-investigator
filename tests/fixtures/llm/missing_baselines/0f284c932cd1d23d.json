@@ -1,0 +1,101 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "CriticCheck": {
+          "additionalProperties": false,
+          "properties": {
+            "check": {
+              "title": "Check",
+              "type": "string"
+            },
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Detail"
+            },
+            "result": {
+              "enum": [
+                "pass",
+                "warning",
+                "blocked"
+              ],
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "check",
+            "result",
+            "detail"
+          ],
+          "title": "CriticCheck",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/CriticCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Notes"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "checks",
+        "notes",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "CriticResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-15T07:10:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-15T07:40:00+00:00) minus 30m lookback; no metrics available to detect recovery -> ongoing\n\nTRIAGE ASSESSMENT\nseverity: SEV-3 (confidence low) - login failures are confirmed by logs but no metrics are in the package, so failure rate and user share cannot be quantified - SEV-3 as limited-degradation floor, low confidence\nwhat happened: Logins fail intermittently on SSO token-exchange timeouts from about 07:18.\naffected services: auth-service\ncustomer impact: Some users cannot log in on first attempt.\n\nRANKED HYPOTHESES (with code-derived confidence)\n- hypothesis_959f62e325 [low] sso-provider degradation timing out token exchanges\n  statement: Log timeouts against the external SSO provider are consistent with upstream degradation, but with no metrics the scale and onset cannot be corroborated - single-source evidence only.\n  rubric: aligned_signals=1 timing=unknown conflicts=0\n  supporting: evidence_e4fe7ca65a\n  conflicting: (none)\n  assumptions: log sampling did not hide earlier symptoms\n  recommended checks: check the SSO provider status page and error rates from a probe; pull auth-service success-rate metrics from the source system\n\nEVIDENCE (cite items by their exact id)\n- evidence_4cf33e1fa4 [deploys] service=auth-service: deploys.json is an empty list: change window checked, nothing shipped - internal change ruled out\n- evidence_e4fe7ca65a [logs] service=auth-service at 2026-06-15T07:25:41+00:00: SSO token exchange degrades from slow (1900ms, 07:18) to timeouts (3000ms) causing login failures\n\nKNOWN DATA GAPS\n- traces.json not provided (impact: cannot identify slow spans or failing dependencies)\n- metrics.json not provided (impact: cannot measure deviation from baselines or detect recovery)\n- runbook.md not provided (impact: no operational guidance or known failure modes available)\n- triage: no metrics in the package: failure rate unquantifiable (impact: flagged by an investigator as limiting its conclusions)\n- hypothesis_ranker: metrics absent: deviation-based corroboration impossible (impact: flagged by an investigator as limiting its conclusions)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: safety critic. You adversarially review the investigation's own\noutput before a human reads it. You challenge; you do not rewrite.\n\nReview every hypothesis and the triage assessment. Emit one check entry per\ndistinct concern, and also emit explicit `pass` entries for each category\nyou reviewed and found sound, so the review shows its coverage. Categories\nto always cover:\n- overconfidence: does any statement claim more than its cited evidence\n  shows (e.g. \"caused\" where evidence shows correlation)? Is the severity\n  proportionate to the observed numbers?\n- evidence_grounding: do the cited evidence items actually say what the\n  hypothesis needs them to say? Is conflicting evidence acknowledged rather\n  than omitted (unaffected services, contradicting signals)?\n- action_safety: are all recommended checks genuinely read-only\n  (inspect/compare/query)? Flag anything that would change system state,\n  however phrased.\n- uncertainty: are assumptions and known data gaps honestly surfaced where\n  they matter?\n\nResults: `pass` = reviewed and sound; `warning` = a human should look;\n`blocked` = must be fixed before this report should be trusted.\nName the hypothesis id or field each non-pass check refers to in `detail`.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"checks\":[{\"check\":\"overconfidence\",\"result\":\"pass\",\"detail\":null},{\"check\":\"evidence_grounding\",\"result\":\"pass\",\"detail\":null},{\"check\":\"action_safety\",\"result\":\"pass\",\"detail\":null},{\"check\":\"uncertainty\",\"result\":\"pass\",\"detail\":null}],\"notes\":null,\"gaps\":[],\"reasoning\":\"statements stay within what the cited evidence shows\"}"
+  }
+}

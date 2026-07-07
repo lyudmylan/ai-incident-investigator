@@ -1,0 +1,12 @@
+{
+  "deploys": [
+    {
+      "id": "change_om_1",
+      "service": "search-service",
+      "version": "replicas-6",
+      "deployed_at": "2026-06-25T16:32:00Z",
+      "description": "Operator scaled search-service replicas 3 -> 6 during incident response",
+      "change_type": "config"
+    }
+  ]
+}

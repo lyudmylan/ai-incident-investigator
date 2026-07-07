@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-21T02:42:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-21T03:12:00+00:00) minus 30m lookback; no metrics available to detect recovery -> ongoing\n\nLOG RECORDS (6 total)\n2026-06-21T02:58:03+00:00 ERROR payments-web 502 upstream prematurely closed connection while reading response header\n2026-06-21T03:03:44+00:00 ERROR payments-web 502 upstream prematurely closed connection while reading response header\n2026-06-21T03:07:19+00:00 ERROR payments-web 502 upstream prematurely closed connection while reading response header\n2026-06-21T03:11:02+00:00 ERROR payments-web 502 upstream prematurely closed connection while reading response header\n2026-06-21T03:11:47+00:00 ERROR payments-web 502 upstream prematurely closed connection while reading response header\n2026-06-21T03:15:30+00:00 ERROR payments-web 502 upstream prematurely closed connection while reading response header",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: logs investigator.\nInput: structured log records (timestamp, level, service, message) and the\nincident window.\n\nReport as findings, each citing concrete records via timestamp and service:\n- error and warning patterns: what fails, where, starting when\n- repetition and escalation (e.g. retries per operation, attempt counts,\n  whether retry behavior is bounded)\n- resource saturation messages (pools, queues, limits) with their numbers\n- the first log record that departs from routine, and what changed at that\n  moment\n- notable silences: services logging normally through the window\nQuote key message fragments verbatim inside interpretations.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"six identical '502 upstream prematurely closed' lines 02:58-03:15 with no upstream name, no request ids, no pattern change\",\"timestamp\":\"2026-06-21T02:58:03Z\",\"service\":\"payments-web\",\"signal\":null,\"value\":null}],\"gaps\":[\"edge logs lack upstream identity; cannot localize the closer\"],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

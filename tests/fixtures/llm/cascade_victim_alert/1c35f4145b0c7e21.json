@@ -1,0 +1,225 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "JiraDraft": {
+          "additionalProperties": false,
+          "description": "No priority field on purpose: the suggestion is mapped from severity\nin code (docs/assumptions.md) - a documented rule, not a model judgment.",
+          "properties": {
+            "description": {
+              "title": "Description",
+              "type": "string"
+            },
+            "labels": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Labels",
+              "type": "array"
+            },
+            "summary": {
+              "title": "Summary",
+              "type": "string"
+            }
+          },
+          "required": [
+            "summary",
+            "description",
+            "labels"
+          ],
+          "title": "JiraDraft",
+          "type": "object"
+        },
+        "MitigationDraft": {
+          "additionalProperties": false,
+          "description": "A mitigation to CONSIDER; approval is enforced by the contract, not here.",
+          "properties": {
+            "action": {
+              "title": "Action",
+              "type": "string"
+            },
+            "rationale": {
+              "title": "Rationale",
+              "type": "string"
+            },
+            "risks": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Risks",
+              "type": "array"
+            }
+          },
+          "required": [
+            "action",
+            "rationale",
+            "risks"
+          ],
+          "title": "MitigationDraft",
+          "type": "object"
+        },
+        "SlackDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "title": "SlackDraft",
+          "type": "object"
+        },
+        "StatusPageResponseDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "phase": {
+              "enum": [
+                "investigating",
+                "identified",
+                "monitoring"
+              ],
+              "title": "Phase",
+              "type": "string"
+            },
+            "text": {
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "phase",
+            "text"
+          ],
+          "title": "StatusPageResponseDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Mitigation options plus all communication drafts, in one grounded call.",
+      "properties": {
+        "action_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Action Items",
+          "type": "array"
+        },
+        "contributing_factors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Contributing Factors",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "internal_update": {
+          "title": "Internal Update",
+          "type": "string"
+        },
+        "jira_ticket": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JiraDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mitigation_options": {
+          "items": {
+            "$ref": "#/$defs/MitigationDraft"
+          },
+          "title": "Mitigation Options",
+          "type": "array"
+        },
+        "open_questions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Open Questions",
+          "type": "array"
+        },
+        "postmortem_impact": {
+          "title": "Postmortem Impact",
+          "type": "string"
+        },
+        "postmortem_summary": {
+          "title": "Postmortem Summary",
+          "type": "string"
+        },
+        "postmortem_title": {
+          "title": "Postmortem Title",
+          "type": "string"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "slack_update": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SlackDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status_page": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatusPageResponseDraft"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "mitigation_options",
+        "internal_update",
+        "jira_ticket",
+        "slack_update",
+        "status_page",
+        "postmortem_title",
+        "postmortem_summary",
+        "postmortem_impact",
+        "contributing_factors",
+        "open_questions",
+        "action_items",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "ReporterResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-18T12:56:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-18T13:26:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nTRIAGE ASSESSMENT\nseverity: SEV-3 (confidence medium) - notification delivery lags by minutes but delivery retries exist and no booking-path service is degraded; no error-rate or latency series is in the package to place this in a numeric band\nwhat happened: session-store began mass-evicting at 13:00; broker consumers lost sessions and rebalanced; worker lag grew from 13:15. The alerting service is the end of the chain, not its start.\naffected services: session-store, message-broker, notifications-worker\ncustomer impact: Notifications arrive minutes late.\n\nRANKED HYPOTHESES (with code-derived confidence)\n- hypothesis_bf78c7ce4f [high] session-store eviction cascade through broker to workers\n  statement: session-store evictions (13:00) broke broker consumer sessions (13:07) causing worker rebalance churn and lag (13:15) - the deviation order matches the topology chain and the runbook's documented cascade.\n  rubric: aligned_signals=3 timing=aligned conflicts=0\n  supporting: evidence_1242ac1c11, evidence_d9ecc65dac, evidence_b7444cfd4c\n  conflicting: (none)\n  assumptions: package telemetry is complete for the window\n  recommended checks: confirm session-store memory limit and what grew into it; verify consumer session TTLs against eviction age\n\nEVIDENCE (cite items by their exact id)\n- evidence_49081ad88f [deploys] service=notifications-worker: deploys.json empty: nothing shipped in the change window; capacity/state cause more plausible than change-driven\n- evidence_d9ecc65dac [logs] service=session-store at 2026-06-18T13:01:09+00:00: eviction warning 13:01 -> broker session-lookup failures 13:07 -> worker rejoin errors 13:16: the log chain follows the topology\n- evidence_1d9b813e78 [metrics] service=notifications-worker signal=consumer_lag_seconds value=22.0 at 2026-06-18T13:15:00+00:00: notifications-worker lag first deviated at 13:15 (22s vs 4s baseline)\n- evidence_bc23cb2bed [metrics] service=message-broker signal=queue_depth_msgs value=480.0 at 2026-06-18T13:05:00+00:00: message-broker queue depth first deviated at 13:05 (480 vs 150)\n- evidence_1242ac1c11 [metrics] service=session-store signal=evictions_per_sec value=420.0 at 2026-06-18T13:00:00+00:00: session-store evictions first deviated at 13:00 (420/s vs 2/s) - the EARLIEST deviation, two topology hops from the alerting service\n- evidence_b7444cfd4c [runbook] service=notifications-worker: runbook documents this exact failure mode: 'session-store eviction cascade' - worker lag is named as the symptom, the store the cause; scaling workers during a rebalance storm is explicitly warned against\n\nRECOMMENDED NEXT STEPS (aggregated, with back-references)\n- next_step_cf3a602e0f: confirm session-store memory limit and what grew into it\n- next_step_78e09f22c5: verify consumer session TTLs against eviction age\n- next_step_52f265f8f2: Provide or repair the package data: traces.json not provided\n\nSAFETY REVIEW: all 4 checks passed\n\nKNOWN DATA GAPS\n- traces.json not provided (impact: cannot identify slow spans or failing dependencies)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: reporter. You produce three deliverables from the reviewed\ninvestigation: safe mitigation OPTIONS, an internal update draft, and a\npostmortem draft.\n\nMitigation options:\n- propose only actions grounded in the evidence and hypotheses you were\n  given (runbook-documented mitigations are the strongest candidates;\n  standard reversible operations are acceptable when clearly relevant)\n- each option needs a rationale tied to a hypothesis and an honest list of\n  risks; note conditions (\"only if X\") in the action wording when the\n  evidence says so\n- these are options for a human to consider - never present one as chosen,\n  scheduled, or done; no option is ever pre-approved\n- an empty list is correct when nothing is well-grounded\n\nInternal update (for the incident channel, written now, mid-incident):\n- lead with status: severity, user impact, affected services\n- current leading hypothesis WITH its confidence label and what conflicts\n  with or limits it; never present a hypothesis as a confirmed cause\n- what is being checked next\n- state explicitly that no remediation has been executed and that\n  mitigation options await human approval\n- plain sentences a stressed on-call engineer can skim; no headings\n\nPostmortem draft (blameless, honest about uncertainty):\n- postmortem_summary: what happened and how it progressed, past tense\n- postmortem_impact: who/what was affected, with the observed numbers\n- contributing_factors: from hypotheses, each qualified by its confidence\n  (\"likely\", \"possibly\" for medium/low); never assert an unproven cause\n- open_questions: what the investigation could not establish\n- action_items: follow-ups grounded in the recommended next steps you were\n  given, plus durable improvements the evidence supports\n\nExternal drafts (a human copies these out; the tool never posts anything):\n- jira_ticket: summary is one imperative line; description is grounded in\n  the cited evidence with hypothesis confidence qualifiers, and includes\n  the incident window and affected services; labels are short slugs\n  (e.g. \"incident\"). Do not include a priority - it is derived in code\n  from severity.\n- slack_update: skimmable incident-channel text - severity, user impact,\n  leading hypothesis with confidence, what is being checked. It MUST state\n  explicitly that no remediation has been executed and options await\n  human approval.\n- status_page: customer-facing and held to strict rules. NO internal\n  service, system, or tool names of any kind; NO speculation language\n  (\"we believe\", \"likely\", \"appears to be\"); NO root-cause claims - those\n  belong to the postmortem. Say what users experience, that the team is\n  on it, and where updates appear. phase: \"monitoring\" once recovery is\n  observed, \"identified\" only when a mitigation path is in hand,\n  otherwise \"investigating\".\n- omit any external draft (null) rather than write one you cannot ground.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"mitigation_options\":[{\"action\":\"Raise session-store maxmemory one step per the runbook\",\"rationale\":\"runbook-verified safe; keys are re-derivable\",\"risks\":[\"higher memory footprint on the cache host\"]}],\"internal_update\":\"SEV-3, ongoing: notifications delayed minutes. Leading hypothesis (high confidence): session-store eviction cascade - deviations follow the topology chain store->broker->worker and match the runbook's documented failure mode. Do NOT scale workers (runbook: worsens rebalance churn). No remediation has been executed; the maxmemory raise awaits human approval.\",\"jira_ticket\":null,\"slack_update\":null,\"status_page\":{\"phase\":\"identified\",\"text\":\"Some notifications are currently delayed by a few minutes. We have identified the cause and a fix is being prepared. No notifications are lost; delayed messages will be delivered.\"},\"postmortem_title\":\"Postmortem draft: notification lag 2026-06-18\",\"postmortem_summary\":\"session-store memory pressure caused mass evictions; broker consumers lost sessions and worker throughput collapsed into rebalance churn.\",\"postmortem_impact\":\"Notification delivery delayed up to 4 minutes.\",\"contributing_factors\":[\"likely: session-store sized below current session volume\"],\"open_questions\":[\"what grew memory usage to the limit\"],\"action_items\":[\"alert on eviction rate; review store sizing\"],\"gaps\":[],\"reasoning\":\"drafted from the reviewed investigation output\"}"
+  }
+}

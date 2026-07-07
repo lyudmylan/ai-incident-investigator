@@ -1,0 +1,88 @@
+{
+  "request": {
+    "json_schema": {
+      "additionalProperties": false,
+      "description": "Triage produces the severity assessment and the incident summary.",
+      "properties": {
+        "affected_services": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affected Services",
+          "type": "array"
+        },
+        "customer_impact": {
+          "title": "Customer Impact",
+          "type": "string"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "severity_confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Severity Confidence",
+          "type": "string"
+        },
+        "severity_explanation": {
+          "title": "Severity Explanation",
+          "type": "string"
+        },
+        "severity_level": {
+          "enum": [
+            "SEV-1",
+            "SEV-2",
+            "SEV-3",
+            "SEV-4"
+          ],
+          "title": "Severity Level",
+          "type": "string"
+        },
+        "what_happened": {
+          "title": "What Happened",
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity_level",
+        "severity_explanation",
+        "severity_confidence",
+        "what_happened",
+        "affected_services",
+        "customer_impact",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "TriageResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-10T10:35:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-10T11:05:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nALERT\nid: alert_rh_001\ntitle: High p95 latency on reports-service GET /reports\nservice: reports-service\ntriggered_at: 2026-06-10T11:05:00+00:00\nmonitoring severity label: critical\nsignal: p95_latency_ms\nthreshold: 900.0\nobserved value at trigger: 2400.0\ndescription: p95 latency above 900ms for 10 consecutive minutes\n\nDETERMINISTIC TIMELINE (9 events)\n2026-06-10T10:30:00+00:00 [metrics] reports-db: io_wait_ms first deviated >=2.0x from baseline (5.0 ms -> 18.0 ms)\n2026-06-10T10:31:12+00:00 [logs] reports-db: WARN: disk I/O latency above threshold on /dev/nvme1: 18ms avg over 60s\n2026-06-10T10:40:00+00:00 [metrics] reports-service: p95_latency_ms first deviated >=2.0x from baseline (300.0 ms -> 780.0 ms)\n2026-06-10T10:41:40+00:00 [logs] reports-db: ERROR: slow query: SELECT report_rows aggregation took 2100ms (threshold 500ms)\n2026-06-10T10:52:07+00:00 [logs] reports-db: ERROR: slow query: SELECT report_rows aggregation took 3900ms (threshold 500ms)\n2026-06-10T10:58:00+00:00 [deploys] reports-service: config 2026.06.10-1058 on reports-service: Update dashboard footer copyright text (static template only, no code paths changed)\n2026-06-10T11:05:00+00:00 [alert] reports-service: Alert fired: High p95 latency on reports-service GET /reports\n2026-06-10T11:06:33+00:00 [logs] reports-service: ERROR: report generation timed out after 2000ms waiting for reports-db\n2026-06-10T11:12:51+00:00 [logs] reports-service: WARN: request queue depth 240 (normal < 20)\n\nTOPOLOGY (service -> depends on)\n- reports-db (database) -> (nothing)\n- reports-service (service) -> reports-db\n\nMETRIC SERIES (each with pre-incident baseline)\n- service=reports-service signal=p95_latency_ms baseline=300.0 ms\n  2026-06-10T10:20:00+00:00  310.0 ms\n  2026-06-10T10:30:00+00:00  340.0 ms\n  2026-06-10T10:35:00+00:00  520.0 ms\n  2026-06-10T10:40:00+00:00  780.0 ms\n  2026-06-10T10:45:00+00:00  1150.0 ms\n  2026-06-10T10:50:00+00:00  1600.0 ms\n  2026-06-10T10:55:00+00:00  2000.0 ms\n  2026-06-10T11:00:00+00:00  2250.0 ms\n  2026-06-10T11:05:00+00:00  2400.0 ms\n  2026-06-10T11:10:00+00:00  2450.0 ms\n  2026-06-10T11:15:00+00:00  2380.0 ms\n  2026-06-10T11:20:00+00:00  2400.0 ms\n- service=reports-db signal=io_wait_ms baseline=5.0 ms\n  2026-06-10T10:20:00+00:00  6.0 ms\n  2026-06-10T10:30:00+00:00  18.0 ms\n  2026-06-10T10:35:00+00:00  32.0 ms\n  2026-06-10T10:40:00+00:00  55.0 ms\n  2026-06-10T10:45:00+00:00  90.0 ms\n  2026-06-10T10:50:00+00:00  105.0 ms\n  2026-06-10T10:55:00+00:00  120.0 ms\n  2026-06-10T11:00:00+00:00  128.0 ms\n  2026-06-10T11:05:00+00:00  135.0 ms\n  2026-06-10T11:10:00+00:00  138.0 ms\n  2026-06-10T11:15:00+00:00  136.0 ms\n  2026-06-10T11:20:00+00:00  140.0 ms",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: triage. You assess severity, affected services, blast radius, and\ncustomer impact from the package overview.\n\nSeverity rules (docs/assumptions.md - apply these, do not invent your own):\n- SEV-1: critical user-facing flow broken for most users, no workaround\n  (e.g. error rate > 25% on a critical flow, or hard outage)\n- SEV-2: significant degradation of an important flow (e.g. error rate\n  1-25% or latency > 4x baseline on a critical flow)\n- SEV-3: limited degradation, workaround exists, small share of users\n  affected\n- SEV-4: warning-level signal, no established user impact yet\nAlso per the rules: assess from observed impact, not the monitoring alert's\nown severity label (that label is evidence, not a verdict); patient- or\nsafety-impacting flows bias one level up when in doubt; high confidence\nrequires multiple aligned signals.\n\nOutput guidance:\n- what_happened: one or two sentences, symptoms only, no cause claims\n- affected_services: only services whose data shows degradation; use the\n  topology to judge blast radius but do not list a service as affected on\n  topology alone - note suspected-but-unconfirmed ones in gaps\n- customer_impact: what a user of the product experiences, stated plainly\n- severity_explanation: cite the specific numbers that place it at the\n  chosen level under the rules above, restating each number NEXT TO the\n  band it falls in (e.g. \"error rate 4.8%, inside the 1-25% SEV-2 band\").\n  If a cited number falls outside the chosen level's band, the level is\n  wrong - re-derive it before answering. A deterministic linter\n  cross-checks the claimed level against the observed metrics.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"severity_level\":\"SEV-2\",\"severity_explanation\":\"reports-service p95 reached 2400ms against a 300ms baseline, 8x, inside the >4x-latency SEV-2 band; no error-rate series is present to justify SEV-1\",\"severity_confidence\":\"high\",\"what_happened\":\"Report generation latency rose from about 10:30 and saturated above 2 seconds; the incident is ongoing.\",\"affected_services\":[\"reports-service\",\"reports-db\"],\"customer_impact\":\"Report pages load slowly or time out.\",\"gaps\":[],\"reasoning\":\"applied the documented severity bands to the observed latency\"}"
+  }
+}

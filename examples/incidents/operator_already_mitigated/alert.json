@@ -1,0 +1,11 @@
+{
+  "id": "alert_om_001",
+  "title": "High p95 latency on search-service",
+  "service": "search-service",
+  "triggered_at": "2026-06-25T16:20:00Z",
+  "severity": "major",
+  "description": "search latency above budget for 10 minutes",
+  "signal": "p95_latency_ms",
+  "threshold": 500,
+  "observed_value": 940
+}

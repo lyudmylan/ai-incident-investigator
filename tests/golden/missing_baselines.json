@@ -1,0 +1,384 @@
+{
+  "incident_id": "missing_baselines",
+  "summary": {
+    "what_happened": "Logins fail intermittently on SSO token-exchange timeouts from about 07:18.",
+    "affected_services": [
+      "auth-service"
+    ],
+    "customer_impact": "Some users cannot log in on first attempt.",
+    "incident_window": {
+      "start": "2026-06-15T07:10:00Z",
+      "end": null,
+      "rule": "alert.triggered_at (2026-06-15T07:40:00+00:00) minus 30m lookback; no metrics available to detect recovery -> ongoing"
+    }
+  },
+  "severity": {
+    "level": "SEV-3",
+    "explanation": "login failures are confirmed by logs but no metrics are in the package, so failure rate and user share cannot be quantified - SEV-3 as limited-degradation floor, low confidence",
+    "confidence": "low"
+  },
+  "timeline": [
+    {
+      "id": "timeline_72ee59f6c1",
+      "timestamp": "2026-06-15T07:18:22Z",
+      "source": "logs",
+      "service": "auth-service",
+      "description": "WARN: SSO token exchange slow: 1900ms (budget 1000ms)"
+    },
+    {
+      "id": "timeline_56ea18007d",
+      "timestamp": "2026-06-15T07:25:41Z",
+      "source": "logs",
+      "service": "auth-service",
+      "description": "ERROR: SSO token exchange timed out after 3000ms"
+    },
+    {
+      "id": "timeline_98d75175cb",
+      "timestamp": "2026-06-15T07:33:05Z",
+      "source": "logs",
+      "service": "auth-service",
+      "description": "ERROR: SSO token exchange timed out after 3000ms"
+    },
+    {
+      "id": "timeline_7059f567c5",
+      "timestamp": "2026-06-15T07:38:50Z",
+      "source": "logs",
+      "service": "auth-service",
+      "description": "ERROR: login failed for session 4471: upstream sso timeout"
+    },
+    {
+      "id": "timeline_a6cb1d78de",
+      "timestamp": "2026-06-15T07:40:00Z",
+      "source": "alert",
+      "service": "auth-service",
+      "description": "Alert fired: Login failure rate elevated on auth-service"
+    },
+    {
+      "id": "timeline_9e3aaa1ddb",
+      "timestamp": "2026-06-15T07:41:19Z",
+      "source": "logs",
+      "service": "auth-service",
+      "description": "ERROR: login failed for session 4519: upstream sso timeout"
+    },
+    {
+      "id": "timeline_8327f05f44",
+      "timestamp": "2026-06-15T07:44:37Z",
+      "source": "logs",
+      "service": "auth-service",
+      "description": "WARN: retrying token exchange with backoff (attempt 2)"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_4cf33e1fa4",
+      "source": "deploys",
+      "interpretation": "deploys.json is an empty list: change window checked, nothing shipped - internal change ruled out",
+      "timestamp": null,
+      "service": "auth-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_e4fe7ca65a",
+      "source": "logs",
+      "interpretation": "SSO token exchange degrades from slow (1900ms, 07:18) to timeouts (3000ms) causing login failures",
+      "timestamp": "2026-06-15T07:25:41Z",
+      "service": "auth-service",
+      "signal": null,
+      "value": null
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hypothesis_959f62e325",
+      "title": "sso-provider degradation timing out token exchanges",
+      "statement": "Log timeouts against the external SSO provider are consistent with upstream degradation, but with no metrics the scale and onset cannot be corroborated - single-source evidence only.",
+      "confidence": "low",
+      "rubric": {
+        "aligned_signals": 1,
+        "timing_alignment": "unknown",
+        "conflicting_evidence_count": 0
+      },
+      "supporting_evidence_ids": [
+        "evidence_e4fe7ca65a"
+      ],
+      "conflicting_evidence_ids": [],
+      "assumptions": [
+        "log sampling did not hide earlier symptoms"
+      ],
+      "recommended_checks": [
+        "check the SSO provider status page and error rates from a probe",
+        "pull auth-service success-rate metrics from the source system"
+      ]
+    }
+  ],
+  "missing_data": [
+    {
+      "id": "missing_4e3a18b794",
+      "description": "traces.json not provided",
+      "impact": "cannot identify slow spans or failing dependencies"
+    },
+    {
+      "id": "missing_51ca2fde48",
+      "description": "metrics.json not provided",
+      "impact": "cannot measure deviation from baselines or detect recovery"
+    },
+    {
+      "id": "missing_7d924872d6",
+      "description": "runbook.md not provided",
+      "impact": "no operational guidance or known failure modes available"
+    },
+    {
+      "id": "missing_35403fbbc2",
+      "description": "triage: no metrics in the package: failure rate unquantifiable",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    },
+    {
+      "id": "missing_516be3a5bf",
+      "description": "hypothesis_ranker: metrics absent: deviation-based corroboration impossible",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    },
+    {
+      "id": "missing_9e28d42cee",
+      "description": "reporter: impact quantification impossible without metrics",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    }
+  ],
+  "recommended_next_steps": [
+    {
+      "id": "next_step_b99da7a5ae",
+      "description": "check the SSO provider status page and error rates from a probe",
+      "source_hypothesis_ids": [
+        "hypothesis_959f62e325"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_a56db5a40f",
+      "description": "pull auth-service success-rate metrics from the source system",
+      "source_hypothesis_ids": [
+        "hypothesis_959f62e325"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_52f265f8f2",
+      "description": "Provide or repair the package data: traces.json not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_4e3a18b794"
+      ]
+    },
+    {
+      "id": "next_step_27d7ed0020",
+      "description": "Provide or repair the package data: metrics.json not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_51ca2fde48"
+      ]
+    },
+    {
+      "id": "next_step_6011dabe5c",
+      "description": "Provide or repair the package data: runbook.md not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_7d924872d6"
+      ]
+    },
+    {
+      "id": "next_step_924077fd04",
+      "description": "Investigate open question: triage: no metrics in the package: failure rate unquantifiable",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_35403fbbc2"
+      ]
+    },
+    {
+      "id": "next_step_fb3fa47e18",
+      "description": "Investigate open question: hypothesis_ranker: metrics absent: deviation-based corroboration impossible",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_516be3a5bf"
+      ]
+    }
+  ],
+  "safe_mitigation_options": [],
+  "remediation_plans": [],
+  "recovery_verification": null,
+  "safety_review": {
+    "checks": [
+      {
+        "check": "overconfidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "evidence_grounding",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "action_safety",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "uncertainty",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "hypotheses_cite_resolvable_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "no_hypothesis_without_supporting_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "plans_reference_existing_items",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "state_changing_steps_verified_and_approved",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "mitigations_require_human_approval",
+        "result": "pass",
+        "detail": "0 mitigation option(s) checked"
+      },
+      {
+        "check": "no_executed_action_phrasing",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "severity_not_above_numeric_ceiling",
+        "result": "pass",
+        "detail": "no numeric signals to check the claimed level against"
+      },
+      {
+        "check": "status_page_customer_safe",
+        "result": "pass",
+        "detail": "no draft"
+      },
+      {
+        "check": "slack_update_states_nothing_was_executed",
+        "result": "pass",
+        "detail": null
+      }
+    ],
+    "notes": null
+  },
+  "communication_drafts": {
+    "internal_update": "SEV-3 (low confidence, data-poor): intermittent login failures on SSO timeouts. Single-source evidence; metrics are missing from the package so scale is unknown. No remediation has been executed.",
+    "jira_ticket": null,
+    "slack_update": null,
+    "status_page": null
+  },
+  "postmortem_draft": {
+    "title": "Postmortem draft: login failures 2026-06-15",
+    "summary": "Intermittent SSO token-exchange timeouts caused login failures; scale unquantified due to missing metrics.",
+    "impact": "Unknown share of logins affected (no metrics).",
+    "contributing_factors": [
+      "possibly: sso-provider upstream degradation"
+    ],
+    "open_questions": [
+      "actual failure rate; SSO provider incident status"
+    ],
+    "action_items": [
+      "include auth metrics in future packages"
+    ]
+  },
+  "reasoning_trace": [
+    {
+      "stage": "metrics_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "trace_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "runbook_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "deploy_correlation",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_4cf33e1fa4"
+      ]
+    },
+    {
+      "stage": "logs_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_e4fe7ca65a"
+      ]
+    },
+    {
+      "stage": "recovery_builder",
+      "summary": "no metrics in the package; no verification plan derivable",
+      "input_ids": []
+    },
+    {
+      "stage": "triage",
+      "summary": "logs alone cannot support a stronger severity claim",
+      "input_ids": []
+    },
+    {
+      "stage": "hypothesis_ranker",
+      "summary": "ranked by evidence alignment and timing | timing: 'sso-provider degradation timing out token exchanges': no metric series exists to anchor onset; first log symptom 07:18",
+      "input_ids": [
+        "hypothesis_959f62e325"
+      ]
+    },
+    {
+      "stage": "safety_critic",
+      "summary": "statements stay within what the cited evidence shows (4 checks, 0 non-pass)",
+      "input_ids": []
+    },
+    {
+      "stage": "recommendation_builder",
+      "summary": "aggregated 7 next steps deterministically (2 from hypothesis checks, 5 from missing data)",
+      "input_ids": [
+        "next_step_b99da7a5ae",
+        "next_step_a56db5a40f",
+        "next_step_52f265f8f2",
+        "next_step_27d7ed0020",
+        "next_step_6011dabe5c",
+        "next_step_924077fd04",
+        "next_step_fb3fa47e18"
+      ]
+    },
+    {
+      "stage": "reporter",
+      "summary": "drafted from the reviewed investigation output (0 mitigation option(s) proposed)",
+      "input_ids": []
+    },
+    {
+      "stage": "planner",
+      "summary": "no runbook-grounded option to structure into a plan (0 plan(s), 0 state-changing step(s), all requiring approval)",
+      "input_ids": []
+    },
+    {
+      "stage": "safety_linter",
+      "summary": "deterministic lint: 10 checks (total review: 0 blocked, 0 warning)",
+      "input_ids": []
+    }
+  ]
+}

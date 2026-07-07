@@ -1,0 +1,6 @@
+{"timestamp": "2026-06-10T10:31:12Z", "service": "reports-db", "level": "WARN", "message": "disk I/O latency above threshold on /dev/nvme1: 18ms avg over 60s"}
+{"timestamp": "2026-06-10T10:41:40Z", "service": "reports-db", "level": "ERROR", "message": "slow query: SELECT report_rows aggregation took 2100ms (threshold 500ms)"}
+{"timestamp": "2026-06-10T10:52:07Z", "service": "reports-db", "level": "ERROR", "message": "slow query: SELECT report_rows aggregation took 3900ms (threshold 500ms)"}
+{"timestamp": "2026-06-10T10:58:20Z", "service": "reports-service", "level": "INFO", "message": "deployment 2026.06.10-1058 rolled out: footer copyright text update"}
+{"timestamp": "2026-06-10T11:06:33Z", "service": "reports-service", "level": "ERROR", "message": "report generation timed out after 2000ms waiting for reports-db"}
+{"timestamp": "2026-06-10T11:12:51Z", "service": "reports-service", "level": "WARN", "message": "request queue depth 240 (normal < 20)"}

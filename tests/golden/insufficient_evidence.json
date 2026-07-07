@@ -1,0 +1,372 @@
+{
+  "incident_id": "insufficient_evidence",
+  "summary": {
+    "what_happened": "Sporadic 502s at the payments-web edge; nothing localizes them.",
+    "affected_services": [
+      "payments-web"
+    ],
+    "customer_impact": "Not established; possibly a handful of failed page loads.",
+    "incident_window": {
+      "start": "2026-06-21T02:42:00Z",
+      "end": null,
+      "rule": "alert.triggered_at (2026-06-21T03:12:00+00:00) minus 30m lookback; no metrics available to detect recovery -> ongoing"
+    }
+  },
+  "severity": {
+    "level": "SEV-4",
+    "explanation": "six edge 502s over 17 minutes with no metrics, no upstream detail, and no established user impact - warning-level signal only",
+    "confidence": "low"
+  },
+  "timeline": [
+    {
+      "id": "timeline_02a4da6fa3",
+      "timestamp": "2026-06-21T02:58:03Z",
+      "source": "logs",
+      "service": "payments-web",
+      "description": "ERROR: 502 upstream prematurely closed connection while reading response header"
+    },
+    {
+      "id": "timeline_a0727d2b5a",
+      "timestamp": "2026-06-21T03:03:44Z",
+      "source": "logs",
+      "service": "payments-web",
+      "description": "ERROR: 502 upstream prematurely closed connection while reading response header"
+    },
+    {
+      "id": "timeline_ad58a8cb84",
+      "timestamp": "2026-06-21T03:07:19Z",
+      "source": "logs",
+      "service": "payments-web",
+      "description": "ERROR: 502 upstream prematurely closed connection while reading response header"
+    },
+    {
+      "id": "timeline_cd6e0e2110",
+      "timestamp": "2026-06-21T03:11:02Z",
+      "source": "logs",
+      "service": "payments-web",
+      "description": "ERROR: 502 upstream prematurely closed connection while reading response header"
+    },
+    {
+      "id": "timeline_191ccecce9",
+      "timestamp": "2026-06-21T03:11:47Z",
+      "source": "logs",
+      "service": "payments-web",
+      "description": "ERROR: 502 upstream prematurely closed connection while reading response header"
+    },
+    {
+      "id": "timeline_5e7aedacee",
+      "timestamp": "2026-06-21T03:12:00Z",
+      "source": "alert",
+      "service": "payments-web",
+      "description": "Alert fired: Sporadic 502 responses on payments-web"
+    },
+    {
+      "id": "timeline_b149d00b3d",
+      "timestamp": "2026-06-21T03:15:30Z",
+      "source": "logs",
+      "service": "payments-web",
+      "description": "ERROR: 502 upstream prematurely closed connection while reading response header"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_c3efbc167e",
+      "source": "logs",
+      "interpretation": "six identical '502 upstream prematurely closed' lines 02:58-03:15 with no upstream name, no request ids, no pattern change",
+      "timestamp": "2026-06-21T02:58:03Z",
+      "service": "payments-web",
+      "signal": null,
+      "value": null
+    }
+  ],
+  "hypotheses": [],
+  "missing_data": [
+    {
+      "id": "missing_05819010ed",
+      "description": "deploys.json not provided",
+      "impact": "cannot correlate incident timing with recent changes"
+    },
+    {
+      "id": "missing_4e3a18b794",
+      "description": "traces.json not provided",
+      "impact": "cannot identify slow spans or failing dependencies"
+    },
+    {
+      "id": "missing_51ca2fde48",
+      "description": "metrics.json not provided",
+      "impact": "cannot measure deviation from baselines or detect recovery"
+    },
+    {
+      "id": "missing_7d924872d6",
+      "description": "runbook.md not provided",
+      "impact": "no operational guidance or known failure modes available"
+    },
+    {
+      "id": "missing_3f9a98e8b2",
+      "description": "logs_investigator: edge logs lack upstream identity; cannot localize the closer",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    },
+    {
+      "id": "missing_d487e254a1",
+      "description": "triage: no metrics, traces, or deploy records in the package",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    },
+    {
+      "id": "missing_972abd4eb9",
+      "description": "triage: 502 lines carry no upstream identity",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    },
+    {
+      "id": "missing_607e4fcd46",
+      "description": "hypothesis_ranker: no hypothesis is honest on this evidence: six identical edge 502s with no metrics, traces, or change records cannot distinguish upstream restarts, LB timeouts, or network resets",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    },
+    {
+      "id": "missing_b6de7dea8e",
+      "description": "reporter: cause not established - insufficient evidence",
+      "impact": "flagged by an investigator as limiting its conclusions"
+    }
+  ],
+  "recommended_next_steps": [
+    {
+      "id": "next_step_878ae57c53",
+      "description": "Provide or repair the package data: deploys.json not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_05819010ed"
+      ]
+    },
+    {
+      "id": "next_step_52f265f8f2",
+      "description": "Provide or repair the package data: traces.json not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_4e3a18b794"
+      ]
+    },
+    {
+      "id": "next_step_27d7ed0020",
+      "description": "Provide or repair the package data: metrics.json not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_51ca2fde48"
+      ]
+    },
+    {
+      "id": "next_step_6011dabe5c",
+      "description": "Provide or repair the package data: runbook.md not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_7d924872d6"
+      ]
+    },
+    {
+      "id": "next_step_2ed1290989",
+      "description": "Investigate open question: logs_investigator: edge logs lack upstream identity; cannot localize the closer",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_3f9a98e8b2"
+      ]
+    },
+    {
+      "id": "next_step_3d5874d52a",
+      "description": "Investigate open question: triage: no metrics, traces, or deploy records in the package",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_d487e254a1"
+      ]
+    },
+    {
+      "id": "next_step_e531a39916",
+      "description": "Investigate open question: triage: 502 lines carry no upstream identity",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_972abd4eb9"
+      ]
+    },
+    {
+      "id": "next_step_b3f1d2f062",
+      "description": "Investigate open question: hypothesis_ranker: no hypothesis is honest on this evidence: six identical edge 502s with no metrics, traces, or change records cannot distinguish upstream restarts, LB timeouts, or network resets",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_607e4fcd46"
+      ]
+    }
+  ],
+  "safe_mitigation_options": [],
+  "remediation_plans": [],
+  "recovery_verification": null,
+  "safety_review": {
+    "checks": [
+      {
+        "check": "overconfidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "evidence_grounding",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "action_safety",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "uncertainty",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "hypotheses_cite_resolvable_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "no_hypothesis_without_supporting_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "plans_reference_existing_items",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "state_changing_steps_verified_and_approved",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "mitigations_require_human_approval",
+        "result": "pass",
+        "detail": "0 mitigation option(s) checked"
+      },
+      {
+        "check": "no_executed_action_phrasing",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "severity_not_above_numeric_ceiling",
+        "result": "pass",
+        "detail": "no numeric signals to check the claimed level against"
+      },
+      {
+        "check": "status_page_customer_safe",
+        "result": "pass",
+        "detail": "no draft"
+      },
+      {
+        "check": "slack_update_states_nothing_was_executed",
+        "result": "pass",
+        "detail": null
+      }
+    ],
+    "notes": null
+  },
+  "communication_drafts": {
+    "internal_update": "SEV-4 signal, insufficient evidence: sporadic 502s at the payments-web edge. The package cannot localize a cause - no hypothesis is proposed. Needed next: payments-api logs/metrics for the window and LB target health history. No remediation has been executed.",
+    "jira_ticket": null,
+    "slack_update": null,
+    "status_page": null
+  },
+  "postmortem_draft": {
+    "title": "Postmortem draft: sporadic 502s 2026-06-21 (data-poor)",
+    "summary": "Six 502s at the edge over 17 minutes; the investigation could not establish a cause from the available data.",
+    "impact": "Unknown; at most a handful of failed requests.",
+    "contributing_factors": [],
+    "open_questions": [
+      "which upstream closed connections",
+      "whether payments-api restarted or redeployed"
+    ],
+    "action_items": [
+      "collect payments-api telemetry for the window",
+      "add upstream identity to edge error logs"
+    ]
+  },
+  "reasoning_trace": [
+    {
+      "stage": "metrics_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "trace_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "deploy_correlation",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "runbook_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "logs_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_c3efbc167e"
+      ]
+    },
+    {
+      "stage": "recovery_builder",
+      "summary": "no metrics in the package; no verification plan derivable",
+      "input_ids": []
+    },
+    {
+      "stage": "triage",
+      "summary": "a signal this thin cannot support impact claims",
+      "input_ids": []
+    },
+    {
+      "stage": "hypothesis_ranker",
+      "summary": "declining to rank: any hypothesis would be speculation; the correct output is the data needed to form one",
+      "input_ids": []
+    },
+    {
+      "stage": "safety_critic",
+      "summary": "statements stay within what the cited evidence shows (4 checks, 0 non-pass)",
+      "input_ids": []
+    },
+    {
+      "stage": "recommendation_builder",
+      "summary": "aggregated 8 next steps deterministically (0 from hypothesis checks, 8 from missing data)",
+      "input_ids": [
+        "next_step_878ae57c53",
+        "next_step_52f265f8f2",
+        "next_step_27d7ed0020",
+        "next_step_6011dabe5c",
+        "next_step_2ed1290989",
+        "next_step_3d5874d52a",
+        "next_step_e531a39916",
+        "next_step_b3f1d2f062"
+      ]
+    },
+    {
+      "stage": "reporter",
+      "summary": "drafted from the reviewed investigation output (0 mitigation option(s) proposed)",
+      "input_ids": []
+    },
+    {
+      "stage": "planner",
+      "summary": "skipped LLM call: no hypotheses to plan against",
+      "input_ids": []
+    },
+    {
+      "stage": "safety_linter",
+      "summary": "deterministic lint: 10 checks (total review: 0 blocked, 0 warning)",
+      "input_ids": []
+    }
+  ]
+}

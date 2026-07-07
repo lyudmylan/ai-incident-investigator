@@ -1,0 +1,49 @@
+{
+  "series": [
+    {
+      "service": "checkout-service",
+      "signal": "error_rate_pct",
+      "baseline": 0.4,
+      "unit": "%",
+      "points": [
+        {"timestamp": "2026-06-12T08:50:00Z", "value": 0.4},
+        {"timestamp": "2026-06-12T08:55:00Z", "value": 0.5},
+        {"timestamp": "2026-06-12T09:00:00Z", "value": 1.8},
+        {"timestamp": "2026-06-12T09:05:00Z", "value": 3.1},
+        {"timestamp": "2026-06-12T09:10:00Z", "value": 3.6},
+        {"timestamp": "2026-06-12T09:15:00Z", "value": 3.8},
+        {"timestamp": "2026-06-12T09:20:00Z", "value": 3.7}
+      ]
+    },
+    {
+      "service": "payment-gateway",
+      "signal": "p95_latency_ms",
+      "baseline": 120,
+      "unit": "ms",
+      "points": [
+        {"timestamp": "2026-06-12T08:50:00Z", "value": 118},
+        {"timestamp": "2026-06-12T08:55:00Z", "value": 122},
+        {"timestamp": "2026-06-12T09:00:00Z", "value": 119},
+        {"timestamp": "2026-06-12T09:05:00Z", "value": 125},
+        {"timestamp": "2026-06-12T09:10:00Z", "value": 121},
+        {"timestamp": "2026-06-12T09:15:00Z", "value": 117},
+        {"timestamp": "2026-06-12T09:20:00Z", "value": 123}
+      ]
+    },
+    {
+      "service": "session-cache",
+      "signal": "hit_rate_pct",
+      "baseline": 96,
+      "unit": "%",
+      "points": [
+        {"timestamp": "2026-06-12T08:50:00Z", "value": 95},
+        {"timestamp": "2026-06-12T08:55:00Z", "value": 94},
+        {"timestamp": "2026-06-12T09:00:00Z", "value": 71},
+        {"timestamp": "2026-06-12T09:05:00Z", "value": 54},
+        {"timestamp": "2026-06-12T09:10:00Z", "value": 48},
+        {"timestamp": "2026-06-12T09:15:00Z", "value": 45},
+        {"timestamp": "2026-06-12T09:20:00Z", "value": 44}
+      ]
+    }
+  ]
+}

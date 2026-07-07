@@ -1,0 +1,6 @@
+{"timestamp": "2026-06-12T08:59:41Z", "service": "session-cache", "level": "WARN", "message": "evictions spiking: 1200 keys/s under memory pressure (maxmemory-policy allkeys-lru)"}
+{"timestamp": "2026-06-12T09:01:15Z", "service": "checkout-service", "level": "ERROR", "message": "session lookup miss for cart 88231; recomputing cart state from origin"}
+{"timestamp": "2026-06-12T09:06:02Z", "service": "checkout-service", "level": "ERROR", "message": "session lookup miss for cart 90417; recomputing cart state from origin"}
+{"timestamp": "2026-06-12T09:09:48Z", "service": "checkout-service", "level": "ERROR", "message": "timeout rebuilding cart from cold state after 1500ms; returning 500"}
+{"timestamp": "2026-06-12T09:13:27Z", "service": "checkout-service", "level": "ERROR", "message": "timeout rebuilding cart from cold state after 1500ms; returning 500"}
+{"timestamp": "2026-06-12T09:16:10Z", "service": "session-cache", "level": "WARN", "message": "evictions spiking: 1400 keys/s under memory pressure (maxmemory-policy allkeys-lru)"}

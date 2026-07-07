@@ -1,0 +1,6 @@
+{
+  "services": [
+    {"name": "payments-web", "kind": "service", "depends_on": ["payments-api"]},
+    {"name": "payments-api", "kind": "service", "depends_on": []}
+  ]
+}

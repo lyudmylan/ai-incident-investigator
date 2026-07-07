@@ -1,0 +1,8 @@
+{
+  "id": "alert_mb_001",
+  "title": "Login failure rate elevated on auth-service",
+  "service": "auth-service",
+  "triggered_at": "2026-06-15T07:40:00Z",
+  "severity": "major",
+  "description": "synthetic login checks failing intermittently"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "alert_rh_001",
+  "title": "High p95 latency on reports-service GET /reports",
+  "service": "reports-service",
+  "triggered_at": "2026-06-10T11:05:00Z",
+  "severity": "critical",
+  "description": "p95 latency above 900ms for 10 consecutive minutes",
+  "signal": "p95_latency_ms",
+  "threshold": 900,
+  "observed_value": 2400
+}

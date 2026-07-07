@@ -1,0 +1,55 @@
+{
+  "series": [
+    {
+      "service": "notifications-worker",
+      "signal": "consumer_lag_seconds",
+      "baseline": 4,
+      "unit": "s",
+      "points": [
+        {"timestamp": "2026-06-18T12:56:00Z", "value": 4},
+        {"timestamp": "2026-06-18T13:00:00Z", "value": 5},
+        {"timestamp": "2026-06-18T13:05:00Z", "value": 5},
+        {"timestamp": "2026-06-18T13:10:00Z", "value": 6},
+        {"timestamp": "2026-06-18T13:15:00Z", "value": 22},
+        {"timestamp": "2026-06-18T13:20:00Z", "value": 65},
+        {"timestamp": "2026-06-18T13:25:00Z", "value": 130},
+        {"timestamp": "2026-06-18T13:30:00Z", "value": 190},
+        {"timestamp": "2026-06-18T13:35:00Z", "value": 240}
+      ]
+    },
+    {
+      "service": "message-broker",
+      "signal": "queue_depth_msgs",
+      "baseline": 150,
+      "unit": "msgs",
+      "points": [
+        {"timestamp": "2026-06-18T12:56:00Z", "value": 160},
+        {"timestamp": "2026-06-18T13:00:00Z", "value": 170},
+        {"timestamp": "2026-06-18T13:05:00Z", "value": 480},
+        {"timestamp": "2026-06-18T13:10:00Z", "value": 1400},
+        {"timestamp": "2026-06-18T13:15:00Z", "value": 2600},
+        {"timestamp": "2026-06-18T13:20:00Z", "value": 5200},
+        {"timestamp": "2026-06-18T13:25:00Z", "value": 7300},
+        {"timestamp": "2026-06-18T13:30:00Z", "value": 9800},
+        {"timestamp": "2026-06-18T13:35:00Z", "value": 11400}
+      ]
+    },
+    {
+      "service": "session-store",
+      "signal": "evictions_per_sec",
+      "baseline": 2,
+      "unit": "keys/s",
+      "points": [
+        {"timestamp": "2026-06-18T12:56:00Z", "value": 3},
+        {"timestamp": "2026-06-18T13:00:00Z", "value": 420},
+        {"timestamp": "2026-06-18T13:05:00Z", "value": 780},
+        {"timestamp": "2026-06-18T13:10:00Z", "value": 950},
+        {"timestamp": "2026-06-18T13:15:00Z", "value": 1010},
+        {"timestamp": "2026-06-18T13:20:00Z", "value": 990},
+        {"timestamp": "2026-06-18T13:25:00Z", "value": 1030},
+        {"timestamp": "2026-06-18T13:30:00Z", "value": 1080},
+        {"timestamp": "2026-06-18T13:35:00Z", "value": 1050}
+      ]
+    }
+  ]
+}

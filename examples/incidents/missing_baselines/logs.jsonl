@@ -1,0 +1,6 @@
+{"timestamp": "2026-06-15T07:18:22Z", "service": "auth-service", "level": "WARN", "message": "SSO token exchange slow: 1900ms (budget 1000ms)"}
+{"timestamp": "2026-06-15T07:25:41Z", "service": "auth-service", "level": "ERROR", "message": "SSO token exchange timed out after 3000ms"}
+{"timestamp": "2026-06-15T07:33:05Z", "service": "auth-service", "level": "ERROR", "message": "SSO token exchange timed out after 3000ms"}
+{"timestamp": "2026-06-15T07:38:50Z", "service": "auth-service", "level": "ERROR", "message": "login failed for session 4471: upstream sso timeout"}
+{"timestamp": "2026-06-15T07:41:19Z", "service": "auth-service", "level": "ERROR", "message": "login failed for session 4519: upstream sso timeout"}
+{"timestamp": "2026-06-15T07:44:37Z", "service": "auth-service", "level": "WARN", "message": "retrying token exchange with backoff (attempt 2)"}

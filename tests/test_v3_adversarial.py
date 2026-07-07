@@ -134,7 +134,7 @@ def test_leaky_status_page_is_blocked_in_the_report() -> None:
 
 def test_approval_and_reference_invariants_hold_across_all_goldens() -> None:
     goldens = sorted(GOLDEN_DIR.glob("*.json"))
-    assert len(goldens) == 4
+    assert len(goldens) == 10  # 4 originals + the 6-scenario adversarial corpus
     for path in goldens:
         report = InvestigationReport.model_validate_json(path.read_text())
         hypothesis_ids = {h.id for h in report.hypotheses}

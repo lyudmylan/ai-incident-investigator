@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "HypothesisDraft": {
+          "additionalProperties": false,
+          "description": "One candidate explanation. Note: no confidence field - the label is\nderived in code from the citations below (rubric.py).",
+          "properties": {
+            "assumptions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Assumptions",
+              "type": "array"
+            },
+            "conflicting_evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Conflicting Evidence Ids",
+              "type": "array"
+            },
+            "recommended_checks": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Recommended Checks",
+              "type": "array"
+            },
+            "statement": {
+              "title": "Statement",
+              "type": "string"
+            },
+            "supporting_evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Supporting Evidence Ids",
+              "type": "array"
+            },
+            "timing_alignment": {
+              "enum": [
+                "aligned",
+                "misaligned",
+                "unknown"
+              ],
+              "title": "Timing Alignment",
+              "type": "string"
+            },
+            "timing_justification": {
+              "title": "Timing Justification",
+              "type": "string"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "statement",
+            "supporting_evidence_ids",
+            "conflicting_evidence_ids",
+            "timing_alignment",
+            "timing_justification",
+            "assumptions",
+            "recommended_checks"
+          ],
+          "title": "HypothesisDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "hypotheses": {
+          "items": {
+            "$ref": "#/$defs/HypothesisDraft"
+          },
+          "title": "Hypotheses",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hypotheses",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "RankerResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-18T12:56:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-18T13:26:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nTRIAGE ASSESSMENT\nseverity: SEV-3 (confidence medium) - notification delivery lags by minutes but delivery retries exist and no booking-path service is degraded; no error-rate or latency series is in the package to place this in a numeric band\nwhat happened: session-store began mass-evicting at 13:00; broker consumers lost sessions and rebalanced; worker lag grew from 13:15. The alerting service is the end of the chain, not its start.\naffected services: session-store, message-broker, notifications-worker\ncustomer impact: Notifications arrive minutes late.\n\nEVIDENCE (cite items by their exact id)\n- evidence_49081ad88f [deploys] service=notifications-worker: deploys.json empty: nothing shipped in the change window; capacity/state cause more plausible than change-driven\n- evidence_d9ecc65dac [logs] service=session-store at 2026-06-18T13:01:09+00:00: eviction warning 13:01 -> broker session-lookup failures 13:07 -> worker rejoin errors 13:16: the log chain follows the topology\n- evidence_1d9b813e78 [metrics] service=notifications-worker signal=consumer_lag_seconds value=22.0 at 2026-06-18T13:15:00+00:00: notifications-worker lag first deviated at 13:15 (22s vs 4s baseline)\n- evidence_bc23cb2bed [metrics] service=message-broker signal=queue_depth_msgs value=480.0 at 2026-06-18T13:05:00+00:00: message-broker queue depth first deviated at 13:05 (480 vs 150)\n- evidence_1242ac1c11 [metrics] service=session-store signal=evictions_per_sec value=420.0 at 2026-06-18T13:00:00+00:00: session-store evictions first deviated at 13:00 (420/s vs 2/s) - the EARLIEST deviation, two topology hops from the alerting service\n- evidence_b7444cfd4c [runbook] service=notifications-worker: runbook documents this exact failure mode: 'session-store eviction cascade' - worker lag is named as the symptom, the store the cause; scaling workers during a rebalance storm is explicitly warned against\n\nKNOWN DATA GAPS\n- traces.json not provided (impact: cannot identify slow spans or failing dependencies)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: hypothesis ranker. You combine the collected evidence into ranked,\nfalsifiable hypotheses about what contributed to the incident.\n\nRules for hypotheses:\n- order them most likely first\n- every hypothesis must cite supporting evidence by exact id from the\n  EVIDENCE section; cite conflicting evidence ids too - surfacing conflict\n  is required, not optional (an unaffected control service often conflicts\n  with broad-outage hypotheses)\n- cite the STRONGEST supporting ids, at most 8 per hypothesis - every\n  cited id must independently pull weight; omit merely-consistent items\n  (a human reads each citation, and twenty of them bury the three that\n  matter)\n- statement wording: falsifiable and proportionate (\"X increased load on Y,\n  consistent with...\") - never \"root cause confirmed\"\n- timing_alignment: does the suspected cause precede symptom onset with a\n  plausible gap? aligned / misaligned / unknown, with a one-line\n  justification citing the relevant timestamps\n- assumptions: what you are taking for granted that the data does not show\n- recommended_checks: read-only verification steps a human could take next\n  (inspect, compare, query); never state-changing actions\n- prefer two or three well-evidenced hypotheses over many thin ones; include\n  a genuine alternative if the evidence permits one\n\nYou do NOT assign confidence. The pipeline derives it from your citations:\ndistinct supporting sources, timing alignment, and conflict count. Cite\naccordingly - citing three findings from one source counts as one signal.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"hypotheses\":[{\"title\":\"session-store eviction cascade through broker to workers\",\"statement\":\"session-store evictions (13:00) broke broker consumer sessions (13:07) causing worker rebalance churn and lag (13:15) - the deviation order matches the topology chain and the runbook's documented cascade.\",\"supporting_evidence_ids\":[\"evidence_1242ac1c11\",\"evidence_d9ecc65dac\",\"evidence_b7444cfd4c\"],\"conflicting_evidence_ids\":[],\"timing_alignment\":\"aligned\",\"timing_justification\":\"deviations ordered store 13:00 -> broker 13:05 -> worker 13:15, matching dependency direction\",\"assumptions\":[\"package telemetry is complete for the window\"],\"recommended_checks\":[\"confirm session-store memory limit and what grew into it\",\"verify consumer session TTLs against eviction age\"]}],\"gaps\":[],\"reasoning\":\"ranked by evidence alignment and timing\"}"
+  }
+}

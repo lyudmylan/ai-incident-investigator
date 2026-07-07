@@ -1,0 +1,88 @@
+{
+  "request": {
+    "json_schema": {
+      "additionalProperties": false,
+      "description": "Triage produces the severity assessment and the incident summary.",
+      "properties": {
+        "affected_services": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affected Services",
+          "type": "array"
+        },
+        "customer_impact": {
+          "title": "Customer Impact",
+          "type": "string"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "severity_confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Severity Confidence",
+          "type": "string"
+        },
+        "severity_explanation": {
+          "title": "Severity Explanation",
+          "type": "string"
+        },
+        "severity_level": {
+          "enum": [
+            "SEV-1",
+            "SEV-2",
+            "SEV-3",
+            "SEV-4"
+          ],
+          "title": "Severity Level",
+          "type": "string"
+        },
+        "what_happened": {
+          "title": "What Happened",
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity_level",
+        "severity_explanation",
+        "severity_confidence",
+        "what_happened",
+        "affected_services",
+        "customer_impact",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "TriageResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-18T12:56:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-18T13:26:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nALERT\nid: alert_cv_001\ntitle: Consumer lag above 30s on notifications-worker\nservice: notifications-worker\ntriggered_at: 2026-06-18T13:26:00+00:00\nmonitoring severity label: major\nsignal: consumer_lag_seconds\nthreshold: 30.0\nobserved value at trigger: 130.0\ndescription: notification delivery lag growing\n\nDETERMINISTIC TIMELINE (9 events)\n2026-06-18T13:00:00+00:00 [metrics] session-store: evictions_per_sec first deviated >=2.0x from baseline (2.0 keys/s -> 420.0 keys/s)\n2026-06-18T13:01:09+00:00 [logs] session-store: WARN: evicting keys under memory pressure: maxmemory 4gb reached (allkeys-lru)\n2026-06-18T13:05:00+00:00 [metrics] message-broker: queue_depth_msgs first deviated >=2.0x from baseline (150.0 msgs -> 480.0 msgs)\n2026-06-18T13:07:26+00:00 [logs] message-broker: WARN: consumer session lookups failing; redelivery queue growing\n2026-06-18T13:15:00+00:00 [metrics] notifications-worker: consumer_lag_seconds first deviated >=2.0x from baseline (4.0 s -> 22.0 s)\n2026-06-18T13:16:44+00:00 [logs] notifications-worker: ERROR: cannot restore consumer session: key not found in session-store; rejoining group\n2026-06-18T13:21:12+00:00 [logs] notifications-worker: ERROR: cannot restore consumer session: key not found in session-store; rejoining group\n2026-06-18T13:24:58+00:00 [logs] notifications-worker: ERROR: rebalance storm: 14 group rejoins in 5 minutes; throughput collapsed\n2026-06-18T13:26:00+00:00 [alert] notifications-worker: Alert fired: Consumer lag above 30s on notifications-worker\n\nTOPOLOGY (service -> depends on)\n- message-broker (queue) -> session-store\n- notifications-worker (service) -> message-broker\n- session-store (cache) -> (nothing)\n\nMETRIC SERIES (each with pre-incident baseline)\n- service=notifications-worker signal=consumer_lag_seconds baseline=4.0 s\n  2026-06-18T12:56:00+00:00  4.0 s\n  2026-06-18T13:00:00+00:00  5.0 s\n  2026-06-18T13:05:00+00:00  5.0 s\n  2026-06-18T13:10:00+00:00  6.0 s\n  2026-06-18T13:15:00+00:00  22.0 s\n  2026-06-18T13:20:00+00:00  65.0 s\n  2026-06-18T13:25:00+00:00  130.0 s\n  2026-06-18T13:30:00+00:00  190.0 s\n  2026-06-18T13:35:00+00:00  240.0 s\n- service=message-broker signal=queue_depth_msgs baseline=150.0 msgs\n  2026-06-18T12:56:00+00:00  160.0 msgs\n  2026-06-18T13:00:00+00:00  170.0 msgs\n  2026-06-18T13:05:00+00:00  480.0 msgs\n  2026-06-18T13:10:00+00:00  1400.0 msgs\n  2026-06-18T13:15:00+00:00  2600.0 msgs\n  2026-06-18T13:20:00+00:00  5200.0 msgs\n  2026-06-18T13:25:00+00:00  7300.0 msgs\n  2026-06-18T13:30:00+00:00  9800.0 msgs\n  2026-06-18T13:35:00+00:00  11400.0 msgs\n- service=session-store signal=evictions_per_sec baseline=2.0 keys/s\n  2026-06-18T12:56:00+00:00  3.0 keys/s\n  2026-06-18T13:00:00+00:00  420.0 keys/s\n  2026-06-18T13:05:00+00:00  780.0 keys/s\n  2026-06-18T13:10:00+00:00  950.0 keys/s\n  2026-06-18T13:15:00+00:00  1010.0 keys/s\n  2026-06-18T13:20:00+00:00  990.0 keys/s\n  2026-06-18T13:25:00+00:00  1030.0 keys/s\n  2026-06-18T13:30:00+00:00  1080.0 keys/s\n  2026-06-18T13:35:00+00:00  1050.0 keys/s",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: triage. You assess severity, affected services, blast radius, and\ncustomer impact from the package overview.\n\nSeverity rules (docs/assumptions.md - apply these, do not invent your own):\n- SEV-1: critical user-facing flow broken for most users, no workaround\n  (e.g. error rate > 25% on a critical flow, or hard outage)\n- SEV-2: significant degradation of an important flow (e.g. error rate\n  1-25% or latency > 4x baseline on a critical flow)\n- SEV-3: limited degradation, workaround exists, small share of users\n  affected\n- SEV-4: warning-level signal, no established user impact yet\nAlso per the rules: assess from observed impact, not the monitoring alert's\nown severity label (that label is evidence, not a verdict); patient- or\nsafety-impacting flows bias one level up when in doubt; high confidence\nrequires multiple aligned signals.\n\nOutput guidance:\n- what_happened: one or two sentences, symptoms only, no cause claims\n- affected_services: only services whose data shows degradation; use the\n  topology to judge blast radius but do not list a service as affected on\n  topology alone - note suspected-but-unconfirmed ones in gaps\n- customer_impact: what a user of the product experiences, stated plainly\n- severity_explanation: cite the specific numbers that place it at the\n  chosen level under the rules above, restating each number NEXT TO the\n  band it falls in (e.g. \"error rate 4.8%, inside the 1-25% SEV-2 band\").\n  If a cited number falls outside the chosen level's band, the level is\n  wrong - re-derive it before answering. A deterministic linter\n  cross-checks the claimed level against the observed metrics.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"severity_level\":\"SEV-3\",\"severity_explanation\":\"notification delivery lags by minutes but delivery retries exist and no booking-path service is degraded; no error-rate or latency series is in the package to place this in a numeric band\",\"severity_confidence\":\"medium\",\"what_happened\":\"session-store began mass-evicting at 13:00; broker consumers lost sessions and rebalanced; worker lag grew from 13:15. The alerting service is the end of the chain, not its start.\",\"affected_services\":[\"session-store\",\"message-broker\",\"notifications-worker\"],\"customer_impact\":\"Notifications arrive minutes late.\",\"gaps\":[],\"reasoning\":\"impact limited to delayed notifications with retries in place\"}"
+  }
+}

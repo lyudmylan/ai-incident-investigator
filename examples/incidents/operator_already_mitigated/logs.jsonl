@@ -1,0 +1,5 @@
+{"timestamp": "2026-06-25T16:06:31Z", "service": "search-service", "level": "WARN", "message": "query queue saturated: all 8 workers busy, queueing requests"}
+{"timestamp": "2026-06-25T16:14:05Z", "service": "search-service", "level": "ERROR", "message": "search timed out after 900ms budget (index scan incomplete)"}
+{"timestamp": "2026-06-25T16:21:47Z", "service": "search-service", "level": "ERROR", "message": "search timed out after 900ms budget (index scan incomplete)"}
+{"timestamp": "2026-06-25T16:33:02Z", "service": "search-service", "level": "INFO", "message": "scaling event observed: replicas 3 -> 6 (change record change_om_1)"}
+{"timestamp": "2026-06-25T16:44:29Z", "service": "search-service", "level": "INFO", "message": "query queue drained; latencies back within budget"}

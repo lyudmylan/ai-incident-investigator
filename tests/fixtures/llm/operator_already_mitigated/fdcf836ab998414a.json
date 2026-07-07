@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-25T15:50:00+00:00\nend: 2026-06-25T16:45:00+00:00\nrule: alert.triggered_at (2026-06-25T16:20:00+00:00) minus 30m lookback; end = start of sustained recovery across all deviated series\n\nLOG RECORDS (5 total)\n2026-06-25T16:06:31+00:00 WARN search-service query queue saturated: all 8 workers busy, queueing requests\n2026-06-25T16:14:05+00:00 ERROR search-service search timed out after 900ms budget (index scan incomplete)\n2026-06-25T16:21:47+00:00 ERROR search-service search timed out after 900ms budget (index scan incomplete)\n2026-06-25T16:33:02+00:00 INFO search-service scaling event observed: replicas 3 -> 6 (change record change_om_1)\n2026-06-25T16:44:29+00:00 INFO search-service query queue drained; latencies back within budget",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: logs investigator.\nInput: structured log records (timestamp, level, service, message) and the\nincident window.\n\nReport as findings, each citing concrete records via timestamp and service:\n- error and warning patterns: what fails, where, starting when\n- repetition and escalation (e.g. retries per operation, attempt counts,\n  whether retry behavior is bounded)\n- resource saturation messages (pools, queues, limits) with their numbers\n- the first log record that departs from routine, and what changed at that\n  moment\n- notable silences: services logging normally through the window\nQuote key message fragments verbatim inside interpretations.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"queue saturation warnings precede timeouts; the observed scaling event at 16:33 is followed by 'queue drained' at 16:44\",\"timestamp\":\"2026-06-25T16:33:02Z\",\"service\":\"search-service\",\"signal\":null,\"value\":null}],\"gaps\":[],\"reasoning\":\"compared data against baselines\"}"
+  }
+}
