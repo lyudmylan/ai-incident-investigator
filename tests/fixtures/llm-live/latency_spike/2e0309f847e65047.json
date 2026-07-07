@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nALERT\nid: alert_001\ntitle: High p95 latency on booking-service POST /book\nservice: booking-service\ntriggered_at: 2026-06-01T14:35:00+00:00\nmonitoring severity label: critical\nsignal: p95_latency_ms\nthreshold: 1000.0\nobserved value at trigger: 2100.0\ndescription: p95 latency on the appointment booking endpoint exceeded the 1000ms threshold for 5 consecutive minutes.\n\nDEPLOYS AND CHANGES (chronological)\n- deploy_001 deploy service=notifications-service version=2026.05.30-0915 at 2026-05-30T09:15:00+00:00: Reminder template copy update\n- deploy_002 deploy service=booking-service version=2026.06.01-1420 at 2026-06-01T14:20:00+00:00: Enable payment eligibility enrichment in the booking flow (gated by feature flag payment_enrichment)\n\nTOPOLOGY (service -> depends on)\n- appointments-db (database) -> (nothing)\n- booking-queue (queue) -> (nothing)\n- booking-service (service) -> payment-service, appointments-db, booking-queue\n- notifications-service (service) -> booking-queue\n- payment-service (service) -> appointments-db, stripe-api\n- stripe-api (third_party) -> (nothing)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-sonnet-5",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: deploy correlation investigator.\nInput: deploys/config/flag changes, the alert, the incident window, and the\nservice topology.\n\nReport as findings with exact timestamps:\n- for each change: how long before/after symptom onset it landed, and\n  whether that gap is consistent with causing the incident\n- whether the changed service can reach the affected service through the\n  topology (name the path), or cannot\n- changes that are poor candidates (wrong service, wrong time, no path) -\n  ruling out is evidence\nTiming correlation is not causation: state alignment strength, not verdicts.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 1778,
+    "model": "claude-sonnet-5",
+    "output_tokens": 3053,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"deploy_002 (booking-service, feature flag payment_enrichment) landed at 2026-06-01T14:20:00+00:00, which is 15 minutes before alert_001 triggered (2026-06-01T14:35:00+00:00) and falls inside the incident window (started 2026-06-01T14:05:00+00:00). This is a tight temporal alignment: the change to the affected service occurred shortly before symptom onset, consistent with (but not proof of) being the cause.\",\"timestamp\":\"2026-06-01T14:20:00+00:00\",\"service\":\"booking-service\",\"signal\":\"deploy_timing\",\"value\":\"15m before alert trigger\"},{\"interpretation\":\"deploy_002 was applied directly to booking-service, the same service named in alert_001 for the p95_latency_ms breach on POST /book. No topology traversal is needed to explain a link to the symptomatic endpoint; the change enriches the same booking flow whose latency alert fired. This is the strongest possible topological alignment (self-service change).\",\"timestamp\":\"2026-06-01T14:20:00+00:00\",\"service\":\"booking-service\",\"signal\":\"topology_path\",\"value\":\"booking-service (direct, 0 hops)\"},{\"interpretation\":\"deploy_002 enables 'payment eligibility enrichment' gated by flag payment_enrichment, and topology shows booking-service depends on payment-service, which in turn depends on appointments-db and stripe-api. If the enrichment call is synchronous, added latency could propagate from payment-service/stripe-api through booking-service's POST /book handler. This is a plausible mechanistic path, though the input does not confirm the enrichment call is synchronous or blocking.\",\"timestamp\":\"2026-06-01T14:20:00+00:00\",\"service\":\"booking-service\",\"signal\":\"topology_path\",\"value\":\"booking-service -> payment-service -> stripe-api / appointments-db\"},{\"interpretation\":\"deploy_001 (notifications-service, reminder template copy update) landed at 2026-05-30T09:15:00+00:00, roughly 2 days and 5 hours 20 minutes before alert_001 triggered (2026-06-01T14:35:00+00:00) and well before the incident window start (2026-06-01T14:05:00+00:00). This gap is far too large to be temporally consistent with causing a latency spike that began within the 30-minute lookback window; timing rules this out as a plausible trigger.\",\"timestamp\":\"2026-05-30T09:15:00+00:00\",\"service\":\"notifications-service\",\"signal\":\"deploy_timing\",\"value\":\"~2d 5h before alert trigger\"},{\"interpretation\":\"deploy_001 changed notifications-service, which depends only on booking-queue. Booking-service also depends on booking-queue, but the topology shows no dependency edge from notifications-service to booking-service (or vice versa) - both merely share a downstream queue dependency, not a calling relationship in the direction that would let notifications-service affect booking-service's POST /book latency. No path exists in the given topology; this is a poor candidate on structural grounds as well as timing.\",\"timestamp\":null,\"service\":\"notifications-service\",\"signal\":\"topology_path\",\"value\":\"no path to booking-service\"},{\"interpretation\":\"A copy-only template update (deploy_001) to a service that only produces reminders is not a change class typically associated with request-path latency, reinforcing that it is an unlikely contributor to a p95_latency_ms breach on a different service's booking endpoint.\",\"timestamp\":\"2026-05-30T09:15:00+00:00\",\"service\":\"notifications-service\",\"signal\":\"change_type\",\"value\":\"reminder template copy update\"}],\"gaps\":[\"No data confirming whether the payment_enrichment feature flag was enabled for all traffic at 14:20:00 or ramped gradually, which would affect how quickly the latency impact could appear.\",\"No direct latency/error metrics for payment-service or stripe-api in the input to confirm the mechanistic path from deploy_002 to the booking-service p95 spike.\",\"No information on other config or flag changes (besides the two deploys listed) that might have occurred in the incident window.\",\"No confirmation of exact time the p95 latency deviation began (only the alert's 30m lookback-derived window start is given), so precise gap between deploy_002 and true onset cannot be pinned closer than the window boundaries.\"],\"reasoning\":\"Two changes are in scope: deploy_002 to booking-service and deploy_001 to notifications-service. deploy_002 shows strong timing alignment (15 minutes before alert trigger, inside the incident window) and a direct/short topological path to the affected service and endpoint, making it the stronger correlate, though this is timing/topology correlation, not confirmed causation. deploy_001 is a poor candidate on both timing (over 2 days before onset) and topology (no dependency path connects notifications-service to booking-service in the provided graph - they only share a downstream queue), and its change type (copy update) is not typically latency-impacting. These distinctions are stated as alignment strength, not verdicts, per the investigation remit.\"}"
+  }
+}

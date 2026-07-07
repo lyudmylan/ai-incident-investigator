@@ -1,0 +1,88 @@
+{
+  "request": {
+    "json_schema": {
+      "additionalProperties": false,
+      "description": "Triage produces the severity assessment and the incident summary.",
+      "properties": {
+        "affected_services": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affected Services",
+          "type": "array"
+        },
+        "customer_impact": {
+          "title": "Customer Impact",
+          "type": "string"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "severity_confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Severity Confidence",
+          "type": "string"
+        },
+        "severity_explanation": {
+          "title": "Severity Explanation",
+          "type": "string"
+        },
+        "severity_level": {
+          "enum": [
+            "SEV-1",
+            "SEV-2",
+            "SEV-3",
+            "SEV-4"
+          ],
+          "title": "Severity Level",
+          "type": "string"
+        },
+        "what_happened": {
+          "title": "What Happened",
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity_level",
+        "severity_explanation",
+        "severity_confidence",
+        "what_happened",
+        "affected_services",
+        "customer_impact",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "TriageResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nALERT\nid: alert_001\ntitle: High p95 latency on booking-service POST /book\nservice: booking-service\ntriggered_at: 2026-06-01T14:35:00+00:00\nmonitoring severity label: critical\nsignal: p95_latency_ms\nthreshold: 1000.0\nobserved value at trigger: 2100.0\ndescription: p95 latency on the appointment booking endpoint exceeded the 1000ms threshold for 5 consecutive minutes.\n\nDETERMINISTIC TIMELINE (25 events)\n2026-05-30T09:15:00+00:00 [deploys] notifications-service: deploy 2026.05.30-0915 on notifications-service: Reminder template copy update\n2026-06-01T14:20:00+00:00 [deploys] booking-service: deploy 2026.06.01-1420 on booking-service: Enable payment eligibility enrichment in the booking flow (gated by feature flag payment_enrichment)\n2026-06-01T14:25:00+00:00 [metrics] booking-queue: queue_depth first deviated >=2.0x from baseline (12.0 messages -> 35.0 messages)\n2026-06-01T14:25:00+00:00 [metrics] booking-service: error_rate_pct first deviated >=2.0x from baseline (0.3 % -> 0.7 %)\n2026-06-01T14:26:02+00:00 [logs] booking-service: WARN: Payment eligibility check slow: 1480ms (threshold 500ms)\n2026-06-01T14:27:39+00:00 [logs] payment-service: WARN: Eligibility enrichment query exceeded slow query threshold: 1210ms\n2026-06-01T14:29:14+00:00 [logs] booking-service: WARN: Retrying eligibility lookup for booking 84152 (attempt 2 of 5)\n2026-06-01T14:30:00+00:00 [metrics] booking-service: p95_latency_ms first deviated >=2.0x from baseline (450.0 ms -> 900.0 ms)\n2026-06-01T14:30:00+00:00 [metrics] payment-service: p95_latency_ms first deviated >=2.0x from baseline (220.0 ms -> 980.0 ms)\n2026-06-01T14:30:27+00:00 [logs] appointments-db: WARN: Connection pool nearing saturation: 82/100 connections in use\n2026-06-01T14:31:08+00:00 [logs] booking-service: ERROR: Eligibility lookup timed out after 2000ms for booking 84158 (attempt 3 of 5)\n2026-06-01T14:32:36+00:00 [logs] booking-service: WARN: Retrying eligibility lookup for booking 84158 (attempt 4 of 5)\n2026-06-01T14:33:21+00:00 [logs] payment-service: ERROR: Eligibility enrichment query timed out after 2000ms\n2026-06-01T14:34:44+00:00 [logs] appointments-db: WARN: Connection pool saturated: 97/100 connections in use\n2026-06-01T14:35:00+00:00 [alert] booking-service: Alert fired: High p95 latency on booking-service POST /book\n2026-06-01T14:35:00+00:00 [metrics] appointments-db: cpu_pct first deviated >=2.0x from baseline (38.0 % -> 84.0 %)\n2026-06-01T14:35:52+00:00 [logs] booking-service: ERROR: Booking failed for appointment 84163: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:36:30+00:00 [logs] booking-service: WARN: Booking queue depth 260 exceeds normal operating range\n2026-06-01T14:38:09+00:00 [logs] booking-service: ERROR: Booking failed for appointment 84170: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:39:05+00:00 [traces] booking-service: Trace trace_incident_01: POST /book failed after 3180ms\n2026-06-01T14:40:51+00:00 [logs] appointments-db: WARN: Slow query: SELECT plan_rules FROM eligibility_rules WHERE plan_group = $1 took 2350ms\n2026-06-01T14:45:17+00:00 [logs] booking-service: ERROR: Booking failed for appointment 84181: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:50:33+00:00 [logs] booking-service: WARN: Retrying eligibility lookup for booking 84190 (attempt 2 of 5)\n2026-06-01T14:52:31+00:00 [traces] booking-service: Trace trace_incident_02: POST /book failed after 3320ms\n2026-06-01T14:55:46+00:00 [logs] payment-service: ERROR: Eligibility enrichment query timed out after 2000ms\n\nTOPOLOGY (service -> depends on)\n- appointments-db (database) -> (nothing)\n- booking-queue (queue) -> (nothing)\n- booking-service (service) -> payment-service, appointments-db, booking-queue\n- notifications-service (service) -> booking-queue\n- payment-service (service) -> appointments-db, stripe-api\n- stripe-api (third_party) -> (nothing)\n\nMETRIC SERIES (each with pre-incident baseline)\n- service=booking-service signal=p95_latency_ms baseline=450.0 ms\n  2026-06-01T14:00:00+00:00  445.0 ms\n  2026-06-01T14:05:00+00:00  450.0 ms\n  2026-06-01T14:10:00+00:00  460.0 ms\n  2026-06-01T14:15:00+00:00  455.0 ms\n  2026-06-01T14:20:00+00:00  470.0 ms\n  2026-06-01T14:25:00+00:00  520.0 ms\n  2026-06-01T14:30:00+00:00  900.0 ms\n  2026-06-01T14:35:00+00:00  2100.0 ms\n  2026-06-01T14:40:00+00:00  3200.0 ms\n  2026-06-01T14:45:00+00:00  3150.0 ms\n  2026-06-01T14:50:00+00:00  3300.0 ms\n  2026-06-01T14:55:00+00:00  3250.0 ms\n  2026-06-01T15:00:00+00:00  3200.0 ms\n- service=booking-service signal=error_rate_pct baseline=0.3 %\n  2026-06-01T14:00:00+00:00  0.3 %\n  2026-06-01T14:05:00+00:00  0.2 %\n  2026-06-01T14:10:00+00:00  0.3 %\n  2026-06-01T14:15:00+00:00  0.3 %\n  2026-06-01T14:20:00+00:00  0.4 %\n  2026-06-01T14:25:00+00:00  0.7 %\n  2026-06-01T14:30:00+00:00  1.6 %\n  2026-06-01T14:35:00+00:00  3.2 %\n  2026-06-01T14:40:00+00:00  4.8 %\n  2026-06-01T14:45:00+00:00  4.7 %\n  2026-06-01T14:50:00+00:00  4.8 %\n  2026-06-01T14:55:00+00:00  4.6 %\n  2026-06-01T15:00:00+00:00  4.8 %\n- service=payment-service signal=p95_latency_ms baseline=220.0 ms\n  2026-06-01T14:00:00+00:00  215.0 ms\n  2026-06-01T14:05:00+00:00  225.0 ms\n  2026-06-01T14:10:00+00:00  218.0 ms\n  2026-06-01T14:15:00+00:00  222.0 ms\n  2026-06-01T14:20:00+00:00  230.0 ms\n  2026-06-01T14:25:00+00:00  410.0 ms\n  2026-06-01T14:30:00+00:00  980.0 ms\n  2026-06-01T14:35:00+00:00  1700.0 ms\n  2026-06-01T14:40:00+00:00  2400.0 ms\n  2026-06-01T14:45:00+00:00  2350.0 ms\n  2026-06-01T14:50:00+00:00  2450.0 ms\n  2026-06-01T14:55:00+00:00  2400.0 ms\n  2026-06-01T15:00:00+00:00  2380.0 ms\n- service=appointments-db signal=cpu_pct baseline=38.0 %\n  2026-06-01T14:00:00+00:00  36.0 %\n  2026-06-01T14:05:00+00:00  39.0 %\n  2026-06-01T14:10:00+00:00  37.0 %\n  2026-06-01T14:15:00+00:00  38.0 %\n  2026-06-01T14:20:00+00:00  41.0 %\n  2026-06-01T14:25:00+00:00  55.0 %\n  2026-06-01T14:30:00+00:00  71.0 %\n  2026-06-01T14:35:00+00:00  84.0 %\n  2026-06-01T14:40:00+00:00  92.0 %\n  2026-06-01T14:45:00+00:00  91.0 %\n  2026-06-01T14:50:00+00:00  93.0 %\n  2026-06-01T14:55:00+00:00  92.0 %\n  2026-06-01T15:00:00+00:00  92.0 %\n- service=booking-queue signal=queue_depth baseline=12.0 messages\n  2026-06-01T14:00:00+00:00  10.0 messages\n  2026-06-01T14:05:00+00:00  12.0 messages\n  2026-06-01T14:10:00+00:00  11.0 messages\n  2026-06-01T14:15:00+00:00  13.0 messages\n  2026-06-01T14:20:00+00:00  14.0 messages\n  2026-06-01T14:25:00+00:00  35.0 messages\n  2026-06-01T14:30:00+00:00  110.0 messages\n  2026-06-01T14:35:00+00:00  260.0 messages\n  2026-06-01T14:40:00+00:00  480.0 messages\n  2026-06-01T14:45:00+00:00  510.0 messages\n  2026-06-01T14:50:00+00:00  540.0 messages\n  2026-06-01T14:55:00+00:00  530.0 messages\n  2026-06-01T15:00:00+00:00  545.0 messages\n- service=notifications-service signal=p95_latency_ms baseline=120.0 ms\n  2026-06-01T14:00:00+00:00  118.0 ms\n  2026-06-01T14:05:00+00:00  122.0 ms\n  2026-06-01T14:10:00+00:00  119.0 ms\n  2026-06-01T14:15:00+00:00  121.0 ms\n  2026-06-01T14:20:00+00:00  120.0 ms\n  2026-06-01T14:25:00+00:00  123.0 ms\n  2026-06-01T14:30:00+00:00  119.0 ms\n  2026-06-01T14:35:00+00:00  124.0 ms\n  2026-06-01T14:40:00+00:00  121.0 ms\n  2026-06-01T14:45:00+00:00  120.0 ms\n  2026-06-01T14:50:00+00:00  122.0 ms\n  2026-06-01T14:55:00+00:00  119.0 ms\n  2026-06-01T15:00:00+00:00  121.0 ms",
+        "role": "user"
+      }
+    ],
+    "model": "claude-sonnet-5",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: triage. You assess severity, affected services, blast radius, and\ncustomer impact from the package overview.\n\nSeverity rules (docs/assumptions.md - apply these, do not invent your own):\n- SEV-1: critical user-facing flow broken for most users, no workaround\n  (e.g. error rate > 25% on a critical flow, or hard outage)\n- SEV-2: significant degradation of an important flow (e.g. error rate\n  1-25% or latency > 4x baseline on a critical flow)\n- SEV-3: limited degradation, workaround exists, small share of users\n  affected\n- SEV-4: warning-level signal, no established user impact yet\nAlso per the rules: assess from observed impact, not the monitoring alert's\nown severity label (that label is evidence, not a verdict); patient- or\nsafety-impacting flows bias one level up when in doubt; high confidence\nrequires multiple aligned signals.\n\nOutput guidance:\n- what_happened: one or two sentences, symptoms only, no cause claims\n- affected_services: only services whose data shows degradation; use the\n  topology to judge blast radius but do not list a service as affected on\n  topology alone - note suspected-but-unconfirmed ones in gaps\n- customer_impact: what a user of the product experiences, stated plainly\n- severity_explanation: cite the specific numbers that place it at the\n  chosen level under the rules above",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 5395,
+    "model": "claude-sonnet-5",
+    "output_tokens": 1957,
+    "stop_reason": "end_turn",
+    "text": "{\"severity_level\":\"SEV-2\",\"severity_explanation\":\"Under the stated rules, SEV-2 applies when a critical flow shows latency >4x baseline or error rate in the 1-25% range. Booking-service p95 latency rose from a 450.0 ms baseline to 3200.0 ms at 14:40:00 (and stayed 3150-3300 ms through 15:00:00), roughly 7x baseline, and booking-service error_rate_pct rose from a 0.3% baseline to 4.8% at 14:40:00 (staying 4.6-4.8% through 15:00:00), within the 1-25% band. Neither metric crosses into SEV-1 territory (error rate stayed under 25%), so SEV-2 is the correct level per the rules, not the monitoring tool's own 'critical' label on alert_001.\",\"severity_confidence\":\"high\",\"what_happened\":\"Starting around 2026-06-01T14:25:00+00:00, booking-service began showing elevated latency and error rates on the POST /book flow, culminating in an alert at 2026-06-01T14:35:00+00:00 for p95 latency of 2100.0 ms against a 1000.0 ms threshold; latency and error rate continued climbing and had not recovered as of the latest observed point (2026-06-01T15:00:00+00:00, 3200.0 ms / 4.8%). Multiple booking attempts are logged as failing after exhausting retries, and dependent queue and database signals also deviated sharply from baseline over the same window.\",\"affected_services\":[\"booking-service\",\"payment-service\",\"appointments-db\",\"booking-queue\"],\"customer_impact\":\"Users attempting to book appointments experience significantly slower responses (booking-service p95 latency up to ~3200-3300 ms vs a 450.0 ms baseline) and a portion of booking attempts fail outright, as shown by repeated 'Booking failed ... eligibility lookup exhausted retries (5 of 5)' errors (e.g. appointments 84163, 84170, 84181) and failed traces (trace_incident_01 at 3180ms, trace_incident_02 at 3320ms).\",\"gaps\":[\"notifications-service depends on booking-queue per topology, and booking-queue depth rose from a 12.0 baseline to 545.0 messages by 15:00:00, but notifications-service p95_latency_ms shows no deviation (stays 118-124 ms) in the provided series, so any downstream notification impact is unconfirmed.\",\"stripe-api is a topology dependency of payment-service but no metrics or logs for stripe-api are included, so its involvement/impact cannot be assessed.\",\"No data is provided on total booking request volume or the proportion of distinct users affected, so the exact scale of 'most users' vs a subset cannot be confirmed beyond the observed error_rate_pct and failure log samples.\",\"No recovery signal is present in any series through the last data point (2026-06-01T15:00:00+00:00), consistent with the incident window rule marking this ongoing, but the true end time is unknown.\"],\"reasoning\":\"I evaluated the deterministic timeline and metric series against the severity rules rather than the alert's own 'critical' label. Booking-service p95 latency and error_rate_pct both show sustained, multi-point deviation from baseline (not a single-point spike): latency 450.0->3200.0+ ms (~7x) and error rate 0.3%->4.8% (within 1-25%), matching the SEV-2 criteria for a critical flow (latency >4x baseline or error rate 1-25%) rather than SEV-1 (>25% error rate or hard outage) since booking is still processing some requests, evidenced by mixed WARN retries and some traces, and no full-outage signal is present. Payment-service and appointments-db show aligned upstream/downstream degradation (p95 latency 220.0->2400.0 ms, cpu_pct 38.0->92.0%, connection pool saturation logs), and booking-queue depth rose from 12.0 to 545.0 messages, all reinforcing that the booking flow is the affected critical path. Notifications-service metrics remain flat, so it is excluded from affected_services despite topology adjacency, per the instruction not to infer impact from topology alone.\"}"
+  }
+}

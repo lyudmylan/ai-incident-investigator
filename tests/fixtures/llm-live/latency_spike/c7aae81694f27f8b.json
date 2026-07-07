@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nMETRIC SERIES (each with pre-incident baseline)\n- service=booking-service signal=p95_latency_ms baseline=450.0 ms\n  2026-06-01T14:00:00+00:00  445.0 ms\n  2026-06-01T14:05:00+00:00  450.0 ms\n  2026-06-01T14:10:00+00:00  460.0 ms\n  2026-06-01T14:15:00+00:00  455.0 ms\n  2026-06-01T14:20:00+00:00  470.0 ms\n  2026-06-01T14:25:00+00:00  520.0 ms\n  2026-06-01T14:30:00+00:00  900.0 ms\n  2026-06-01T14:35:00+00:00  2100.0 ms\n  2026-06-01T14:40:00+00:00  3200.0 ms\n  2026-06-01T14:45:00+00:00  3150.0 ms\n  2026-06-01T14:50:00+00:00  3300.0 ms\n  2026-06-01T14:55:00+00:00  3250.0 ms\n  2026-06-01T15:00:00+00:00  3200.0 ms\n- service=booking-service signal=error_rate_pct baseline=0.3 %\n  2026-06-01T14:00:00+00:00  0.3 %\n  2026-06-01T14:05:00+00:00  0.2 %\n  2026-06-01T14:10:00+00:00  0.3 %\n  2026-06-01T14:15:00+00:00  0.3 %\n  2026-06-01T14:20:00+00:00  0.4 %\n  2026-06-01T14:25:00+00:00  0.7 %\n  2026-06-01T14:30:00+00:00  1.6 %\n  2026-06-01T14:35:00+00:00  3.2 %\n  2026-06-01T14:40:00+00:00  4.8 %\n  2026-06-01T14:45:00+00:00  4.7 %\n  2026-06-01T14:50:00+00:00  4.8 %\n  2026-06-01T14:55:00+00:00  4.6 %\n  2026-06-01T15:00:00+00:00  4.8 %\n- service=payment-service signal=p95_latency_ms baseline=220.0 ms\n  2026-06-01T14:00:00+00:00  215.0 ms\n  2026-06-01T14:05:00+00:00  225.0 ms\n  2026-06-01T14:10:00+00:00  218.0 ms\n  2026-06-01T14:15:00+00:00  222.0 ms\n  2026-06-01T14:20:00+00:00  230.0 ms\n  2026-06-01T14:25:00+00:00  410.0 ms\n  2026-06-01T14:30:00+00:00  980.0 ms\n  2026-06-01T14:35:00+00:00  1700.0 ms\n  2026-06-01T14:40:00+00:00  2400.0 ms\n  2026-06-01T14:45:00+00:00  2350.0 ms\n  2026-06-01T14:50:00+00:00  2450.0 ms\n  2026-06-01T14:55:00+00:00  2400.0 ms\n  2026-06-01T15:00:00+00:00  2380.0 ms\n- service=appointments-db signal=cpu_pct baseline=38.0 %\n  2026-06-01T14:00:00+00:00  36.0 %\n  2026-06-01T14:05:00+00:00  39.0 %\n  2026-06-01T14:10:00+00:00  37.0 %\n  2026-06-01T14:15:00+00:00  38.0 %\n  2026-06-01T14:20:00+00:00  41.0 %\n  2026-06-01T14:25:00+00:00  55.0 %\n  2026-06-01T14:30:00+00:00  71.0 %\n  2026-06-01T14:35:00+00:00  84.0 %\n  2026-06-01T14:40:00+00:00  92.0 %\n  2026-06-01T14:45:00+00:00  91.0 %\n  2026-06-01T14:50:00+00:00  93.0 %\n  2026-06-01T14:55:00+00:00  92.0 %\n  2026-06-01T15:00:00+00:00  92.0 %\n- service=booking-queue signal=queue_depth baseline=12.0 messages\n  2026-06-01T14:00:00+00:00  10.0 messages\n  2026-06-01T14:05:00+00:00  12.0 messages\n  2026-06-01T14:10:00+00:00  11.0 messages\n  2026-06-01T14:15:00+00:00  13.0 messages\n  2026-06-01T14:20:00+00:00  14.0 messages\n  2026-06-01T14:25:00+00:00  35.0 messages\n  2026-06-01T14:30:00+00:00  110.0 messages\n  2026-06-01T14:35:00+00:00  260.0 messages\n  2026-06-01T14:40:00+00:00  480.0 messages\n  2026-06-01T14:45:00+00:00  510.0 messages\n  2026-06-01T14:50:00+00:00  540.0 messages\n  2026-06-01T14:55:00+00:00  530.0 messages\n  2026-06-01T15:00:00+00:00  545.0 messages\n- service=notifications-service signal=p95_latency_ms baseline=120.0 ms\n  2026-06-01T14:00:00+00:00  118.0 ms\n  2026-06-01T14:05:00+00:00  122.0 ms\n  2026-06-01T14:10:00+00:00  119.0 ms\n  2026-06-01T14:15:00+00:00  121.0 ms\n  2026-06-01T14:20:00+00:00  120.0 ms\n  2026-06-01T14:25:00+00:00  123.0 ms\n  2026-06-01T14:30:00+00:00  119.0 ms\n  2026-06-01T14:35:00+00:00  124.0 ms\n  2026-06-01T14:40:00+00:00  121.0 ms\n  2026-06-01T14:45:00+00:00  120.0 ms\n  2026-06-01T14:50:00+00:00  122.0 ms\n  2026-06-01T14:55:00+00:00  119.0 ms\n  2026-06-01T15:00:00+00:00  121.0 ms",
+        "role": "user"
+      }
+    ],
+    "model": "claude-sonnet-5",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: metrics investigator.\nInput: metric series with pre-incident baselines, plus the incident window.\nThe documented deviation rule (docs/assumptions.md): a value is anomalous at\n>= 2x baseline or <= 0.5x baseline; with a zero baseline any nonzero value\nis anomalous.\n\nReport as findings, each tied to a concrete series and timestamp:\n- for each series that deviates: when it first crossed, how far it peaked\n  relative to baseline, and whether it recovered inside the window\n- ordering between deviating series (which moved first)\n- series that stayed at baseline - unaffected services are evidence too\n- suspicious shapes the rule misses (steady climb, step change, plateau)\nDo not speculate about causes in other sources; describe metric behavior.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 3524,
+    "model": "claude-sonnet-5",
+    "output_tokens": 3804,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"booking-queue queue_depth first became anomalous per the 2x rule (35 messages = 2.92x the 12.0 baseline), the earliest confirmed deviation crossing in the window along with booking-service error_rate.\",\"timestamp\":\"2026-06-01T14:25:00+00:00\",\"service\":\"booking-queue\",\"signal\":\"queue_depth\",\"value\":35.0},{\"interpretation\":\"booking-service error_rate_pct crossed the anomaly threshold (0.7% = 2.33x the 0.3% baseline) at the same timestamp as booking-queue's first crossing, making these the two earliest-deviating series.\",\"timestamp\":\"2026-06-01T14:25:00+00:00\",\"service\":\"booking-service\",\"signal\":\"error_rate_pct\",\"value\":0.7},{\"interpretation\":\"booking-queue queue_depth peaked at 545 messages, 45.4x baseline, and shows no recovery through the end of the observed window; the window is marked ongoing for this series.\",\"timestamp\":\"2026-06-01T15:00:00+00:00\",\"service\":\"booking-queue\",\"signal\":\"queue_depth\",\"value\":545.0},{\"interpretation\":\"booking-service error_rate_pct peaked at 4.8%, 16x baseline, sustained at this elevated plateau through the end of the window with no recovery.\",\"timestamp\":\"2026-06-01T14:50:00+00:00\",\"service\":\"booking-service\",\"signal\":\"error_rate_pct\",\"value\":4.8},{\"interpretation\":\"booking-service p95_latency_ms crossed the anomaly threshold at exactly 2x baseline (900ms vs 450ms baseline), first deviating here.\",\"timestamp\":\"2026-06-01T14:30:00+00:00\",\"service\":\"booking-service\",\"signal\":\"p95_latency_ms\",\"value\":900.0},{\"interpretation\":\"payment-service p95_latency_ms crossed the anomaly threshold (980ms = 4.45x the 220ms baseline) at the same timestamp as booking-service latency's first crossing.\",\"timestamp\":\"2026-06-01T14:30:00+00:00\",\"service\":\"payment-service\",\"signal\":\"p95_latency_ms\",\"value\":980.0},{\"interpretation\":\"booking-service p95_latency_ms peaked at 3300ms, 7.33x baseline, and remained elevated (3200ms, 7.1x baseline) at the last observed point with no recovery.\",\"timestamp\":\"2026-06-01T14:50:00+00:00\",\"service\":\"booking-service\",\"signal\":\"p95_latency_ms\",\"value\":3300.0},{\"interpretation\":\"payment-service p95_latency_ms peaked at 2450ms, 11.1x baseline, remaining elevated (2380ms, 10.8x baseline) at the final observed point with no recovery.\",\"timestamp\":\"2026-06-01T14:50:00+00:00\",\"service\":\"payment-service\",\"signal\":\"p95_latency_ms\",\"value\":2450.0},{\"interpretation\":\"appointments-db cpu_pct crossed the anomaly threshold (84% = 2.21x the 38% baseline), the latest of the deviating series to first cross 2x, roughly 5-10 minutes after the others.\",\"timestamp\":\"2026-06-01T14:35:00+00:00\",\"service\":\"appointments-db\",\"signal\":\"cpu_pct\",\"value\":84.0},{\"interpretation\":\"appointments-db cpu_pct peaked at 93%, 2.45x baseline, plateauing near this level (91-93%) through the end of the window with no recovery.\",\"timestamp\":\"2026-06-01T14:50:00+00:00\",\"service\":\"appointments-db\",\"signal\":\"cpu_pct\",\"value\":93.0},{\"interpretation\":\"notifications-service p95_latency_ms stayed within a narrow band (118-124ms) around its 120ms baseline throughout the entire window, never approaching the 2x/0.5x anomaly thresholds; this service shows no metric-level impact.\",\"timestamp\":\"2026-06-01T15:00:00+00:00\",\"service\":\"notifications-service\",\"signal\":\"p95_latency_ms\",\"value\":121.0},{\"interpretation\":\"Ordering of first anomalous crossings: booking-queue queue_depth and booking-service error_rate_pct crossed first at 14:25:00, followed by booking-service p95_latency_ms and payment-service p95_latency_ms at 14:30:00, with appointments-db cpu_pct crossing last at 14:35:00 - consistent with a cascading failure pattern from booking/queue toward the database tier.\",\"timestamp\":\"2026-06-01T14:25:00+00:00\",\"service\":null,\"signal\":null,\"value\":null},{\"interpretation\":\"appointments-db cpu_pct shows a steady, non-abrupt climb (36->39->37->38->41->55->71->84...) rather than a sharp step change, suggesting a gradually building load pattern that the binary 2x threshold does not fully capture until 14:35.\",\"timestamp\":\"2026-06-01T14:20:00+00:00\",\"service\":\"appointments-db\",\"signal\":\"cpu_pct\",\"value\":41.0},{\"interpretation\":\"booking-queue queue_depth shows continued, unresolved growth (480->510->540->530->545) rather than a clean plateau, indicating the queue may still be backing up rather than stabilizing, unlike the other deviating series which flatten after ~14:40.\",\"timestamp\":\"2026-06-01T14:55:00+00:00\",\"service\":\"booking-queue\",\"signal\":\"queue_depth\",\"value\":530.0},{\"interpretation\":\"booking-service p95_latency_ms shows a pre-threshold gradual rise (450->460->455->470->520) before the sharp jump to 900ms at 14:30, a shape the binary deviation rule misses since none of these early points individually crossed 2x baseline.\",\"timestamp\":\"2026-06-01T14:10:00+00:00\",\"service\":\"booking-service\",\"signal\":\"p95_latency_ms\",\"value\":460.0},{\"interpretation\":\"payment-service p95_latency_ms nearly crossed the anomaly threshold at 14:25 (410ms = 1.86x baseline) before fully crossing at 14:30, indicating the onset began slightly earlier than the formal 2x crossing captures.\",\"timestamp\":\"2026-06-01T14:25:00+00:00\",\"service\":\"payment-service\",\"signal\":\"p95_latency_ms\",\"value\":410.0}],\"gaps\":[\"No data points are provided beyond 2026-06-01T15:00:00+00:00, so it cannot be determined from metrics alone whether/when any of the deviating series eventually recovered; window is marked ongoing per the incident window definition.\",\"Metric granularity is 5-minute intervals, so exact sub-interval crossing times (e.g., precisely when payment-service crossed 2x between 14:25 and 14:30) cannot be pinpointed more finely than the sampled timestamps.\"],\"reasoning\":\"Applied the documented >=2x / <=0.5x baseline deviation rule to each series at each timestamp to identify first crossing, peak deviation, and recovery status. Compared first-crossing timestamps across series to establish ordering. Flagged notifications-service as unaffected since all values stayed within roughly +/-3% of baseline. Additionally noted shape characteristics (steady climbs, near-threshold approaches, non-plateauing growth) that the binary threshold rule does not explicitly surface but are visible in the raw series.\"}"
+  }
+}
