@@ -44,7 +44,11 @@ Output guidance:
   topology alone - note suspected-but-unconfirmed ones in gaps
 - customer_impact: what a user of the product experiences, stated plainly
 - severity_explanation: cite the specific numbers that place it at the
-  chosen level under the rules above"""
+  chosen level under the rules above, restating each number NEXT TO the
+  band it falls in (e.g. "error rate 4.8%, inside the 1-25% SEV-2 band").
+  If a cited number falls outside the chosen level's band, the level is
+  wrong - re-derive it before answering. A deterministic linter
+  cross-checks the claimed level against the observed metrics."""
 
 
 def _triage_input(state: InvestigationState) -> str:

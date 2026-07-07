@@ -36,6 +36,10 @@ Rules for hypotheses:
   EVIDENCE section; cite conflicting evidence ids too - surfacing conflict
   is required, not optional (an unaffected control service often conflicts
   with broad-outage hypotheses)
+- cite the STRONGEST supporting ids, at most 8 per hypothesis - every
+  cited id must independently pull weight; omit merely-consistent items
+  (a human reads each citation, and twenty of them bury the three that
+  matter)
 - statement wording: falsifiable and proportionate ("X increased load on Y,
   consistent with...") - never "root cause confirmed"
 - timing_alignment: does the suspected cause precede symptom onset with a

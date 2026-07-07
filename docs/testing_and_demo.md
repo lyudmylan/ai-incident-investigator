@@ -96,6 +96,9 @@ Sonnet 5 run of latency_spike lives in `tests/fixtures/llm-live/`
       --format markdown
 
     The model override is required: fixture keys embed the model name.
+    The snapshot pairs with the prompts as of its recording commit -
+    prompt changes invalidate replay (fixture keys embed the full
+    request); re-record after meaningful prompt work to refresh it.
     Notable content: the critic BLOCKS triage on a timestamp-precision
     error and questions the confidence rubric's design - real safety-layer
     behavior on real model output. Kept separate from tests/fixtures/llm

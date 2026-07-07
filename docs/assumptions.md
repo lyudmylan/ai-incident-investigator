@@ -61,6 +61,11 @@ The deterministic timeline contains, in timestamp order:
 - Patient- or safety-impacting flows (the target user includes healthcare SaaS)
   bias one level up when in doubt.
 - Severity always ships with an explanation and a confidence label.
+- The deterministic linter cross-checks the claimed level against the
+  observed metrics (issue #45): the numeric bands above define a ceiling -
+  the most severe level the numbers can justify. Judgment (flow
+  criticality, workarounds, the patient-safety bias) may lower a claim
+  below the ceiling, never raise it above; overstated claims are flagged.
 
 ## Confidence rubric
 
