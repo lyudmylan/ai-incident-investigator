@@ -1,0 +1,7 @@
+{
+  "services": [
+    {"name": "notifications-worker", "kind": "service", "depends_on": ["message-broker"]},
+    {"name": "message-broker", "kind": "queue", "depends_on": ["session-store"]},
+    {"name": "session-store", "kind": "cache", "depends_on": []}
+  ]
+}

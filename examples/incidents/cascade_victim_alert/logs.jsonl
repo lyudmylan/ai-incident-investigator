@@ -1,0 +1,5 @@
+{"timestamp": "2026-06-18T13:01:09Z", "service": "session-store", "level": "WARN", "message": "evicting keys under memory pressure: maxmemory 4gb reached (allkeys-lru)"}
+{"timestamp": "2026-06-18T13:07:26Z", "service": "message-broker", "level": "WARN", "message": "consumer session lookups failing; redelivery queue growing"}
+{"timestamp": "2026-06-18T13:16:44Z", "service": "notifications-worker", "level": "ERROR", "message": "cannot restore consumer session: key not found in session-store; rejoining group"}
+{"timestamp": "2026-06-18T13:21:12Z", "service": "notifications-worker", "level": "ERROR", "message": "cannot restore consumer session: key not found in session-store; rejoining group"}
+{"timestamp": "2026-06-18T13:24:58Z", "service": "notifications-worker", "level": "ERROR", "message": "rebalance storm: 14 group rejoins in 5 minutes; throughput collapsed"}

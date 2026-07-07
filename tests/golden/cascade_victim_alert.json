@@ -1,0 +1,457 @@
+{
+  "incident_id": "cascade_victim_alert",
+  "summary": {
+    "what_happened": "session-store began mass-evicting at 13:00; broker consumers lost sessions and rebalanced; worker lag grew from 13:15. The alerting service is the end of the chain, not its start.",
+    "affected_services": [
+      "session-store",
+      "message-broker",
+      "notifications-worker"
+    ],
+    "customer_impact": "Notifications arrive minutes late.",
+    "incident_window": {
+      "start": "2026-06-18T12:56:00Z",
+      "end": null,
+      "rule": "alert.triggered_at (2026-06-18T13:26:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing"
+    }
+  },
+  "severity": {
+    "level": "SEV-3",
+    "explanation": "notification delivery lags by minutes but delivery retries exist and no booking-path service is degraded; no error-rate or latency series is in the package to place this in a numeric band",
+    "confidence": "medium"
+  },
+  "timeline": [
+    {
+      "id": "timeline_dd5956e4c6",
+      "timestamp": "2026-06-18T13:00:00Z",
+      "source": "metrics",
+      "service": "session-store",
+      "description": "evictions_per_sec first deviated >=2.0x from baseline (2.0 keys/s -> 420.0 keys/s)"
+    },
+    {
+      "id": "timeline_1ab180ba0e",
+      "timestamp": "2026-06-18T13:01:09Z",
+      "source": "logs",
+      "service": "session-store",
+      "description": "WARN: evicting keys under memory pressure: maxmemory 4gb reached (allkeys-lru)"
+    },
+    {
+      "id": "timeline_512ff41619",
+      "timestamp": "2026-06-18T13:05:00Z",
+      "source": "metrics",
+      "service": "message-broker",
+      "description": "queue_depth_msgs first deviated >=2.0x from baseline (150.0 msgs -> 480.0 msgs)"
+    },
+    {
+      "id": "timeline_603e33074a",
+      "timestamp": "2026-06-18T13:07:26Z",
+      "source": "logs",
+      "service": "message-broker",
+      "description": "WARN: consumer session lookups failing; redelivery queue growing"
+    },
+    {
+      "id": "timeline_124cf64372",
+      "timestamp": "2026-06-18T13:15:00Z",
+      "source": "metrics",
+      "service": "notifications-worker",
+      "description": "consumer_lag_seconds first deviated >=2.0x from baseline (4.0 s -> 22.0 s)"
+    },
+    {
+      "id": "timeline_53f5decda9",
+      "timestamp": "2026-06-18T13:16:44Z",
+      "source": "logs",
+      "service": "notifications-worker",
+      "description": "ERROR: cannot restore consumer session: key not found in session-store; rejoining group"
+    },
+    {
+      "id": "timeline_96c4a3a222",
+      "timestamp": "2026-06-18T13:21:12Z",
+      "source": "logs",
+      "service": "notifications-worker",
+      "description": "ERROR: cannot restore consumer session: key not found in session-store; rejoining group"
+    },
+    {
+      "id": "timeline_dc5a8b4ee8",
+      "timestamp": "2026-06-18T13:24:58Z",
+      "source": "logs",
+      "service": "notifications-worker",
+      "description": "ERROR: rebalance storm: 14 group rejoins in 5 minutes; throughput collapsed"
+    },
+    {
+      "id": "timeline_34cb7a4b52",
+      "timestamp": "2026-06-18T13:26:00Z",
+      "source": "alert",
+      "service": "notifications-worker",
+      "description": "Alert fired: Consumer lag above 30s on notifications-worker"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_49081ad88f",
+      "source": "deploys",
+      "interpretation": "deploys.json empty: nothing shipped in the change window; capacity/state cause more plausible than change-driven",
+      "timestamp": null,
+      "service": "notifications-worker",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_d9ecc65dac",
+      "source": "logs",
+      "interpretation": "eviction warning 13:01 -> broker session-lookup failures 13:07 -> worker rejoin errors 13:16: the log chain follows the topology",
+      "timestamp": "2026-06-18T13:01:09Z",
+      "service": "session-store",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_1d9b813e78",
+      "source": "metrics",
+      "interpretation": "notifications-worker lag first deviated at 13:15 (22s vs 4s baseline)",
+      "timestamp": "2026-06-18T13:15:00Z",
+      "service": "notifications-worker",
+      "signal": "consumer_lag_seconds",
+      "value": 22.0
+    },
+    {
+      "id": "evidence_bc23cb2bed",
+      "source": "metrics",
+      "interpretation": "message-broker queue depth first deviated at 13:05 (480 vs 150)",
+      "timestamp": "2026-06-18T13:05:00Z",
+      "service": "message-broker",
+      "signal": "queue_depth_msgs",
+      "value": 480.0
+    },
+    {
+      "id": "evidence_1242ac1c11",
+      "source": "metrics",
+      "interpretation": "session-store evictions first deviated at 13:00 (420/s vs 2/s) - the EARLIEST deviation, two topology hops from the alerting service",
+      "timestamp": "2026-06-18T13:00:00Z",
+      "service": "session-store",
+      "signal": "evictions_per_sec",
+      "value": 420.0
+    },
+    {
+      "id": "evidence_b7444cfd4c",
+      "source": "runbook",
+      "interpretation": "runbook documents this exact failure mode: 'session-store eviction cascade' - worker lag is named as the symptom, the store the cause; scaling workers during a rebalance storm is explicitly warned against",
+      "timestamp": null,
+      "service": "notifications-worker",
+      "signal": null,
+      "value": null
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hypothesis_bf78c7ce4f",
+      "title": "session-store eviction cascade through broker to workers",
+      "statement": "session-store evictions (13:00) broke broker consumer sessions (13:07) causing worker rebalance churn and lag (13:15) - the deviation order matches the topology chain and the runbook's documented cascade.",
+      "confidence": "high",
+      "rubric": {
+        "aligned_signals": 3,
+        "timing_alignment": "aligned",
+        "conflicting_evidence_count": 0
+      },
+      "supporting_evidence_ids": [
+        "evidence_1242ac1c11",
+        "evidence_d9ecc65dac",
+        "evidence_b7444cfd4c"
+      ],
+      "conflicting_evidence_ids": [],
+      "assumptions": [
+        "package telemetry is complete for the window"
+      ],
+      "recommended_checks": [
+        "confirm session-store memory limit and what grew into it",
+        "verify consumer session TTLs against eviction age"
+      ]
+    }
+  ],
+  "missing_data": [
+    {
+      "id": "missing_4e3a18b794",
+      "description": "traces.json not provided",
+      "impact": "cannot identify slow spans or failing dependencies"
+    }
+  ],
+  "recommended_next_steps": [
+    {
+      "id": "next_step_cf3a602e0f",
+      "description": "confirm session-store memory limit and what grew into it",
+      "source_hypothesis_ids": [
+        "hypothesis_bf78c7ce4f"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_78e09f22c5",
+      "description": "verify consumer session TTLs against eviction age",
+      "source_hypothesis_ids": [
+        "hypothesis_bf78c7ce4f"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_52f265f8f2",
+      "description": "Provide or repair the package data: traces.json not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_4e3a18b794"
+      ]
+    }
+  ],
+  "safe_mitigation_options": [
+    {
+      "id": "mitigation_fc17140ccd",
+      "action": "Raise session-store maxmemory one step per the runbook",
+      "rationale": "runbook-verified safe; keys are re-derivable",
+      "risks": [
+        "higher memory footprint on the cache host"
+      ],
+      "requires_human_approval": true
+    }
+  ],
+  "remediation_plans": [
+    {
+      "id": "plan_46a4932f19",
+      "kind": "mitigation",
+      "title": "Consider raising session-store maxmemory one step",
+      "hypothesis_id": "hypothesis_bf78c7ce4f",
+      "mitigation_id": "mitigation_fc17140ccd",
+      "preconditions": [
+        "runbook marks the step verified safe (keys re-derivable)"
+      ],
+      "steps": [
+        {
+          "kind": "read_only",
+          "action": "confirm current maxmemory and eviction rate",
+          "verification": "store INFO shows the expected limit"
+        },
+        {
+          "kind": "state_changing",
+          "action": "raise session-store maxmemory one step per runbook",
+          "verification": "evictions fall below 100 keys/s and broker redelivery stops growing within 10 minutes",
+          "requires_human_approval": true
+        }
+      ],
+      "abort_conditions": [
+        "store memory saturates again within 10 minutes of the raise"
+      ],
+      "owner_role": "platform-cache on-call"
+    }
+  ],
+  "recovery_verification": {
+    "mode": "watch_for_recovery",
+    "signals": [
+      {
+        "service": "message-broker",
+        "signal": "queue_depth_msgs",
+        "baseline": 150.0,
+        "recovered_when": "within 10% of baseline 150 msgs for >= 3 consecutive points",
+        "watch_minutes": 60
+      },
+      {
+        "service": "notifications-worker",
+        "signal": "consumer_lag_seconds",
+        "baseline": 4.0,
+        "recovered_when": "within 10% of baseline 4 s for >= 3 consecutive points",
+        "watch_minutes": 40
+      },
+      {
+        "service": "session-store",
+        "signal": "evictions_per_sec",
+        "baseline": 2.0,
+        "recovered_when": "within 10% of baseline 2 keys/s for >= 3 consecutive points",
+        "watch_minutes": 70
+      }
+    ],
+    "log_patterns_should_stop": [
+      "cannot restore consumer session: key not found in session-store; rejoining group"
+    ],
+    "re_alert_condition": "consumer_lag_seconds on notifications-worker crosses the alert threshold 30 again"
+  },
+  "safety_review": {
+    "checks": [
+      {
+        "check": "overconfidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "evidence_grounding",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "action_safety",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "uncertainty",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "hypotheses_cite_resolvable_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "no_hypothesis_without_supporting_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "plans_reference_existing_items",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "state_changing_steps_verified_and_approved",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "mitigations_require_human_approval",
+        "result": "pass",
+        "detail": "1 mitigation option(s) checked"
+      },
+      {
+        "check": "no_executed_action_phrasing",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "severity_not_above_numeric_ceiling",
+        "result": "pass",
+        "detail": "no numeric signals to check the claimed level against"
+      },
+      {
+        "check": "status_page_customer_safe",
+        "result": "pass",
+        "detail": "checked against the wording rules"
+      },
+      {
+        "check": "slack_update_states_nothing_was_executed",
+        "result": "pass",
+        "detail": null
+      }
+    ],
+    "notes": null
+  },
+  "communication_drafts": {
+    "internal_update": "SEV-3, ongoing: notifications delayed minutes. Leading hypothesis (high confidence): session-store eviction cascade - deviations follow the topology chain store->broker->worker and match the runbook's documented failure mode. Do NOT scale workers (runbook: worsens rebalance churn). No remediation has been executed; the maxmemory raise awaits human approval.",
+    "jira_ticket": null,
+    "slack_update": null,
+    "status_page": {
+      "phase": "identified",
+      "text": "Some notifications are currently delayed by a few minutes. We have identified the cause and a fix is being prepared. No notifications are lost; delayed messages will be delivered."
+    }
+  },
+  "postmortem_draft": {
+    "title": "Postmortem draft: notification lag 2026-06-18",
+    "summary": "session-store memory pressure caused mass evictions; broker consumers lost sessions and worker throughput collapsed into rebalance churn.",
+    "impact": "Notification delivery delayed up to 4 minutes.",
+    "contributing_factors": [
+      "likely: session-store sized below current session volume"
+    ],
+    "open_questions": [
+      "what grew memory usage to the limit"
+    ],
+    "action_items": [
+      "alert on eviction rate; review store sizing"
+    ]
+  },
+  "reasoning_trace": [
+    {
+      "stage": "trace_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "deploy_correlation",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_49081ad88f"
+      ]
+    },
+    {
+      "stage": "logs_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_d9ecc65dac"
+      ]
+    },
+    {
+      "stage": "metrics_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_1d9b813e78",
+        "evidence_bc23cb2bed",
+        "evidence_1242ac1c11"
+      ]
+    },
+    {
+      "stage": "recovery_builder",
+      "summary": "derived from 3 deviated series and 1 recurring error pattern(s); mode=watch_for_recovery per the incident window rule",
+      "input_ids": []
+    },
+    {
+      "stage": "runbook_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_b7444cfd4c"
+      ]
+    },
+    {
+      "stage": "triage",
+      "summary": "impact limited to delayed notifications with retries in place",
+      "input_ids": []
+    },
+    {
+      "stage": "hypothesis_ranker",
+      "summary": "ranked by evidence alignment and timing | timing: 'session-store eviction cascade through broker to workers': deviations ordered store 13:00 -> broker 13:05 -> worker 13:15, matching dependency direction",
+      "input_ids": [
+        "hypothesis_bf78c7ce4f"
+      ]
+    },
+    {
+      "stage": "safety_critic",
+      "summary": "statements stay within what the cited evidence shows (4 checks, 0 non-pass)",
+      "input_ids": []
+    },
+    {
+      "stage": "recommendation_builder",
+      "summary": "aggregated 3 next steps deterministically (2 from hypothesis checks, 1 from missing data)",
+      "input_ids": [
+        "next_step_cf3a602e0f",
+        "next_step_78e09f22c5",
+        "next_step_52f265f8f2"
+      ]
+    },
+    {
+      "stage": "reporter",
+      "summary": "drafted from the reviewed investigation output (1 mitigation option(s) proposed)",
+      "input_ids": [
+        "mitigation_fc17140ccd"
+      ]
+    },
+    {
+      "stage": "planner",
+      "summary": "structured the reviewed options into guided plans (1 plan(s), 1 state-changing step(s), all requiring approval)",
+      "input_ids": [
+        "plan_46a4932f19"
+      ]
+    },
+    {
+      "stage": "safety_linter",
+      "summary": "deterministic lint: 10 checks (total review: 0 blocked, 0 warning)",
+      "input_ids": []
+    }
+  ]
+}

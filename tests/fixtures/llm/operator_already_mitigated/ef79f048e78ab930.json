@@ -1,0 +1,158 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "PlanDraft": {
+          "additionalProperties": false,
+          "properties": {
+            "abort_conditions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Abort Conditions",
+              "type": "array"
+            },
+            "hypothesis_id": {
+              "title": "Hypothesis Id",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "mitigation",
+                "rollback"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "mitigation_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mitigation Id"
+            },
+            "owner_role": {
+              "title": "Owner Role",
+              "type": "string"
+            },
+            "preconditions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Preconditions",
+              "type": "array"
+            },
+            "steps": {
+              "items": {
+                "$ref": "#/$defs/PlanStepDraft"
+              },
+              "title": "Steps",
+              "type": "array"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "title",
+            "hypothesis_id",
+            "mitigation_id",
+            "preconditions",
+            "steps",
+            "abort_conditions",
+            "owner_role"
+          ],
+          "title": "PlanDraft",
+          "type": "object"
+        },
+        "PlanStepDraft": {
+          "additionalProperties": false,
+          "description": "verification is a required key but nullable; the converter drops any\nplan whose state-changing step arrives without one (documented invariant).",
+          "properties": {
+            "action": {
+              "title": "Action",
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "read_only",
+                "state_changing"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "verification": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verification"
+            }
+          },
+          "required": [
+            "kind",
+            "action",
+            "verification"
+          ],
+          "title": "PlanStepDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "plans": {
+          "items": {
+            "$ref": "#/$defs/PlanDraft"
+          },
+          "title": "Plans",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plans",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "PlannerResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-25T15:50:00+00:00\nend: 2026-06-25T16:45:00+00:00\nrule: alert.triggered_at (2026-06-25T16:20:00+00:00) minus 30m lookback; end = start of sustained recovery across all deviated series\n\nTRIAGE ASSESSMENT\nseverity: SEV-3 (confidence high) - p95 peaked at 940ms (5.2x baseline, inside the >4x SEV-2 band) and error rate 1.1% (inside 1-25%), but recovery was observed in-window after the operator scale-up and impact was brief - judged one level below the numeric ceiling\nwhat happened: Search latency saturated from 16:05 under queue pressure; the operator scaled replicas 3->6 at 16:32 and metrics recovered by 16:45.\naffected services: search-service\ncustomer impact: Search was slow or timed out for ~40 minutes; recovered.\n\nRANKED HYPOTHESES (with code-derived confidence)\n- hypothesis_fd59e22752 [high] capacity saturation at 3 replicas, resolved by operator scale-up\n  statement: Query load saturated the 8-worker pool at 3 replicas from 16:05; the operator's 16:32 scale-up to 6 replicas was followed by drain and recovery by 16:45 - consistent with a pure capacity shortfall.\n  rubric: aligned_signals=3 timing=aligned conflicts=0\n  supporting: evidence_29a3e6b34d, evidence_40170b655f, evidence_972be12a8e\n  conflicting: (none)\n  assumptions: query volume did not drop independently at 16:35\n  recommended checks: compare query volume 16:00-17:00 against the previous day; confirm replica count history matches change_om_1\n\nSAFE MITIGATION OPTIONS: none proposed\n\nEVIDENCE (cite items by their exact id)\n- evidence_972be12a8e [deploys] service=search-service at 2026-06-25T16:32:00+00:00: change record change_om_1 16:32: operator scaled replicas 3->6 during response - a mitigation record, not a candidate cause (symptoms began 16:05, before it)\n- evidence_40170b655f [logs] service=search-service at 2026-06-25T16:33:02+00:00: queue saturation warnings precede timeouts; the observed scaling event at 16:33 is followed by 'queue drained' at 16:44\n- evidence_29a3e6b34d [metrics] service=search-service signal=p95_latency_ms value=520.0 at 2026-06-25T16:05:00+00:00: search p95 first crossed 2x baseline at 16:05 (520ms) and recovered to within 10% of baseline from 16:45\n- evidence_8f28c0e584 [metrics] service=search-service signal=p95_latency_ms value=430.0 at 2026-06-25T16:35:00+00:00: recovery begins the interval after the 16:32 scale-up: 880ms at 16:30 -> 430ms at 16:35 -> baseline by 16:45\n\nDEPLOYS AND CHANGES (chronological)\n- change_om_1 config service=search-service version=replicas-6 at 2026-06-25T16:32:00+00:00: Operator scaled search-service replicas 3 -> 6 during incident response",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: remediation planner. You structure the reviewed mitigation options\ninto guided, human-approved plans - and produce a rollback checklist when\na deploy- or flag-correlated hypothesis exists.\n\nRules for every plan:\n- cite the hypothesis it addresses by exact id from RANKED HYPOTHESES, and\n  the mitigation option it structures by exact id when one exists\n- only structure options that are well-grounded in the runbook or evidence;\n  an empty plans list is correct when nothing qualifies\n- steps are ordered; each is read_only (observe) or state_changing. Every\n  state_changing step MUST carry verification: how a human confirms it\n  worked before continuing. If you cannot state a verification, do not\n  propose the step.\n- preconditions: what must already be true before starting, from observed\n  state or documented runbook constraints\n- abort_conditions: observable signals (from the EVIDENCE) that mean stop\n  and back out; at least one per plan\n- owner_role: who realistically drives this (e.g. \"on-call engineer\")\n\nRollback checklist (kind=rollback), when a deploy/flag hypothesis exists:\n- name the exact release version or flag from DEPLOYS AND CHANGES; never\n  guess a version\n- pre-checks first: does the release include data migrations or schema\n  changes (ask, as a read_only step, if unknown); flag interactions\n- the rollback itself is state_changing with verification; post-checks\n  confirm the symptom signals recover\n\nPlans are options for a human. Never present a plan or step as chosen,\nscheduled, in progress, or done.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"plans\":[],\"gaps\":[],\"reasoning\":\"no runbook-grounded option to structure into a plan\"}"
+  }
+}

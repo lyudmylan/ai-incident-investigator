@@ -1,0 +1,101 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "CriticCheck": {
+          "additionalProperties": false,
+          "properties": {
+            "check": {
+              "title": "Check",
+              "type": "string"
+            },
+            "detail": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Detail"
+            },
+            "result": {
+              "enum": [
+                "pass",
+                "warning",
+                "blocked"
+              ],
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "check",
+            "result",
+            "detail"
+          ],
+          "title": "CriticCheck",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/CriticCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Notes"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "checks",
+        "notes",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "CriticResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-21T02:42:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-21T03:12:00+00:00) minus 30m lookback; no metrics available to detect recovery -> ongoing\n\nTRIAGE ASSESSMENT\nseverity: SEV-4 (confidence low) - six edge 502s over 17 minutes with no metrics, no upstream detail, and no established user impact - warning-level signal only\nwhat happened: Sporadic 502s at the payments-web edge; nothing localizes them.\naffected services: payments-web\ncustomer impact: Not established; possibly a handful of failed page loads.\n\nHYPOTHESES: none produced\n\nEVIDENCE (cite items by their exact id)\n- evidence_c3efbc167e [logs] service=payments-web at 2026-06-21T02:58:03+00:00: six identical '502 upstream prematurely closed' lines 02:58-03:15 with no upstream name, no request ids, no pattern change\n\nKNOWN DATA GAPS\n- deploys.json not provided (impact: cannot correlate incident timing with recent changes)\n- traces.json not provided (impact: cannot identify slow spans or failing dependencies)\n- metrics.json not provided (impact: cannot measure deviation from baselines or detect recovery)\n- runbook.md not provided (impact: no operational guidance or known failure modes available)\n- logs_investigator: edge logs lack upstream identity; cannot localize the closer (impact: flagged by an investigator as limiting its conclusions)\n- triage: no metrics, traces, or deploy records in the package (impact: flagged by an investigator as limiting its conclusions)\n- triage: 502 lines carry no upstream identity (impact: flagged by an investigator as limiting its conclusions)\n- hypothesis_ranker: no hypothesis is honest on this evidence: six identical edge 502s with no metrics, traces, or change records cannot distinguish upstream restarts, LB timeouts, or network resets (impact: flagged by an investigator as limiting its conclusions)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: safety critic. You adversarially review the investigation's own\noutput before a human reads it. You challenge; you do not rewrite.\n\nReview every hypothesis and the triage assessment. Emit one check entry per\ndistinct concern, and also emit explicit `pass` entries for each category\nyou reviewed and found sound, so the review shows its coverage. Categories\nto always cover:\n- overconfidence: does any statement claim more than its cited evidence\n  shows (e.g. \"caused\" where evidence shows correlation)? Is the severity\n  proportionate to the observed numbers?\n- evidence_grounding: do the cited evidence items actually say what the\n  hypothesis needs them to say? Is conflicting evidence acknowledged rather\n  than omitted (unaffected services, contradicting signals)?\n- action_safety: are all recommended checks genuinely read-only\n  (inspect/compare/query)? Flag anything that would change system state,\n  however phrased.\n- uncertainty: are assumptions and known data gaps honestly surfaced where\n  they matter?\n\nResults: `pass` = reviewed and sound; `warning` = a human should look;\n`blocked` = must be fixed before this report should be trusted.\nName the hypothesis id or field each non-pass check refers to in `detail`.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"checks\":[{\"check\":\"overconfidence\",\"result\":\"pass\",\"detail\":null},{\"check\":\"evidence_grounding\",\"result\":\"pass\",\"detail\":null},{\"check\":\"action_safety\",\"result\":\"pass\",\"detail\":null},{\"check\":\"uncertainty\",\"result\":\"pass\",\"detail\":null}],\"notes\":null,\"gaps\":[],\"reasoning\":\"statements stay within what the cited evidence shows\"}"
+  }
+}

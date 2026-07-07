@@ -1,0 +1,386 @@
+{
+  "incident_id": "operator_already_mitigated",
+  "summary": {
+    "what_happened": "Search latency saturated from 16:05 under queue pressure; the operator scaled replicas 3->6 at 16:32 and metrics recovered by 16:45.",
+    "affected_services": [
+      "search-service"
+    ],
+    "customer_impact": "Search was slow or timed out for ~40 minutes; recovered.",
+    "incident_window": {
+      "start": "2026-06-25T15:50:00Z",
+      "end": "2026-06-25T16:45:00Z",
+      "rule": "alert.triggered_at (2026-06-25T16:20:00+00:00) minus 30m lookback; end = start of sustained recovery across all deviated series"
+    }
+  },
+  "severity": {
+    "level": "SEV-3",
+    "explanation": "p95 peaked at 940ms (5.2x baseline, inside the >4x SEV-2 band) and error rate 1.1% (inside 1-25%), but recovery was observed in-window after the operator scale-up and impact was brief - judged one level below the numeric ceiling",
+    "confidence": "high"
+  },
+  "timeline": [
+    {
+      "id": "timeline_c8bb48e445",
+      "timestamp": "2026-06-25T16:05:00Z",
+      "source": "metrics",
+      "service": "search-service",
+      "description": "error_rate_pct first deviated >=2.0x from baseline (0.2 % -> 0.6 %)"
+    },
+    {
+      "id": "timeline_e6f9bf2f89",
+      "timestamp": "2026-06-25T16:05:00Z",
+      "source": "metrics",
+      "service": "search-service",
+      "description": "p95_latency_ms first deviated >=2.0x from baseline (180.0 ms -> 520.0 ms)"
+    },
+    {
+      "id": "timeline_86b75801be",
+      "timestamp": "2026-06-25T16:06:31Z",
+      "source": "logs",
+      "service": "search-service",
+      "description": "WARN: query queue saturated: all 8 workers busy, queueing requests"
+    },
+    {
+      "id": "timeline_48febc852d",
+      "timestamp": "2026-06-25T16:14:05Z",
+      "source": "logs",
+      "service": "search-service",
+      "description": "ERROR: search timed out after 900ms budget (index scan incomplete)"
+    },
+    {
+      "id": "timeline_2b7dfc17ef",
+      "timestamp": "2026-06-25T16:20:00Z",
+      "source": "alert",
+      "service": "search-service",
+      "description": "Alert fired: High p95 latency on search-service"
+    },
+    {
+      "id": "timeline_f1cec04610",
+      "timestamp": "2026-06-25T16:21:47Z",
+      "source": "logs",
+      "service": "search-service",
+      "description": "ERROR: search timed out after 900ms budget (index scan incomplete)"
+    },
+    {
+      "id": "timeline_2d8c9955dd",
+      "timestamp": "2026-06-25T16:32:00Z",
+      "source": "deploys",
+      "service": "search-service",
+      "description": "config replicas-6 on search-service: Operator scaled search-service replicas 3 -> 6 during incident response"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_972be12a8e",
+      "source": "deploys",
+      "interpretation": "change record change_om_1 16:32: operator scaled replicas 3->6 during response - a mitigation record, not a candidate cause (symptoms began 16:05, before it)",
+      "timestamp": "2026-06-25T16:32:00Z",
+      "service": "search-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_40170b655f",
+      "source": "logs",
+      "interpretation": "queue saturation warnings precede timeouts; the observed scaling event at 16:33 is followed by 'queue drained' at 16:44",
+      "timestamp": "2026-06-25T16:33:02Z",
+      "service": "search-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_29a3e6b34d",
+      "source": "metrics",
+      "interpretation": "search p95 first crossed 2x baseline at 16:05 (520ms) and recovered to within 10% of baseline from 16:45",
+      "timestamp": "2026-06-25T16:05:00Z",
+      "service": "search-service",
+      "signal": "p95_latency_ms",
+      "value": 520.0
+    },
+    {
+      "id": "evidence_8f28c0e584",
+      "source": "metrics",
+      "interpretation": "recovery begins the interval after the 16:32 scale-up: 880ms at 16:30 -> 430ms at 16:35 -> baseline by 16:45",
+      "timestamp": "2026-06-25T16:35:00Z",
+      "service": "search-service",
+      "signal": "p95_latency_ms",
+      "value": 430.0
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hypothesis_fd59e22752",
+      "title": "capacity saturation at 3 replicas, resolved by operator scale-up",
+      "statement": "Query load saturated the 8-worker pool at 3 replicas from 16:05; the operator's 16:32 scale-up to 6 replicas was followed by drain and recovery by 16:45 - consistent with a pure capacity shortfall.",
+      "confidence": "high",
+      "rubric": {
+        "aligned_signals": 3,
+        "timing_alignment": "aligned",
+        "conflicting_evidence_count": 0
+      },
+      "supporting_evidence_ids": [
+        "evidence_29a3e6b34d",
+        "evidence_40170b655f",
+        "evidence_972be12a8e"
+      ],
+      "conflicting_evidence_ids": [],
+      "assumptions": [
+        "query volume did not drop independently at 16:35"
+      ],
+      "recommended_checks": [
+        "compare query volume 16:00-17:00 against the previous day",
+        "confirm replica count history matches change_om_1"
+      ]
+    }
+  ],
+  "missing_data": [
+    {
+      "id": "missing_4e3a18b794",
+      "description": "traces.json not provided",
+      "impact": "cannot identify slow spans or failing dependencies"
+    },
+    {
+      "id": "missing_7d924872d6",
+      "description": "runbook.md not provided",
+      "impact": "no operational guidance or known failure modes available"
+    }
+  ],
+  "recommended_next_steps": [
+    {
+      "id": "next_step_9104033bb9",
+      "description": "compare query volume 16:00-17:00 against the previous day",
+      "source_hypothesis_ids": [
+        "hypothesis_fd59e22752"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_20dbb5adb2",
+      "description": "confirm replica count history matches change_om_1",
+      "source_hypothesis_ids": [
+        "hypothesis_fd59e22752"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_52f265f8f2",
+      "description": "Provide or repair the package data: traces.json not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_4e3a18b794"
+      ]
+    },
+    {
+      "id": "next_step_6011dabe5c",
+      "description": "Provide or repair the package data: runbook.md not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_7d924872d6"
+      ]
+    }
+  ],
+  "safe_mitigation_options": [],
+  "remediation_plans": [],
+  "recovery_verification": {
+    "mode": "confirm_sustained_recovery",
+    "signals": [
+      {
+        "service": "search-service",
+        "signal": "error_rate_pct",
+        "baseline": 0.2,
+        "recovered_when": "within 10% of baseline 0.2 % for >= 3 consecutive points",
+        "watch_minutes": 60
+      },
+      {
+        "service": "search-service",
+        "signal": "p95_latency_ms",
+        "baseline": 180.0,
+        "recovered_when": "within 10% of baseline 180 ms for >= 3 consecutive points",
+        "watch_minutes": 60
+      }
+    ],
+    "log_patterns_should_stop": [
+      "search timed out after Nms budget (index scan incomplete)"
+    ],
+    "re_alert_condition": "p95_latency_ms on search-service crosses the alert threshold 500 again"
+  },
+  "safety_review": {
+    "checks": [
+      {
+        "check": "overconfidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "evidence_grounding",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "action_safety",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "uncertainty",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "hypotheses_cite_resolvable_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "no_hypothesis_without_supporting_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "plans_reference_existing_items",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "state_changing_steps_verified_and_approved",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "mitigations_require_human_approval",
+        "result": "pass",
+        "detail": "0 mitigation option(s) checked"
+      },
+      {
+        "check": "no_executed_action_phrasing",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "severity_not_above_numeric_ceiling",
+        "result": "pass",
+        "detail": "SEV-3 is within the numeric ceiling (SEV-2)"
+      },
+      {
+        "check": "status_page_customer_safe",
+        "result": "pass",
+        "detail": "checked against the wording rules"
+      },
+      {
+        "check": "slack_update_states_nothing_was_executed",
+        "result": "pass",
+        "detail": null
+      }
+    ],
+    "notes": null
+  },
+  "communication_drafts": {
+    "internal_update": "SEV-3, recovered: search latency saturated for ~40 minutes; the operator scaled replicas 3->6 at 16:32 (change_om_1) and metrics recovered by 16:45. The tool has executed nothing; the only action taken was the operator's, recorded as an observed change. Remaining options await human approval.",
+    "jira_ticket": null,
+    "slack_update": null,
+    "status_page": {
+      "phase": "monitoring",
+      "text": "Search was slow for some users earlier today. Service has returned to normal and we are monitoring to confirm full recovery."
+    }
+  },
+  "postmortem_draft": {
+    "title": "Postmortem draft: search saturation 2026-06-25",
+    "summary": "Search capacity at 3 replicas was insufficient for the afternoon query load; latency saturated until the operator scaled to 6 replicas, after which queues drained and metrics recovered.",
+    "impact": "Search slow/timing out ~40 minutes; fully recovered.",
+    "contributing_factors": [
+      "likely: replica count sized below current query volume"
+    ],
+    "open_questions": [
+      "was the load organic growth or a one-off spike"
+    ],
+    "action_items": [
+      "review autoscaling thresholds for search-service",
+      "keep replicas at 6 pending the volume review"
+    ]
+  },
+  "reasoning_trace": [
+    {
+      "stage": "trace_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "runbook_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "deploy_correlation",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_972be12a8e"
+      ]
+    },
+    {
+      "stage": "logs_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_40170b655f"
+      ]
+    },
+    {
+      "stage": "metrics_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_29a3e6b34d",
+        "evidence_8f28c0e584"
+      ]
+    },
+    {
+      "stage": "recovery_builder",
+      "summary": "derived from 2 deviated series and 1 recurring error pattern(s); mode=confirm_sustained_recovery per the incident window rule",
+      "input_ids": []
+    },
+    {
+      "stage": "triage",
+      "summary": "numeric bands support SEV-2; brevity and recovery justify SEV-3",
+      "input_ids": []
+    },
+    {
+      "stage": "hypothesis_ranker",
+      "summary": "ranked by evidence alignment and timing | timing: 'capacity saturation at 3 replicas, resolved by operator scale-up': saturation 16:05 precedes the scale-up 16:32; recovery follows within one interval - response, not cause",
+      "input_ids": [
+        "hypothesis_fd59e22752"
+      ]
+    },
+    {
+      "stage": "safety_critic",
+      "summary": "statements stay within what the cited evidence shows (4 checks, 0 non-pass)",
+      "input_ids": []
+    },
+    {
+      "stage": "recommendation_builder",
+      "summary": "aggregated 4 next steps deterministically (2 from hypothesis checks, 2 from missing data)",
+      "input_ids": [
+        "next_step_9104033bb9",
+        "next_step_20dbb5adb2",
+        "next_step_52f265f8f2",
+        "next_step_6011dabe5c"
+      ]
+    },
+    {
+      "stage": "reporter",
+      "summary": "drafted from the reviewed investigation output (0 mitigation option(s) proposed)",
+      "input_ids": []
+    },
+    {
+      "stage": "planner",
+      "summary": "no runbook-grounded option to structure into a plan (0 plan(s), 0 state-changing step(s), all requiring approval)",
+      "input_ids": []
+    },
+    {
+      "stage": "safety_linter",
+      "summary": "deterministic lint: 10 checks (total review: 0 blocked, 0 warning)",
+      "input_ids": []
+    }
+  ]
+}

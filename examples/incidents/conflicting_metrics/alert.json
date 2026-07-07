@@ -1,0 +1,11 @@
+{
+  "id": "alert_cm_001",
+  "title": "Checkout error rate above 1% on checkout-service",
+  "service": "checkout-service",
+  "triggered_at": "2026-06-12T09:14:00Z",
+  "severity": "major",
+  "description": "error rate sustained above 1% for 10 minutes",
+  "signal": "error_rate_pct",
+  "threshold": 1,
+  "observed_value": 3.6
+}

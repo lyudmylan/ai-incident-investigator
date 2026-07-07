@@ -1,0 +1,411 @@
+{
+  "incident_id": "conflicting_metrics",
+  "summary": {
+    "what_happened": "Checkout errors rose from 09:00; the session cache hit rate collapsed while the payment gateway stayed at baseline.",
+    "affected_services": [
+      "checkout-service",
+      "session-cache"
+    ],
+    "customer_impact": "A few percent of checkouts fail on first attempt.",
+    "incident_window": {
+      "start": "2026-06-12T08:44:00Z",
+      "end": null,
+      "rule": "alert.triggered_at (2026-06-12T09:14:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing"
+    }
+  },
+  "severity": {
+    "level": "SEV-2",
+    "explanation": "checkout error rate 3.8% against a 0.4% baseline, inside the 1-25% SEV-2 band on a revenue-critical flow",
+    "confidence": "high"
+  },
+  "timeline": [
+    {
+      "id": "timeline_f5589335cd",
+      "timestamp": "2026-06-12T08:59:41Z",
+      "source": "logs",
+      "service": "session-cache",
+      "description": "WARN: evictions spiking: 1200 keys/s under memory pressure (maxmemory-policy allkeys-lru)"
+    },
+    {
+      "id": "timeline_ccce71d0d8",
+      "timestamp": "2026-06-12T09:00:00Z",
+      "source": "metrics",
+      "service": "checkout-service",
+      "description": "error_rate_pct first deviated >=2.0x from baseline (0.4 % -> 1.8 %)"
+    },
+    {
+      "id": "timeline_e1650cd2f1",
+      "timestamp": "2026-06-12T09:01:15Z",
+      "source": "logs",
+      "service": "checkout-service",
+      "description": "ERROR: session lookup miss for cart 88231; recomputing cart state from origin"
+    },
+    {
+      "id": "timeline_61ae8d6996",
+      "timestamp": "2026-06-12T09:06:02Z",
+      "source": "logs",
+      "service": "checkout-service",
+      "description": "ERROR: session lookup miss for cart 90417; recomputing cart state from origin"
+    },
+    {
+      "id": "timeline_cf6c6c54b3",
+      "timestamp": "2026-06-12T09:09:48Z",
+      "source": "logs",
+      "service": "checkout-service",
+      "description": "ERROR: timeout rebuilding cart from cold state after 1500ms; returning 500"
+    },
+    {
+      "id": "timeline_942cf01720",
+      "timestamp": "2026-06-12T09:10:00Z",
+      "source": "metrics",
+      "service": "session-cache",
+      "description": "hit_rate_pct first deviated >=2.0x from baseline (96.0 % -> 48.0 %)"
+    },
+    {
+      "id": "timeline_18e937d36e",
+      "timestamp": "2026-06-12T09:13:27Z",
+      "source": "logs",
+      "service": "checkout-service",
+      "description": "ERROR: timeout rebuilding cart from cold state after 1500ms; returning 500"
+    },
+    {
+      "id": "timeline_7e013b2f3f",
+      "timestamp": "2026-06-12T09:14:00Z",
+      "source": "alert",
+      "service": "checkout-service",
+      "description": "Alert fired: Checkout error rate above 1% on checkout-service"
+    },
+    {
+      "id": "timeline_83943ac26d",
+      "timestamp": "2026-06-12T09:16:10Z",
+      "source": "logs",
+      "service": "session-cache",
+      "description": "WARN: evictions spiking: 1400 keys/s under memory pressure (maxmemory-policy allkeys-lru)"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_a1337679c6",
+      "source": "deploys",
+      "interpretation": "deploys.json is an empty list: the change window was checked and nothing shipped - internal change ruled out as trigger",
+      "timestamp": null,
+      "service": "checkout-service",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_73ad6b8cab",
+      "source": "logs",
+      "interpretation": "session-cache eviction storm (1200-1400 keys/s) begins 08:59, checkout session misses and cold-rebuild timeouts follow",
+      "timestamp": "2026-06-12T08:59:41Z",
+      "service": "session-cache",
+      "signal": null,
+      "value": null
+    },
+    {
+      "id": "evidence_437ff08932",
+      "source": "metrics",
+      "interpretation": "checkout-service error rate first crossed 2x baseline at 09:00 (1.8%)",
+      "timestamp": "2026-06-12T09:00:00Z",
+      "service": "checkout-service",
+      "signal": "error_rate_pct",
+      "value": 1.8
+    },
+    {
+      "id": "evidence_eef0c4eb5f",
+      "source": "metrics",
+      "interpretation": "payment-gateway p95 stayed at baseline (117-125ms) through the whole window - CONFLICTS with any gateway-outage explanation",
+      "timestamp": null,
+      "service": "payment-gateway",
+      "signal": "p95_latency_ms",
+      "value": null
+    },
+    {
+      "id": "evidence_e13d5954b9",
+      "source": "metrics",
+      "interpretation": "session-cache hit rate collapsed 96% -> 44% starting 09:00",
+      "timestamp": "2026-06-12T09:00:00Z",
+      "service": "session-cache",
+      "signal": "hit_rate_pct",
+      "value": 44.0
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hypothesis_af00e0ecc3",
+      "title": "session-cache eviction storm forcing cold cart rebuilds",
+      "statement": "Cache evictions from 08:59 collapsed the hit rate; checkout rebuilt carts from cold state and timed out, consistent with the 500s. The flat payment-gateway series conflicts with any broader payment-path outage.",
+      "confidence": "medium",
+      "rubric": {
+        "aligned_signals": 2,
+        "timing_alignment": "aligned",
+        "conflicting_evidence_count": 1
+      },
+      "supporting_evidence_ids": [
+        "evidence_e13d5954b9",
+        "evidence_73ad6b8cab"
+      ],
+      "conflicting_evidence_ids": [
+        "evidence_eef0c4eb5f"
+      ],
+      "assumptions": [
+        "cart rebuild is the dominant source of the 500s",
+        "cache memory pressure is not itself caused by a traffic surge"
+      ],
+      "recommended_checks": [
+        "inspect session-cache memory usage and key-size distribution",
+        "sample 500 responses to confirm cold-rebuild timeouts dominate"
+      ]
+    }
+  ],
+  "missing_data": [
+    {
+      "id": "missing_4e3a18b794",
+      "description": "traces.json not provided",
+      "impact": "cannot identify slow spans or failing dependencies"
+    },
+    {
+      "id": "missing_7d924872d6",
+      "description": "runbook.md not provided",
+      "impact": "no operational guidance or known failure modes available"
+    }
+  ],
+  "recommended_next_steps": [
+    {
+      "id": "next_step_768d30013f",
+      "description": "inspect session-cache memory usage and key-size distribution",
+      "source_hypothesis_ids": [
+        "hypothesis_af00e0ecc3"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_6dcd6065d9",
+      "description": "sample 500 responses to confirm cold-rebuild timeouts dominate",
+      "source_hypothesis_ids": [
+        "hypothesis_af00e0ecc3"
+      ],
+      "source_missing_data_ids": []
+    },
+    {
+      "id": "next_step_52f265f8f2",
+      "description": "Provide or repair the package data: traces.json not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_4e3a18b794"
+      ]
+    },
+    {
+      "id": "next_step_6011dabe5c",
+      "description": "Provide or repair the package data: runbook.md not provided",
+      "source_hypothesis_ids": [],
+      "source_missing_data_ids": [
+        "missing_7d924872d6"
+      ]
+    }
+  ],
+  "safe_mitigation_options": [],
+  "remediation_plans": [],
+  "recovery_verification": {
+    "mode": "watch_for_recovery",
+    "signals": [
+      {
+        "service": "checkout-service",
+        "signal": "error_rate_pct",
+        "baseline": 0.4,
+        "recovered_when": "within 10% of baseline 0.4 % for >= 3 consecutive points",
+        "watch_minutes": 40
+      },
+      {
+        "service": "session-cache",
+        "signal": "hit_rate_pct",
+        "baseline": 96.0,
+        "recovered_when": "within 10% of baseline 96 % for >= 3 consecutive points",
+        "watch_minutes": 30
+      }
+    ],
+    "log_patterns_should_stop": [
+      "session lookup miss for cart N; recomputing cart state from origin",
+      "timeout rebuilding cart from cold state after Nms; returning N"
+    ],
+    "re_alert_condition": "error_rate_pct on checkout-service crosses the alert threshold 1 again"
+  },
+  "safety_review": {
+    "checks": [
+      {
+        "check": "overconfidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "evidence_grounding",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "action_safety",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "uncertainty",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "hypotheses_cite_resolvable_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "no_hypothesis_without_supporting_evidence",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "confidence_labels_match_documented_rubric",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "plans_reference_existing_items",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "state_changing_steps_verified_and_approved",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "mitigations_require_human_approval",
+        "result": "pass",
+        "detail": "0 mitigation option(s) checked"
+      },
+      {
+        "check": "no_executed_action_phrasing",
+        "result": "pass",
+        "detail": null
+      },
+      {
+        "check": "severity_not_above_numeric_ceiling",
+        "result": "pass",
+        "detail": "SEV-2 is within the numeric ceiling (SEV-2)"
+      },
+      {
+        "check": "status_page_customer_safe",
+        "result": "pass",
+        "detail": "no draft"
+      },
+      {
+        "check": "slack_update_states_nothing_was_executed",
+        "result": "pass",
+        "detail": null
+      }
+    ],
+    "notes": null
+  },
+  "communication_drafts": {
+    "internal_update": "SEV-2, ongoing: ~4% of checkouts fail. Leading hypothesis (medium confidence): session-cache eviction storm forcing cold cart rebuilds; the flat payment-gateway series conflicts with a wider payment outage, which caps confidence. No remediation has been executed; options await human approval.",
+    "jira_ticket": null,
+    "slack_update": null,
+    "status_page": null
+  },
+  "postmortem_draft": {
+    "title": "Postmortem draft: checkout errors 2026-06-12",
+    "summary": "Session-cache evictions collapsed the hit rate; checkout cold rebuilds timed out for a few percent of carts.",
+    "impact": "~3.5% checkout failures for 20+ minutes, ongoing.",
+    "contributing_factors": [
+      "likely: cache memory pressure and eviction storm",
+      "conflicting signal: payment gateway healthy throughout"
+    ],
+    "open_questions": [
+      "what filled the cache - key growth or memory shrink?"
+    ],
+    "action_items": [
+      "alert on eviction rate before hit-rate collapse"
+    ]
+  },
+  "reasoning_trace": [
+    {
+      "stage": "trace_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "runbook_investigator",
+      "summary": "skipped: required source data not present in the package",
+      "input_ids": []
+    },
+    {
+      "stage": "deploy_correlation",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_a1337679c6"
+      ]
+    },
+    {
+      "stage": "logs_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_73ad6b8cab"
+      ]
+    },
+    {
+      "stage": "metrics_investigator",
+      "summary": "compared data against baselines",
+      "input_ids": [
+        "evidence_437ff08932",
+        "evidence_eef0c4eb5f",
+        "evidence_e13d5954b9"
+      ]
+    },
+    {
+      "stage": "recovery_builder",
+      "summary": "derived from 2 deviated series and 2 recurring error pattern(s); mode=watch_for_recovery per the incident window rule",
+      "input_ids": []
+    },
+    {
+      "stage": "triage",
+      "summary": "applied the documented severity bands to observed error rate",
+      "input_ids": []
+    },
+    {
+      "stage": "hypothesis_ranker",
+      "summary": "ranked by evidence alignment and timing | timing: 'session-cache eviction storm forcing cold cart rebuilds': evictions 08:59 precede the first error-rate deviation 09:00",
+      "input_ids": [
+        "hypothesis_af00e0ecc3"
+      ]
+    },
+    {
+      "stage": "safety_critic",
+      "summary": "statements stay within what the cited evidence shows (4 checks, 0 non-pass)",
+      "input_ids": []
+    },
+    {
+      "stage": "recommendation_builder",
+      "summary": "aggregated 4 next steps deterministically (2 from hypothesis checks, 2 from missing data)",
+      "input_ids": [
+        "next_step_768d30013f",
+        "next_step_6dcd6065d9",
+        "next_step_52f265f8f2",
+        "next_step_6011dabe5c"
+      ]
+    },
+    {
+      "stage": "reporter",
+      "summary": "drafted from the reviewed investigation output (0 mitigation option(s) proposed)",
+      "input_ids": []
+    },
+    {
+      "stage": "planner",
+      "summary": "no runbook-grounded option to structure into a plan (0 plan(s), 0 state-changing step(s), all requiring approval)",
+      "input_ids": []
+    },
+    {
+      "stage": "safety_linter",
+      "summary": "deterministic lint: 10 checks (total review: 0 blocked, 0 warning)",
+      "input_ids": []
+    }
+  ]
+}

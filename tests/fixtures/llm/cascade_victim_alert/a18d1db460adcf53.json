@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-18T12:56:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-18T13:26:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nMETRIC SERIES (each with pre-incident baseline)\n- service=notifications-worker signal=consumer_lag_seconds baseline=4.0 s\n  2026-06-18T12:56:00+00:00  4.0 s\n  2026-06-18T13:00:00+00:00  5.0 s\n  2026-06-18T13:05:00+00:00  5.0 s\n  2026-06-18T13:10:00+00:00  6.0 s\n  2026-06-18T13:15:00+00:00  22.0 s\n  2026-06-18T13:20:00+00:00  65.0 s\n  2026-06-18T13:25:00+00:00  130.0 s\n  2026-06-18T13:30:00+00:00  190.0 s\n  2026-06-18T13:35:00+00:00  240.0 s\n- service=message-broker signal=queue_depth_msgs baseline=150.0 msgs\n  2026-06-18T12:56:00+00:00  160.0 msgs\n  2026-06-18T13:00:00+00:00  170.0 msgs\n  2026-06-18T13:05:00+00:00  480.0 msgs\n  2026-06-18T13:10:00+00:00  1400.0 msgs\n  2026-06-18T13:15:00+00:00  2600.0 msgs\n  2026-06-18T13:20:00+00:00  5200.0 msgs\n  2026-06-18T13:25:00+00:00  7300.0 msgs\n  2026-06-18T13:30:00+00:00  9800.0 msgs\n  2026-06-18T13:35:00+00:00  11400.0 msgs\n- service=session-store signal=evictions_per_sec baseline=2.0 keys/s\n  2026-06-18T12:56:00+00:00  3.0 keys/s\n  2026-06-18T13:00:00+00:00  420.0 keys/s\n  2026-06-18T13:05:00+00:00  780.0 keys/s\n  2026-06-18T13:10:00+00:00  950.0 keys/s\n  2026-06-18T13:15:00+00:00  1010.0 keys/s\n  2026-06-18T13:20:00+00:00  990.0 keys/s\n  2026-06-18T13:25:00+00:00  1030.0 keys/s\n  2026-06-18T13:30:00+00:00  1080.0 keys/s\n  2026-06-18T13:35:00+00:00  1050.0 keys/s",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: metrics investigator.\nInput: metric series with pre-incident baselines, plus the incident window.\nThe documented deviation rule (docs/assumptions.md): a value is anomalous at\n>= 2x baseline or <= 0.5x baseline; with a zero baseline any nonzero value\nis anomalous.\n\nReport as findings, each tied to a concrete series and timestamp:\n- for each series that deviates: when it first crossed, how far it peaked\n  relative to baseline, and whether it recovered inside the window\n- ordering between deviating series (which moved first)\n- series that stayed at baseline - unaffected services are evidence too\n- suspicious shapes the rule misses (steady climb, step change, plateau)\nDo not speculate about causes in other sources; describe metric behavior.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"notifications-worker lag first deviated at 13:15 (22s vs 4s baseline)\",\"timestamp\":\"2026-06-18T13:15:00Z\",\"service\":\"notifications-worker\",\"signal\":\"consumer_lag_seconds\",\"value\":22.0},{\"interpretation\":\"message-broker queue depth first deviated at 13:05 (480 vs 150)\",\"timestamp\":\"2026-06-18T13:05:00Z\",\"service\":\"message-broker\",\"signal\":\"queue_depth_msgs\",\"value\":480.0},{\"interpretation\":\"session-store evictions first deviated at 13:00 (420/s vs 2/s) - the EARLIEST deviation, two topology hops from the alerting service\",\"timestamp\":\"2026-06-18T13:00:00Z\",\"service\":\"session-store\",\"signal\":\"evictions_per_sec\",\"value\":420.0}],\"gaps\":[],\"reasoning\":\"compared data against baselines\"}"
+  }
+}

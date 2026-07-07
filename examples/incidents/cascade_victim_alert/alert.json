@@ -1,0 +1,11 @@
+{
+  "id": "alert_cv_001",
+  "title": "Consumer lag above 30s on notifications-worker",
+  "service": "notifications-worker",
+  "triggered_at": "2026-06-18T13:26:00Z",
+  "severity": "major",
+  "description": "notification delivery lag growing",
+  "signal": "consumer_lag_seconds",
+  "threshold": 30,
+  "observed_value": 130
+}

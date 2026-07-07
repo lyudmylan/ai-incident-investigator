@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "HypothesisDraft": {
+          "additionalProperties": false,
+          "description": "One candidate explanation. Note: no confidence field - the label is\nderived in code from the citations below (rubric.py).",
+          "properties": {
+            "assumptions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Assumptions",
+              "type": "array"
+            },
+            "conflicting_evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Conflicting Evidence Ids",
+              "type": "array"
+            },
+            "recommended_checks": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Recommended Checks",
+              "type": "array"
+            },
+            "statement": {
+              "title": "Statement",
+              "type": "string"
+            },
+            "supporting_evidence_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Supporting Evidence Ids",
+              "type": "array"
+            },
+            "timing_alignment": {
+              "enum": [
+                "aligned",
+                "misaligned",
+                "unknown"
+              ],
+              "title": "Timing Alignment",
+              "type": "string"
+            },
+            "timing_justification": {
+              "title": "Timing Justification",
+              "type": "string"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "statement",
+            "supporting_evidence_ids",
+            "conflicting_evidence_ids",
+            "timing_alignment",
+            "timing_justification",
+            "assumptions",
+            "recommended_checks"
+          ],
+          "title": "HypothesisDraft",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "hypotheses": {
+          "items": {
+            "$ref": "#/$defs/HypothesisDraft"
+          },
+          "title": "Hypotheses",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hypotheses",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "RankerResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-12T08:44:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-12T09:14:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nTRIAGE ASSESSMENT\nseverity: SEV-2 (confidence high) - checkout error rate 3.8% against a 0.4% baseline, inside the 1-25% SEV-2 band on a revenue-critical flow\nwhat happened: Checkout errors rose from 09:00; the session cache hit rate collapsed while the payment gateway stayed at baseline.\naffected services: checkout-service, session-cache\ncustomer impact: A few percent of checkouts fail on first attempt.\n\nEVIDENCE (cite items by their exact id)\n- evidence_a1337679c6 [deploys] service=checkout-service: deploys.json is an empty list: the change window was checked and nothing shipped - internal change ruled out as trigger\n- evidence_73ad6b8cab [logs] service=session-cache at 2026-06-12T08:59:41+00:00: session-cache eviction storm (1200-1400 keys/s) begins 08:59, checkout session misses and cold-rebuild timeouts follow\n- evidence_437ff08932 [metrics] service=checkout-service signal=error_rate_pct value=1.8 at 2026-06-12T09:00:00+00:00: checkout-service error rate first crossed 2x baseline at 09:00 (1.8%)\n- evidence_eef0c4eb5f [metrics] service=payment-gateway signal=p95_latency_ms: payment-gateway p95 stayed at baseline (117-125ms) through the whole window - CONFLICTS with any gateway-outage explanation\n- evidence_e13d5954b9 [metrics] service=session-cache signal=hit_rate_pct value=44.0 at 2026-06-12T09:00:00+00:00: session-cache hit rate collapsed 96% -> 44% starting 09:00\n\nKNOWN DATA GAPS\n- traces.json not provided (impact: cannot identify slow spans or failing dependencies)\n- runbook.md not provided (impact: no operational guidance or known failure modes available)",
+        "role": "user"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: hypothesis ranker. You combine the collected evidence into ranked,\nfalsifiable hypotheses about what contributed to the incident.\n\nRules for hypotheses:\n- order them most likely first\n- every hypothesis must cite supporting evidence by exact id from the\n  EVIDENCE section; cite conflicting evidence ids too - surfacing conflict\n  is required, not optional (an unaffected control service often conflicts\n  with broad-outage hypotheses)\n- cite the STRONGEST supporting ids, at most 8 per hypothesis - every\n  cited id must independently pull weight; omit merely-consistent items\n  (a human reads each citation, and twenty of them bury the three that\n  matter)\n- statement wording: falsifiable and proportionate (\"X increased load on Y,\n  consistent with...\") - never \"root cause confirmed\"\n- timing_alignment: does the suspected cause precede symptom onset with a\n  plausible gap? aligned / misaligned / unknown, with a one-line\n  justification citing the relevant timestamps\n- assumptions: what you are taking for granted that the data does not show\n- recommended_checks: read-only verification steps a human could take next\n  (inspect, compare, query); never state-changing actions\n- prefer two or three well-evidenced hypotheses over many thin ones; include\n  a genuine alternative if the evidence permits one\n\nYou do NOT assign confidence. The pipeline derives it from your citations:\ndistinct supporting sources, timing alignment, and conflict count. Cite\naccordingly - citing three findings from one source counts as one signal.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 0,
+    "model": "claude-opus-4-8",
+    "output_tokens": 0,
+    "stop_reason": "end_turn",
+    "text": "{\"hypotheses\":[{\"title\":\"session-cache eviction storm forcing cold cart rebuilds\",\"statement\":\"Cache evictions from 08:59 collapsed the hit rate; checkout rebuilt carts from cold state and timed out, consistent with the 500s. The flat payment-gateway series conflicts with any broader payment-path outage.\",\"supporting_evidence_ids\":[\"evidence_e13d5954b9\",\"evidence_73ad6b8cab\"],\"conflicting_evidence_ids\":[\"evidence_eef0c4eb5f\"],\"timing_alignment\":\"aligned\",\"timing_justification\":\"evictions 08:59 precede the first error-rate deviation 09:00\",\"assumptions\":[\"cart rebuild is the dominant source of the 500s\",\"cache memory pressure is not itself caused by a traffic surge\"],\"recommended_checks\":[\"inspect session-cache memory usage and key-size distribution\",\"sample 500 responses to confirm cold-rebuild timeouts dominate\"]}],\"gaps\":[],\"reasoning\":\"ranked by evidence alignment and timing\"}"
+  }
+}

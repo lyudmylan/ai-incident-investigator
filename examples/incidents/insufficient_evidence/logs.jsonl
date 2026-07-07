@@ -1,0 +1,6 @@
+{"timestamp": "2026-06-21T02:58:03Z", "service": "payments-web", "level": "ERROR", "message": "502 upstream prematurely closed connection while reading response header"}
+{"timestamp": "2026-06-21T03:03:44Z", "service": "payments-web", "level": "ERROR", "message": "502 upstream prematurely closed connection while reading response header"}
+{"timestamp": "2026-06-21T03:07:19Z", "service": "payments-web", "level": "ERROR", "message": "502 upstream prematurely closed connection while reading response header"}
+{"timestamp": "2026-06-21T03:11:02Z", "service": "payments-web", "level": "ERROR", "message": "502 upstream prematurely closed connection while reading response header"}
+{"timestamp": "2026-06-21T03:11:47Z", "service": "payments-web", "level": "ERROR", "message": "502 upstream prematurely closed connection while reading response header"}
+{"timestamp": "2026-06-21T03:15:30Z", "service": "payments-web", "level": "ERROR", "message": "502 upstream prematurely closed connection while reading response header"}

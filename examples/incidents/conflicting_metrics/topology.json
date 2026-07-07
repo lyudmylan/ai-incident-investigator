@@ -1,0 +1,7 @@
+{
+  "services": [
+    {"name": "checkout-service", "kind": "service", "depends_on": ["payment-gateway", "session-cache"]},
+    {"name": "payment-gateway", "kind": "third_party", "depends_on": []},
+    {"name": "session-cache", "kind": "cache", "depends_on": []}
+  ]
+}

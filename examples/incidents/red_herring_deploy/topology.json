@@ -1,0 +1,6 @@
+{
+  "services": [
+    {"name": "reports-service", "kind": "service", "depends_on": ["reports-db"]},
+    {"name": "reports-db", "kind": "database", "depends_on": []}
+  ]
+}

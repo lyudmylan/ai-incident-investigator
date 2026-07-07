@@ -36,12 +36,17 @@ calls / ~17k input tokens, roughly $1 on the default model and cents on
 Haiku), plus the standard recipes for free demos and the one recording
 worth paying for.
 
-Four example incidents ship with fixtures, so the replay demo works out of
-the box: `latency_spike` (deploy-driven retry amplification), `error_rate_spike`
-(feature flag breaks template rendering; recovers in-window),
-`dependency_timeout` (third-party API degradation, no internal change), and
-`collected_demo` (the same booking scenario as gathered by the `collect`
-command below - byte-for-byte reproducible from the committed HTTP fixtures).
+Ten example incidents ship with fixtures, so the replay demo works out of
+the box. Four originals: `latency_spike` (deploy-driven retry amplification),
+`error_rate_spike` (feature flag breaks template rendering; recovers
+in-window), `dependency_timeout` (third-party API degradation, no internal
+change), and `collected_demo` (the same booking scenario as gathered by the
+`collect` command below - byte-for-byte reproducible from the committed HTTP
+fixtures). Plus a six-scenario **adversarial corpus** built to mislead -
+red-herring deploys, conflicting metrics, evidence too thin for any honest
+hypothesis - each scored against a rubric of what a correct investigation
+must and must not claim (`scripts/eval_corpus.py`; committed scorecard in
+`docs/eval_scorecard.md`).
 
 ## Guided remediation (v3)
 

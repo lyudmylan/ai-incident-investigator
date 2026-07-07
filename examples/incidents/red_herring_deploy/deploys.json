@@ -1,0 +1,12 @@
+{
+  "deploys": [
+    {
+      "id": "deploy_rh_1",
+      "service": "reports-service",
+      "version": "2026.06.10-1058",
+      "deployed_at": "2026-06-10T10:58:00Z",
+      "description": "Update dashboard footer copyright text (static template only, no code paths changed)",
+      "change_type": "config"
+    }
+  ]
+}
