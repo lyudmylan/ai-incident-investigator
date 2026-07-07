@@ -90,6 +90,12 @@ class AnthropicClient:
         self._anthropic = anthropic
         self._client = anthropic.Anthropic()
 
+    def _create(self, kwargs: dict[str, Any]) -> Any:
+        try:
+            return self._client.messages.create(**kwargs)
+        except self._anthropic.APIError as exc:
+            raise LLMError(f"Claude API call failed: {exc}") from exc
+
     def complete(self, request: LLMRequest) -> LLMResponse:
         kwargs: dict[str, Any] = {
             "model": request.model,
@@ -107,7 +113,14 @@ class AnthropicClient:
         try:
             message = self._client.messages.create(**kwargs)
         except self._anthropic.APIError as exc:
-            raise LLMError(f"Claude API call failed: {exc}") from exc
+            # Adaptive thinking is not supported on every model (e.g. Haiku
+            # 4.5 rejects it with a 400). Detected via the API's own error
+            # rather than a maintained model table; retried once without.
+            if "thinking" in kwargs and "thinking is not supported" in str(exc):
+                del kwargs["thinking"]
+                message = self._create(kwargs)
+            else:
+                raise LLMError(f"Claude API call failed: {exc}") from exc
 
         # Anything but a clean finish is an error: refusal, max_tokens
         # truncation, pause_turn (server tools we don't use), or future
