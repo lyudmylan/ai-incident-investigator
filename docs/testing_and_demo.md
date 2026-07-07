@@ -99,6 +99,11 @@ Sonnet 5 run of latency_spike lives in `tests/fixtures/llm-live/`
     The snapshot pairs with the prompts as of its recording commit -
     prompt changes invalidate replay (fixture keys embed the full
     request); re-record after meaningful prompt work to refresh it.
+    (The #45 prompt fixes did exactly that, so the snapshot currently
+    degrades on replay.) The RENDERED reports survive prompt drift:
+    `docs/samples/latency_spike-sonnet5-report.md` and the Haiku smoke
+    counterpart are the committed static demo artifacts - note the
+    critic blocking triage on timestamp precision in the Sonnet one.
     Notable content: the critic BLOCKS triage on a timestamp-precision
     error and questions the confidence rubric's design - real safety-layer
     behavior on real model output. Kept separate from tests/fixtures/llm
