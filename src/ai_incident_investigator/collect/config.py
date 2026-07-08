@@ -51,6 +51,13 @@ class SourcesConfig(BaseModel):
         return (self.path.parent / relative).resolve()
 
 
+# The publish credential's env var name (publish.github_issue.DEFAULT_TOKEN_ENV;
+# duplicated here because collect/ must not import from publish/ - a
+# cross-check test asserts the two strings stay equal). Collection refusing
+# it keeps the write credential structurally out of every read path.
+_PUBLISH_TOKEN_ENV = "GITHUB_PUBLISH_TOKEN"
+
+
 def _reject_pasted_credentials(node: dict[str, Any], path: Path, where: str) -> None:
     """Recursive: a credential-looking value anywhere in the config is rejected."""
     for key, value in node.items():
@@ -58,6 +65,12 @@ def _reject_pasted_credentials(node: dict[str, Any], path: Path, where: str) -> 
         if isinstance(value, dict):
             _reject_pasted_credentials(value, path, location)
             continue
+        if key.lower().endswith("_env") and value == _PUBLISH_TOKEN_ENV:
+            raise CollectError(
+                f"{path}: {location} references the publish credential "
+                f"({_PUBLISH_TOKEN_ENV}). The write token must never be used for "
+                "collection; give the read source its own token."
+            )
         looks_secret = any(marker in key.lower() for marker in _SECRET_KEY_MARKERS)
         if looks_secret and not key.lower().endswith("_env") and isinstance(value, str):
             raise CollectError(

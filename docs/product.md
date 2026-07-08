@@ -399,6 +399,18 @@ The project is successful when it can:
 	•	produce useful communication drafts
 	•	produce a useful postmortem draft
 	•	keep remediation out of scope unless explicitly approved in future versions
+
+Status (2026-07-08, end of v4): every criterion is met and demonstrable
+offline at zero token cost - loading/timeline/evidence/hypotheses via the
+replay demos (ten example packages including six adversarial ones, each
+rubric-scored in CI); overclaim avoidance via the code-derived confidence
+rubric, the severity ceiling lint, and the insufficient_evidence scenario
+whose CORRECT scored answer is "no hypothesis"; missing data and
+assumptions as first-class report fields; safe next steps, communication
+drafts, and postmortem drafts in every golden; remediation still executes
+nothing (approval records exist, the executor does not). Two live runs
+(Haiku, Sonnet 5) validated the pipeline against the real API; committed
+sample reports under docs/samples/.
 Quality Bar
 The project should follow engineering discipline from day one:
 	•	JSON contracts before implementation

@@ -165,6 +165,20 @@ exception"). The narrowing is structural, not conventional:
   request cannot carry headers, so credentials cannot reach disk.
 - `urllib` is confined to exactly two modules - the GET-only client and
   this one - by a structural test.
+- The reverse isolation also holds: collection config REFUSES the publish
+  credential's env var name, so the write token cannot leak into read
+  paths even by configuration mistake.
+
+## Approval and comparison layers (v4)
+
+`approvals.py` binds human approvals to the sha256 of the exact report
+file (regeneration voids them; append-only sidecar). `is_actionable` is
+the single gate a v5 executor may consult - it answers, never acts.
+`compare.py` judges a follow-up snapshot against the recovery plan the
+original package deterministically implies, using the same recovery rule
+that ends incident windows; verdicts are pessimistic (absent signals are
+unverifiable, never assumed recovered). Both are pure code: no LLM, no
+network, no action on outcomes.
 
 ## Reasoning trace
 
