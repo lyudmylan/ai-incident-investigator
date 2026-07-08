@@ -37,6 +37,8 @@ def _no_blocked(report: InvestigationReport) -> bool:
 
 
 def _hypothesis(report: InvestigationReport, index: int):  # -> Hypothesis
+    if not report.hypotheses:
+        raise LookupError("no hypotheses produced")
     return report.hypotheses[index]
 
 
@@ -103,7 +105,9 @@ RUBRICS: dict[str, list[Check]] = {
     "cascade_victim_alert": [
         (
             "top hypothesis names the culprit two hops away (session-store)",
-            lambda r: "session-store" in _hypothesis(r, 0).title,
+            # case-insensitive on purpose: the first live sweep failed a
+            # CORRECT "Session-store memory exhaustion..." title on case
+            lambda r: "session-store" in _hypothesis(r, 0).title.lower(),
         ),
         (
             "three aligned sources earn HIGH confidence",
@@ -256,6 +260,9 @@ def score() -> tuple[list[str], int]:
         for description, predicate in [*RUBRICS[incident_id], *UNIVERSAL]:
             try:
                 ok = predicate(report)
+            except LookupError as exc:  # empty hypotheses: a finding, not a crash
+                ok = False
+                description = f"{description} [{exc}]"
             except Exception as exc:  # a rubric crash is a failure with a reason
                 ok = False
                 description = f"{description} (rubric error: {exc})"

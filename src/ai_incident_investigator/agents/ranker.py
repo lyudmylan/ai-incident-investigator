@@ -40,6 +40,12 @@ Rules for hypotheses:
   cited id must independently pull weight; omit merely-consistent items
   (a human reads each citation, and twenty of them bury the three that
   matter)
+- ids must be copied VERBATIM from the EVIDENCE section: a cited id that
+  is not in that list invalidates the whole hypothesis (code checks every
+  citation) - a right idea with a wrong id is a dropped idea
+- returning ZERO hypotheses is the correct answer when nothing falsifiable
+  is grounded in the evidence; never force a hypothesis from thin signal -
+  put what you would need to know into gaps instead
 - statement wording: falsifiable and proportionate ("X increased load on Y,
   consistent with...") - never "root cause confirmed"
 - timing_alignment: does the suspected cause precede symptom onset with a
