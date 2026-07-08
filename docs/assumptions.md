@@ -107,6 +107,28 @@ structurally and by the deterministic linter:
   phrasing is linted.
 - An empty plan list is valid when nothing is well-grounded.
 
+## Approval semantics (v4)
+
+Approvals are audit records, never triggers (`approvals.py`):
+
+- An approval binds to the **sha256 of the exact report file** it was
+  granted against. Regenerating the report - even to fix a typo - voids
+  every approval on it; re-approval against the new content is required.
+  Content-addressed, not time-addressed: a byte-identical file keeps its
+  approvals.
+- Approvals name a plan id AND a step index, and only **state-changing**
+  steps are approvable (read-only steps need no approval to be useless
+  to an executor).
+- The sidecar (`<report>.approvals.json`) is append-only: records are
+  never modified or removed; a newer valid record supersedes nothing -
+  any one valid record satisfies the gate.
+- Optional expiry: incidents move fast; stale approvals should die.
+- `is_actionable` is the single gate an executor (v5) may consult. It
+  refuses everything except a valid, hash-matching, unexpired approval of
+  an existing state-changing step - and it only answers, never acts.
+- Approval is NEVER execution. Nothing in v4 acts on an approval; the
+  records exist so v5 can consume a proven format.
+
 ## Recovery verification plan derivation (v3)
 
 Built deterministically from package facts (`recovery.py`); no LLM:
