@@ -32,7 +32,7 @@ def _is_recovered(value: float, baseline: float) -> bool:
     return abs(value - baseline) <= RECOVERY_TOLERANCE * abs(baseline)
 
 
-def _recovery_start(series: MetricSeries) -> datetime | None:
+def recovery_start(series: MetricSeries) -> datetime | None:
     """Start of the trailing recovered run, if the series ends recovered."""
     points = sorted(series.points, key=lambda p: p.timestamp)
     trailing: list[datetime] = []
@@ -79,7 +79,7 @@ def incident_window(
             rule=f"{rule}; no metric series deviated from baseline -> ongoing",
         )
 
-    recovery_starts = [_recovery_start(series) for series in deviated]
+    recovery_starts = [recovery_start(series) for series in deviated]
     if all(recovery is not None for recovery in recovery_starts):
         end = max(recovery for recovery in recovery_starts if recovery is not None)
         return IncidentWindow(

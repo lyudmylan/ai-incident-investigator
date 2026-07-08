@@ -1,0 +1,68 @@
+{
+  "original_incident_id": "latency_spike",
+  "follow_up_incident_id": "latency_spike",
+  "signals": [
+    {
+      "service": "appointments-db",
+      "signal": "cpu_pct",
+      "baseline": 38.0,
+      "incident_peak": 93.0,
+      "follow_up_last": null,
+      "recovered": null,
+      "detail": "signal absent from the follow-up snapshot; recovery unverifiable"
+    },
+    {
+      "service": "booking-queue",
+      "signal": "queue_depth",
+      "baseline": 12.0,
+      "incident_peak": 545.0,
+      "follow_up_last": 12.0,
+      "recovered": true,
+      "detail": "recovered per the documented rule (sustained from 2026-06-01T16:10:00+00:00); last value 12 vs baseline 12"
+    },
+    {
+      "service": "booking-service",
+      "signal": "error_rate_pct",
+      "baseline": 0.3,
+      "incident_peak": 4.8,
+      "follow_up_last": 0.29,
+      "recovered": true,
+      "detail": "recovered per the documented rule (sustained from 2026-06-01T16:00:00+00:00); last value 0.29 vs baseline 0.3"
+    },
+    {
+      "service": "booking-service",
+      "signal": "p95_latency_ms",
+      "baseline": 450.0,
+      "incident_peak": 3300.0,
+      "follow_up_last": 449.0,
+      "recovered": true,
+      "detail": "recovered per the documented rule (sustained from 2026-06-01T16:00:00+00:00); last value 449 vs baseline 450"
+    },
+    {
+      "service": "payment-service",
+      "signal": "p95_latency_ms",
+      "baseline": 220.0,
+      "incident_peak": 2450.0,
+      "follow_up_last": 222.0,
+      "recovered": true,
+      "detail": "recovered per the documented rule (sustained from 2026-06-01T16:00:00+00:00); last value 222 vs baseline 220"
+    }
+  ],
+  "patterns": [
+    {
+      "pattern": "Booking failed for appointment N: eligibility lookup exhausted retries (N of N)",
+      "occurrences_in_follow_up": 0,
+      "still_present": false
+    },
+    {
+      "pattern": "Eligibility enrichment query timed out after Nms",
+      "occurrences_in_follow_up": 0,
+      "still_present": false
+    }
+  ],
+  "re_alert_condition": "p95_latency_ms on booking-service crosses the alert threshold 1000 again",
+  "re_alert": "not_met",
+  "verdict": "inconclusive",
+  "summary": "4/5 watched signals recovered (1 unverifiable); 0 of 2 watched error patterns still present; re-alert condition not met",
+  "postmortem_addendum": "Recovery verification (latency_spike vs latency_spike): INCONCLUSIVE. 4/5 watched signals recovered (1 unverifiable); 0 of 2 watched error patterns still present; re-alert condition not met. Unverifiable: appointments-db/cpu_pct was not in the follow-up snapshot."
+}
