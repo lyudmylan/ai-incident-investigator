@@ -476,6 +476,52 @@ def _approve_main(argv: Sequence[str]) -> int:
     return 0
 
 
+def build_compare_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ai_incident_investigator compare",
+        description="Compare a follow-up snapshot against the original incident's "
+        "recovery verification plan - deterministically, with numbers. Signals "
+        "absent from the follow-up are unverifiable, never assumed recovered. "
+        "The verdict informs a human; nothing acts on it.",
+    )
+    parser.add_argument(
+        "--incident", type=Path, required=True, help="the original incident package"
+    )
+    parser.add_argument("--follow-up", type=Path, required=True, help="the later snapshot package")
+    parser.add_argument("--format", choices=["json", "markdown"], default="json")
+    parser.add_argument(
+        "--output", type=Path, default=None, help="write to this file instead of stdout"
+    )
+    return parser
+
+
+def _compare_main(argv: Sequence[str]) -> int:
+    from ai_incident_investigator.compare import (
+        ComparisonError,
+        build_comparison,
+        render_comparison,
+    )
+
+    parser = build_compare_parser()
+    args = parser.parse_args(argv)
+    try:
+        original = load_package(args.incident).package
+        follow_up = load_package(args.follow_up).package
+        comparison = build_comparison(original, follow_up)
+    except (PackageLoadError, ComparisonError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    text = (
+        render_comparison(comparison)
+        if args.format == "markdown"
+        else comparison.model_dump_json(indent=2)
+    )
+    _emit(text, args.output)
+    print(f"verdict: {comparison.verdict} - {comparison.summary}", file=sys.stderr)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
     if arguments and arguments[0] == "collect":
@@ -486,6 +532,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _publish_main(arguments[1:])
     if arguments and arguments[0] == "approve":
         return _approve_main(arguments[1:])
+    if arguments and arguments[0] == "compare":
+        return _compare_main(arguments[1:])
     return _investigate_main(arguments)  # bare flags: backward-compatible investigate
 
 

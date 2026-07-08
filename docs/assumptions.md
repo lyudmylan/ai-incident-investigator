@@ -107,6 +107,27 @@ structurally and by the deterministic linter:
   phrasing is linted.
 - An empty plan list is valid when nothing is well-grounded.
 
+## Recovery comparison verdict rules (v4)
+
+`compare` evaluates a follow-up snapshot against the recovery verification
+plan the ORIGINAL package deterministically implies (`compare.py`):
+
+- Per watched signal, recovery uses the same rule that ends incident
+  windows (window.recovery_start) against the ORIGINAL baseline - the
+  plan is the anchor even if the follow-up carries its own baseline.
+- A signal absent from the follow-up is **unverifiable**, never assumed
+  recovered. Watched log patterns are matched by the same normalization
+  that derived them; the re-alert condition is evaluated only when the
+  original alert carries a numeric signal+threshold and the follow-up
+  has that series.
+- Verdict: `not_recovered` if ANY verifiable signal failed, any watched
+  pattern is still present, or the re-alert condition is met;
+  else `inconclusive` if anything was unverifiable; else `recovered`.
+  Pessimism is deliberate: a wrong "recovered" costs more than a wrong
+  "inconclusive".
+- The output informs a human (summary + postmortem addendum). Nothing
+  acts on it.
+
 ## Approval semantics (v4)
 
 Approvals are audit records, never triggers (`approvals.py`):

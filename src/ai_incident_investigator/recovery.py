@@ -45,7 +45,7 @@ _DIGITS = re.compile(r"\d+")
 _SPACES = re.compile(r"\s+")
 
 
-def _normalize_pattern(message: str) -> str:
+def normalize_pattern(message: str) -> str:
     return _SPACES.sub(" ", _DIGITS.sub("N", message)).strip()
 
 
@@ -79,7 +79,7 @@ def _log_patterns(package: IncidentPackage, start: datetime, end: datetime | Non
             continue
         if record.timestamp < start or (end is not None and record.timestamp > end):
             continue
-        pattern = _normalize_pattern(record.message)
+        pattern = normalize_pattern(record.message)
         counts[pattern] = counts.get(pattern, 0) + 1
     recurring = [(count, pattern) for pattern, count in counts.items() if count >= 2]
     recurring.sort(key=lambda item: (-item[0], item[1]))

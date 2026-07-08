@@ -1,0 +1,8 @@
+{
+  "id": "alert_001_followup",
+  "title": "Follow-up snapshot: booking-service recovery check",
+  "service": "booking-service",
+  "triggered_at": "2026-06-01T16:30:00Z",
+  "severity": "info",
+  "description": "Post-incident verification snapshot collected two hours after the alert; anchors the follow-up window, not a new incident."
+}

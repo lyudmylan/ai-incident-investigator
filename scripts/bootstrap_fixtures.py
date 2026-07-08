@@ -153,6 +153,20 @@ def regenerate_publish_fixture() -> None:
     print(f"recorded {len(list(fixtures.glob('*.json')))} publish fixture -> {fixtures}")
 
 
+def regenerate_comparison_golden() -> None:
+    """The committed recovery-comparison golden: latency_spike vs its
+    committed follow-up snapshot (deterministic, no fixtures involved)."""
+    from ai_incident_investigator.compare import build_comparison
+
+    original = load_package(ROOT / "examples" / "incidents" / "latency_spike").package
+    follow_up = load_package(ROOT / "examples" / "followups" / "latency_spike").package
+    comparison = build_comparison(original, follow_up)
+    out = ROOT / "tests" / "golden" / "comparisons" / "latency_spike.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(comparison.model_dump_json(indent=2) + "\n")
+    print(f"wrote comparison golden -> {out} (verdict: {comparison.verdict})")
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     goldens_only = "--goldens-only" in sys.argv
@@ -165,6 +179,7 @@ def main() -> None:
     for incident_id in args or sorted(SCRIPTED_INCIDENTS):
         regenerate(incident_id, goldens_only)
     regenerate_publish_fixture()
+    regenerate_comparison_golden()
 
 
 if __name__ == "__main__":
