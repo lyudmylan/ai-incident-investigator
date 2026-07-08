@@ -134,16 +134,37 @@ def regenerate_collected_example() -> None:
     print(f"collected example package -> {out}")
 
 
+def regenerate_publish_fixture() -> None:
+    """The publish demo fixture: the latency_spike golden report rendered
+    and 'created' against the stub issue endpoint. Runs after golden regen
+    so the recorded request matches the committed report byte-for-byte."""
+    from ai_incident_investigator.markdown import render_markdown
+    from ai_incident_investigator.models.report import InvestigationReport
+    from ai_incident_investigator.publish import RecordingPublishClient, render_issue
+    from publish_stub import GitHubIssueStub
+
+    fixtures = ROOT / "tests" / "fixtures" / "http" / "github_publish_demo"
+    shutil.rmtree(fixtures, ignore_errors=True)
+    report = InvestigationReport.model_validate_json(
+        (ROOT / "tests" / "golden" / "latency_spike.json").read_text()
+    )
+    request = render_issue(report, "acme/incidents", render_markdown(report))
+    RecordingPublishClient(GitHubIssueStub(), fixtures).create_issue(request)
+    print(f"recorded {len(list(fixtures.glob('*.json')))} publish fixture -> {fixtures}")
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     goldens_only = "--goldens-only" in sys.argv
     if "--http" in sys.argv:
         regenerate_http_fixtures()
+        regenerate_publish_fixture()
         return
     regenerate_http_fixtures()
     regenerate_collected_example()
     for incident_id in args or sorted(SCRIPTED_INCIDENTS):
         regenerate(incident_id, goldens_only)
+    regenerate_publish_fixture()
 
 
 if __name__ == "__main__":

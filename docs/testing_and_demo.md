@@ -16,6 +16,8 @@ purpose, what each costs, and the guardrails that keep spend intentional.
 | Degradation demo | delete a file from a package copy, replay/off | **zero** |
 | New demo scenario | author package + scripted responses, `bootstrap_fixtures.py` | **zero** |
 | Cost preflight | `python scripts/estimate_tokens.py` | **zero** |
+| Publish preview | `publish --report r.json --repo o/n --dry-run` | **zero** (prints, posts nothing) |
+| Publish demo (stub fixture) | `publish ... --http replay --http-fixtures-dir tests/fixtures/http/github_publish_demo` | **zero** |
 | Live smoke (plumbing against the real API) | `AI_INCIDENT_INVESTIGATOR_MODEL=claude-haiku-4-5-20251001` + `--llm record` on ONE example | measured: **$0.27** |
 | Live quality run (the real model) | `--llm record` on ONE example, default Opus | projected **$4-5** at measured token volume |
 

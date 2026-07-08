@@ -283,12 +283,106 @@ def _collect_main(argv: Sequence[str]) -> int:
     )
 
 
+def build_publish_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ai_incident_investigator publish",
+        description="Publish an investigation report as a GitHub issue - the tool's "
+        "single write path (docs/product.md Safety Model): its own analysis, "
+        "to your own tracker, nothing else.",
+    )
+    parser.add_argument(
+        "--report",
+        type=Path,
+        required=True,
+        help="report JSON produced by investigate --output",
+    )
+    parser.add_argument("--repo", required=True, help="target repository as owner/name")
+    parser.add_argument(
+        "--token-env",
+        default="GITHUB_PUBLISH_TOKEN",
+        help="env var holding the publish token (issues:write scope only; "
+        "deliberately separate from any collection credential)",
+    )
+    parser.add_argument("--github-base-url", default="https://api.github.com")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the would-be issue instead of posting anything",
+    )
+    parser.add_argument(
+        "--http",
+        choices=["live", "replay", "record"],
+        default="live",
+        help="replay/record use publish fixtures (keyless demo/testing)",
+    )
+    parser.add_argument("--http-fixtures-dir", type=Path, default=None)
+    return parser
+
+
+def _publish_main(argv: Sequence[str]) -> int:
+    from ai_incident_investigator.collect.http import EnvBearerAuth
+    from ai_incident_investigator.models.report import InvestigationReport
+    from ai_incident_investigator.publish import (
+        LivePublishClient,
+        PublishClient,
+        RecordingPublishClient,
+        ReplayPublishClient,
+        render_issue,
+    )
+
+    parser = build_publish_parser()
+    args = parser.parse_args(argv)
+
+    try:
+        report = InvestigationReport.model_validate_json(args.report.read_text())
+    except (OSError, ValueError) as exc:
+        print(f"error: could not load the report: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        request = render_issue(report, args.repo, render_markdown(report))
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    if args.dry_run:
+        print(f"DRY RUN - would create in {request.repo}:")
+        print(f"title: {request.title}")
+        print(f"labels: {', '.join(request.labels)}")
+        print(f"body: {len(request.body)} chars of rendered markdown")
+        return 0
+
+    client: PublishClient
+    live = LivePublishClient(base_url=args.github_base_url)
+    if args.http == "live":
+        client = live
+    elif args.http_fixtures_dir is None:
+        print(f"error: --http {args.http} requires --http-fixtures-dir", file=sys.stderr)
+        return 1
+    elif args.http == "replay":
+        client = ReplayPublishClient(args.http_fixtures_dir)
+    else:
+        client = RecordingPublishClient(live, args.http_fixtures_dir)
+
+    auth = EnvBearerAuth(env_var=args.token_env) if args.http != "replay" else None
+    try:
+        created = client.create_issue(request, auth)
+    except Exception as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(f"published: {created.html_url}", file=sys.stderr)
+    print(created.html_url)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
     if arguments and arguments[0] == "collect":
         return _collect_main(arguments[1:])
     if arguments and arguments[0] == "investigate":
         return _investigate_main(arguments[1:])
+    if arguments and arguments[0] == "publish":
+        return _publish_main(arguments[1:])
     return _investigate_main(arguments)  # bare flags: backward-compatible investigate
 
 
