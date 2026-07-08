@@ -130,3 +130,25 @@ def test_apply_update_merges_lists_and_overwrites_scalars() -> None:
     assert [s.stage for s in second.reasoning_trace] == ["one", "two"]
     assert second.summary is None
     assert second.missing_data == state.missing_data  # untouched lists carry over
+
+
+def test_failure_text_is_stabilized_for_replay() -> None:
+    """Issue #61: a live API error carries a per-request id; two otherwise
+    identical failures must produce IDENTICAL state (else downstream prompts
+    differ between live and replay runs and fixtures never match)."""
+    from ai_incident_investigator.loading import load_package
+    from ai_incident_investigator.pipeline import initial_state
+    from ai_incident_investigator.state import record_failure, stable_error_text
+    from helpers import EXAMPLE_DIR
+
+    error_one = "Claude API call failed: 400 {'request_id': 'req_011CcnmDtvkFgEP58T7PwKgq'}"
+    error_two = "Claude API call failed: 400 {'request_id': 'req_9ZZ9ZZ9ZZ9ZZ9ZZ9ZZ9ZZ9'}"
+    assert stable_error_text(error_one) == stable_error_text(error_two)
+    assert "req_<redacted>" in stable_error_text(error_one)
+
+    base = initial_state(load_package(EXAMPLE_DIR))
+    one = record_failure(base, "triage", error_one)
+    two = record_failure(base, "triage", error_two)
+    assert one.missing_data[-1] == two.missing_data[-1]  # same id, same description
+    assert one.failures[-1] == two.failures[-1]
+    assert "req_011" not in one.missing_data[-1].description

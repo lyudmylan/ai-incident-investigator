@@ -31,3 +31,25 @@ def test_committed_scorecard_is_current() -> None:
                 f"scorecard drift ({line!r} missing); regenerate with "
                 "scripts/eval_corpus.py --write"
             )
+
+
+def test_empty_hypotheses_fail_with_a_finding_not_a_crash() -> None:
+    """Issue #61: the first live sweep printed 'rubric error: IndexError'
+    where it should have said what happened."""
+    import pytest
+
+    from ai_incident_investigator.models.report import InvestigationReport
+
+    golden = ROOT / "tests" / "golden" / "insufficient_evidence.json"
+    report = InvestigationReport.model_validate_json(golden.read_text())
+    assert report.hypotheses == []
+    with pytest.raises(LookupError, match="no hypotheses produced"):
+        eval_corpus._hypothesis(report, 0)
+
+
+def test_ranker_prompt_carries_the_issue_61_guidance() -> None:
+    from ai_incident_investigator.agents.ranker import RANKER_PROMPT
+
+    prompt = " ".join(RANKER_PROMPT.split())
+    assert "copied VERBATIM from the EVIDENCE section" in prompt
+    assert "ZERO hypotheses is the correct answer" in prompt

@@ -9,6 +9,7 @@ in-place mutation of list contents. Agents must treat the state as strictly
 read-only; all merge paths here build new lists and never mutate in place.
 """
 
+import re
 import typing
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -118,8 +119,19 @@ def apply_update(state: InvestigationState, update: StateUpdate) -> Investigatio
     return state.model_copy(update=changes)
 
 
+# Volatile tokens in provider error text (issue #61): a live failure whose
+# message carries a per-request id would flow into downstream prompts and
+# make the run unreproducible via replay. Stabilized before entering state.
+_VOLATILE_ERROR_TOKENS = re.compile(r"\breq_[A-Za-z0-9]+\b")
+
+
+def stable_error_text(error: str) -> str:
+    return _VOLATILE_ERROR_TOKENS.sub("req_<redacted>", error)
+
+
 def record_failure(state: InvestigationState, agent: str, error: str) -> InvestigationState:
     """Degrade, never crash: a failed agent becomes missing data plus trace."""
+    error = stable_error_text(error)
     update = StateUpdate(
         missing_data=[
             MissingData(
