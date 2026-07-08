@@ -12,7 +12,9 @@ from ai_incident_investigator.models.report import (
 )
 
 
-def _plan_block(plan: RemediationPlan) -> str:
+def _plan_block(
+    plan: RemediationPlan, step_statuses: dict[tuple[str, int], str] | None = None
+) -> str:
     lines = [
         f"### {plan.title} ({plan.kind})",
         "",
@@ -25,10 +27,13 @@ def _plan_block(plan: RemediationPlan) -> str:
     if plan.preconditions:
         lines.append("- preconditions: " + "; ".join(plan.preconditions))
     lines.append("")
-    for number, step in enumerate(plan.steps, start=1):
+    for index, step in enumerate(plan.steps):
+        number = index + 1
         if step.kind == "state_changing":
             lines.append(f"{number}. **[STATE-CHANGING - approval required]** {step.action}")
             lines.append(f"   - verify: {step.verification}")
+            if step_statuses is not None:
+                lines.append(f"   - approval: {step_statuses.get((plan.id, index), 'unapproved')}")
         else:
             lines.append(f"{number}. [read-only] {step.action}")
             if step.verification:
@@ -61,7 +66,14 @@ def _hypothesis_block(hypothesis: Hypothesis, rank: int) -> str:
     return "\n".join(lines)
 
 
-def render_markdown(report: InvestigationReport) -> str:
+def render_markdown(
+    report: InvestigationReport,
+    *,
+    step_statuses: dict[tuple[str, int], str] | None = None,
+) -> str:
+    """step_statuses (from approvals.step_statuses) annotates each
+    state-changing plan step with its approval state; None renders the
+    report exactly as before approvals existed."""
     summary = report.summary
     severity = report.severity
     window = summary.incident_window
@@ -110,7 +122,7 @@ def render_markdown(report: InvestigationReport) -> str:
         sections.append("## Safe mitigation options\n\n" + "\n".join(lines))
 
     if report.remediation_plans:
-        blocks = [_plan_block(plan) for plan in report.remediation_plans]
+        blocks = [_plan_block(plan, step_statuses) for plan in report.remediation_plans]
         sections.append("## Remediation plans (guided, human-approved)\n\n" + "\n\n".join(blocks))
 
     if report.recovery_verification is not None:

@@ -375,6 +375,107 @@ def _publish_main(argv: Sequence[str]) -> int:
     return 0
 
 
+def build_approve_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ai_incident_investigator approve",
+        description="Record a human approval for a state-changing plan step, bound "
+        "to the exact report content (regenerating the report voids it). Approval "
+        "is NEVER execution: this writes an audit record and nothing else.",
+    )
+    parser.add_argument(
+        "--report", type=Path, required=True, help="report JSON the approval binds to"
+    )
+    parser.add_argument("--list", action="store_true", help="show approval status per step")
+    parser.add_argument("--plan", help="plan id to approve (see the report's remediation_plans)")
+    parser.add_argument("--step", type=int, help="0-based step index within the plan")
+    parser.add_argument("--approver", help="who is approving (identity as claimed)")
+    parser.add_argument(
+        "--expires-in-hours",
+        type=float,
+        default=None,
+        help="optional expiry; incidents move fast and stale approvals should die",
+    )
+    parser.add_argument("--note", default=None, help="optional scope note on the approval")
+    return parser
+
+
+def _approve_main(argv: Sequence[str]) -> int:
+    from datetime import UTC, datetime
+
+    from ai_incident_investigator.approvals import (
+        ApprovalRecord,
+        append_approval,
+        load_approvals,
+        report_hash,
+        step_statuses,
+    )
+    from ai_incident_investigator.models.report import InvestigationReport
+
+    parser = build_approve_parser()
+    args = parser.parse_args(argv)
+
+    try:
+        report = InvestigationReport.model_validate_json(args.report.read_text())
+    except (OSError, ValueError) as exc:
+        print(f"error: could not load the report: {exc}", file=sys.stderr)
+        return 1
+    current_hash = report_hash(args.report)
+    now = datetime.now(UTC)
+
+    if args.list:
+        statuses = step_statuses(report, load_approvals(args.report), current_hash, now)
+        if not statuses:
+            print("no state-changing steps in this report's plans")
+            return 0
+        for (plan_id, index), status in sorted(statuses.items()):
+            listed = next(p for p in report.remediation_plans if p.id == plan_id)
+            action = listed.steps[index].action
+            print(f"{plan_id} step {index} ({action[:60]}): {status}")
+        return 0
+
+    if not (args.plan and args.step is not None and args.approver):
+        parser.error("approving requires --plan, --step, and --approver (or use --list)")
+
+    plan = next((p for p in report.remediation_plans if p.id == args.plan), None)
+    if plan is None:
+        known = ", ".join(p.id for p in report.remediation_plans) or "none"
+        print(f"error: plan {args.plan!r} not in this report (plans: {known})", file=sys.stderr)
+        return 1
+    if args.step >= len(plan.steps):
+        print(f"error: plan {args.plan} has {len(plan.steps)} steps", file=sys.stderr)
+        return 1
+    if plan.steps[args.step].kind != "state_changing":
+        print(
+            f"error: step {args.step} is read-only; approvals apply to state-changing steps only",
+            file=sys.stderr,
+        )
+        return 1
+
+    from datetime import timedelta as _timedelta
+
+    record = ApprovalRecord(
+        approver=args.approver,
+        approved_at=now,
+        plan_id=args.plan,
+        step_index=args.step,
+        report_sha256=current_hash,
+        expires_at=(
+            now + _timedelta(hours=args.expires_in_hours)
+            if args.expires_in_hours is not None
+            else None
+        ),
+        scope_note=args.note,
+    )
+    path = append_approval(args.report, record)
+    print(
+        f"approval recorded: {args.plan} step {args.step} by {args.approver} "
+        f"(bound to report {current_hash[:12]}...)",
+        file=sys.stderr,
+    )
+    print(str(path))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
     if arguments and arguments[0] == "collect":
@@ -383,6 +484,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _investigate_main(arguments[1:])
     if arguments and arguments[0] == "publish":
         return _publish_main(arguments[1:])
+    if arguments and arguments[0] == "approve":
+        return _approve_main(arguments[1:])
     return _investigate_main(arguments)  # bare flags: backward-compatible investigate
 
 
