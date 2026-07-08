@@ -8,6 +8,7 @@ type; nothing in collect/ can write, and nothing here can read.
 """
 
 from ai_incident_investigator.publish.github_issue import (
+    DEFAULT_TOKEN_ENV,
     IssueCreated,
     IssueCreateRequest,
     LivePublishClient,
@@ -19,6 +20,7 @@ from ai_incident_investigator.publish.github_issue import (
 )
 
 __all__ = [
+    "DEFAULT_TOKEN_ENV",
     "IssueCreateRequest",
     "IssueCreated",
     "LivePublishClient",

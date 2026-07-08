@@ -85,6 +85,31 @@ A rendered plan looks like this (from the latency_spike replay):
 **Abort if:** rollback pods crash-loop or error rate exceeds 10%
 ```
 
+## Guided operations (v4)
+
+v4 earns closed-loop before building it — everything below is
+deterministic, zero-token, and acts on nothing:
+
+- **Adversarial evaluation corpus**: six scenarios engineered to mislead
+  (see the examples list above), scored on every test run; the committed
+  scorecard is a CI regression gate.
+- **`publish`**: the tool's single write path - its OWN report as a GitHub
+  issue. The client type can express exactly one route and verb; its
+  credential is isolated from all collection config (structurally, with
+  tests on both directions). `--dry-run` previews; a stub fixture demos
+  offline.
+- **`approve`**: human approvals bound to the sha256 of the exact report
+  file - regenerate the report and every approval on it is VOID. The
+  `is_actionable` gate is what a future executor must consult; today it
+  only answers. Approval is never execution.
+- **`compare`**: a follow-up snapshot judged against the original
+  incident's recovery plan with the same rules that end incident windows.
+  Pessimistic by policy: absent signals are unverifiable, never assumed
+  recovered.
+
+v5 (planned, not scheduled) pilots execution: ONE flag-toggle adapter,
+dry-run mandatory, consuming these approval records unchanged.
+
 ## Collecting packages from live sources (v2)
 
 Instead of hand-authoring a package, `collect` gathers one from read-only
