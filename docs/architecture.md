@@ -146,6 +146,26 @@ the v1 pipeline investigates them unchanged.
   straight into investigation; bare-flag invocations remain the v1
   `investigate` behavior.
 
+## Publish layer (v4): the single write path
+
+`publish/` is the mirror image of the collection layer's GET-only
+philosophy: where collect/ cannot represent a write, publish/ can
+represent exactly ONE - creating a GitHub issue that carries the tool's
+own rendered report (docs/product.md Safety Model, "the single write
+exception"). The narrowing is structural, not conventional:
+
+- `IssueCreateRequest` has no URL field; the endpoint is derived from a
+  pattern-validated `repo` name, so no other route is expressible.
+- `method` is `Literal["POST"]`; there is no generic write client.
+- The publish credential is its own env var (CLI-provided name, default
+  `GITHUB_PUBLISH_TOKEN`, issues:write scope) - sources.toml has no
+  publish section, collect/ never references it, and publish/ cannot
+  read `SourcesConfig` (tested).
+- Record/replay fixtures follow the adapter pattern; the recordable
+  request cannot carry headers, so credentials cannot reach disk.
+- `urllib` is confined to exactly two modules - the GET-only client and
+  this one - by a structural test.
+
 ## Reasoning trace
 
 Every graph node contributes `ReasoningStep`s describing what it concluded

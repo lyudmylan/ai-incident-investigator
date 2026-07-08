@@ -308,6 +308,13 @@ The tool must not execute:
 	•	destructive commands
 	•	customer communication
 All remediation-like output must be framed as requiring human approval.
+
+The single write exception (v4): the tool may publish its OWN
+investigation report to the team's issue tracker. It still never executes
+remediation, never posts customer communications, never pages. The write
+is narrowed structurally: the publish client can represent exactly one
+operation (create issue) against a repo name, with its own credential,
+isolated from all collection configuration.
 Severity Model
 v1 should support a simple severity classification:
 	•	SEV-1: critical production outage, major customer or patient impact, no workaround
@@ -366,13 +373,20 @@ v3 - Guided AI SRE Agent
 	•	status-page update draft
 	•	rollback checklist
 	•	recovery verification plan
-v4 - Closed-Loop Assistance
-	•	execute approved actions through controlled adapters
-	•	verify recovery
-	•	compare pre/post metrics
-	•	update postmortem
-	•	learn from incident patterns
-Execution should remain explicitly gated and auditable.
+v4 - Guided Operations (earn closed-loop before building it)
+	•	adversarial evaluation corpus with a scored rubric (the trust ledger)
+	•	publish the investigation report to the team's tracker (the first,
+		narrowest write path - the tool's own analysis, nothing else)
+	•	approval and audit records, exercised while still draft-only
+	•	verify recovery deterministically: compare pre/post metrics from a
+		second collected snapshot
+v5 - Closed-Loop Assistance (pilot)
+	•	execute ONE approved action type through a controlled adapter
+		(feature-flag toggle: most reversible, best verification story),
+		consuming v4 approval records; dry-run mandatory, allowlisted targets
+	•	update postmortem from verified recovery
+	•	learn from incident patterns (deferred until execution earns trust)
+Execution remains explicitly gated and auditable.
 Success Criteria
 The project is successful when it can:
 	•	load a realistic incident package
