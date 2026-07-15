@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nALERT\nid: alert_001\ntitle: High p95 latency on booking-service POST /book\nservice: booking-service\ntriggered_at: 2026-06-01T14:35:00+00:00\nmonitoring severity label: critical\nsignal: p95_latency_ms\nthreshold: 1000.0\nobserved value at trigger: 2100.0\ndescription: p95 latency on the appointment booking endpoint exceeded the 1000ms threshold for 5 consecutive minutes.\n\nDETERMINISTIC TIMELINE (25 events)\n2026-05-30T09:15:00+00:00 [deploys] notifications-service: deploy 2026.05.30-0915 on notifications-service: Reminder template copy update\n2026-06-01T14:20:00+00:00 [deploys] booking-service: deploy 2026.06.01-1420 on booking-service: Enable payment eligibility enrichment in the booking flow (gated by feature flag payment_enrichment)\n2026-06-01T14:25:00+00:00 [metrics] booking-queue: queue_depth first deviated >=2.0x from baseline (12.0 messages -> 35.0 messages)\n2026-06-01T14:25:00+00:00 [metrics] booking-service: error_rate_pct first deviated >=2.0x from baseline (0.3 % -> 0.7 %)\n2026-06-01T14:26:02+00:00 [logs] booking-service: WARN: Payment eligibility check slow: 1480ms (threshold 500ms)\n2026-06-01T14:27:39+00:00 [logs] payment-service: WARN: Eligibility enrichment query exceeded slow query threshold: 1210ms\n2026-06-01T14:29:14+00:00 [logs] booking-service: WARN: Retrying eligibility lookup for booking 84152 (attempt 2 of 5)\n2026-06-01T14:30:00+00:00 [metrics] booking-service: p95_latency_ms first deviated >=2.0x from baseline (450.0 ms -> 900.0 ms)\n2026-06-01T14:30:00+00:00 [metrics] payment-service: p95_latency_ms first deviated >=2.0x from baseline (220.0 ms -> 980.0 ms)\n2026-06-01T14:30:27+00:00 [logs] appointments-db: WARN: Connection pool nearing saturation: 82/100 connections in use\n2026-06-01T14:31:08+00:00 [logs] booking-service: ERROR: Eligibility lookup timed out after 2000ms for booking 84158 (attempt 3 of 5)\n2026-06-01T14:32:36+00:00 [logs] booking-service: WARN: Retrying eligibility lookup for booking 84158 (attempt 4 of 5)\n2026-06-01T14:33:21+00:00 [logs] payment-service: ERROR: Eligibility enrichment query timed out after 2000ms\n2026-06-01T14:34:44+00:00 [logs] appointments-db: WARN: Connection pool saturated: 97/100 connections in use\n2026-06-01T14:35:00+00:00 [alert] booking-service: Alert fired: High p95 latency on booking-service POST /book\n2026-06-01T14:35:00+00:00 [metrics] appointments-db: cpu_pct first deviated >=2.0x from baseline (38.0 % -> 84.0 %)\n2026-06-01T14:35:52+00:00 [logs] booking-service: ERROR: Booking failed for appointment 84163: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:36:30+00:00 [logs] booking-service: WARN: Booking queue depth 260 exceeds normal operating range\n2026-06-01T14:38:09+00:00 [logs] booking-service: ERROR: Booking failed for appointment 84170: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:39:05+00:00 [traces] booking-service: Trace trace_incident_01: POST /book failed after 3180ms\n2026-06-01T14:40:51+00:00 [logs] appointments-db: WARN: Slow query: SELECT plan_rules FROM eligibility_rules WHERE plan_group = $1 took 2350ms\n2026-06-01T14:45:17+00:00 [logs] booking-service: ERROR: Booking failed for appointment 84181: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:50:33+00:00 [logs] booking-service: WARN: Retrying eligibility lookup for booking 84190 (attempt 2 of 5)\n2026-06-01T14:52:31+00:00 [traces] booking-service: Trace trace_incident_02: POST /book failed after 3320ms\n2026-06-01T14:55:46+00:00 [logs] payment-service: ERROR: Eligibility enrichment query timed out after 2000ms\n\nRUNBOOK (verbatim)\n# Runbook: appointment booking latency\n\n## Service overview\n\n`booking-service` handles appointment booking for the telemedicine platform.\nCritical path: `POST /book` -> payment eligibility check (`payment-service`)\n-> slot reservation (`appointments-db`). Bookings are patient-facing; treat\nsustained degradation as high urgency.\n\n## Known failure modes\n\n1. **appointments-db saturation.** Symptoms: db CPU > 85%, connection pool\n   near 100/100, slow `eligibility_query` / `reserve_slot` spans. Booking and\n   payment both degrade together because they share the database.\n2. **Retry amplification after payment changes.** The booking flow retries\n   eligibility lookups up to 5 times with no backoff. A slow eligibility path\n   multiplies load on `payment-service` and `appointments-db` roughly 5x.\n   Past incident: 2025-11-12 eligibility cache regression.\n3. **Queue backlog.** `booking-queue` depth above ~200 delays confirmation\n   processing; notifications are unaffected (separate consumer).\n\n## Checks\n\n- Compare booking-service error rate and latency before/after the most recent\n  release; correlate deploy time with symptom onset.\n- Inspect `appointments-db` connection pool and slow query log.\n- Check whether eligibility retries are bounded and whether they back off.\n\n## Safe mitigations (human approval required)\n\n- Disable feature flag `payment_enrichment` (safe: booking falls back to the\n  pre-enrichment eligibility path; verified in staging 2026-05-28).\n- Roll back the latest `booking-service` release.\n- Increase booking worker concurrency **only if** queue pressure remains high\n  after the database recovers; adding workers during db saturation makes the\n  saturation worse.\n\n## Escalation\n\n- Primary: booking team on-call. Secondary: platform on-call.\n- Page the data team if `appointments-db` CPU stays > 90% for 15 minutes.\n",
+        "role": "user"
+      }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: runbook investigator.\nInput: the service runbook verbatim, the alert, and the deterministic\ntimeline of observed events.\n\nReport as findings:\n- known failure modes from the runbook whose documented symptoms match\n  observed timeline events (quote both sides)\n- runbook checks relevant to what is being observed\n- operational constraints and warnings the runbook states (e.g. when an\n  action is documented as unsafe)\n- mismatches: observed behavior no runbook failure mode covers\nThe runbook is guidance written in advance, not evidence of current state;\nframe findings as \"the runbook documents X, which matches observed Y\".",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 2868,
+    "model": "claude-haiku-4-5-20251001",
+    "output_tokens": 2232,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\": [{\"interpretation\": \"The runbook documents 'Retry amplification after payment changes' as a known failure mode where eligibility lookups retry up to 5 times with no backoff, multiplying load roughly 5x. The timeline shows booking-service deployment at 2026-06-01T14:20:00+00:00 enabling payment_enrichment feature flag, followed 5\u20136 minutes later by payment eligibility check warnings (14:26:02), slow query warnings (14:27:39), and retry logs (14:29:14, 14:31:08, 14:32:36). Multiple bookings later exhaust all 5 retries (14:35:52, 14:38:09, 14:45:17), consistent with the runbook's documented symptom pattern.\", \"timestamp\": \"2026-06-01T14:20:00+00:00\", \"service\": \"booking-service\", \"signal\": \"deploy + feature flag payment_enrichment + retry pattern\", \"value\": null}, {\"interpretation\": \"The runbook documents 'appointments-db saturation' failure mode with symptoms: db CPU > 85%, connection pool near 100/100, slow eligibility_query spans. Timeline shows connection pool warnings at 14:30:27 (82/100), escalating to saturation at 14:34:44 (97/100), and CPU deviation at alert trigger 14:35:00 (38% -> 84%, just below the >85% threshold). Slow query log at 14:40:51 reports eligibility_rules query taking 2350ms. This matches the runbook's documented saturation pattern.\", \"timestamp\": \"2026-06-01T14:30:27+00:00\", \"service\": \"appointments-db\", \"signal\": \"connection_pool_used + cpu_pct + slow_query\", \"value\": null}, {\"interpretation\": \"The runbook prescribes checking 'whether eligibility retries are bounded and whether they back off.' Timeline logs show retries bounded at 5 attempts (seen in logs at 14:35:52, 14:38:09, 14:45:17: 'eligibility lookup exhausted retries (5 of 5)'). However, the runbook explicitly states retries happen 'with no backoff,' and timeline shows no delays between retry attempts (14:29:14 attempt 2, 14:31:08 attempt 3 ~98 seconds apart, then 14:32:36 attempt 4 ~88 seconds later). The documented lack of backoff combined with saturation is consistent with observed rapid retry cycling.\", \"timestamp\": \"2026-06-01T14:29:14+00:00\", \"service\": \"booking-service\", \"signal\": \"retry_logic\", \"value\": null}, {\"interpretation\": \"The runbook identifies the critical path: 'POST /book -> payment eligibility check (payment-service) -> slot reservation (appointments-db)' and notes both services 'degrade together because they share the database.' Timeline shows payment-service p95_latency deviation at 14:30:00 (220ms -> 980ms), matching booking-service deviation at the same timestamp (450ms -> 900ms), and both remain elevated through alert trigger at 14:35:00 when booking-service reaches 2100ms. This shared degradation pattern matches the runbook's documented dependency model.\", \"timestamp\": \"2026-06-01T14:30:00+00:00\", \"service\": \"payment-service + booking-service\", \"signal\": \"p95_latency_ms\", \"value\": null}, {\"interpretation\": \"The runbook documents 'Queue backlog' as a known failure mode: 'booking-queue depth above ~200 delays confirmation processing.' Timeline shows queue_depth deviation at 14:25:00 (12.0 -> 35.0 messages), then warning at 14:36:30 (queue depth 260 exceeds normal range). The 260-depth observation at 14:36:30 matches the runbook's stated threshold concern (>200) and occurs during sustained latency elevation, consistent with confirmation processing delays.\", \"timestamp\": \"2026-06-01T14:25:00+00:00\", \"service\": \"booking-queue\", \"signal\": \"queue_depth\", \"value\": 35.0}, {\"interpretation\": \"The runbook states a safe mitigation: 'Disable feature flag payment_enrichment (safe: booking falls back to the pre-enrichment eligibility path; verified in staging 2026-05-28).' The timeline shows this feature was enabled at 2026-06-01T14:20:00+00:00 and symptom onset followed within minutes (first eligibility warning at 14:26:02). The runbook explicitly marks this flag-disable as a human-approval mitigation option and notes staging verification, establishing it as a documented safe action path.\", \"timestamp\": null, \"service\": null, \"signal\": \"payment_enrichment feature flag\", \"value\": null}, {\"interpretation\": \"The runbook cautions: 'Increase booking worker concurrency **only if** queue pressure remains high **after** the database recovers; adding workers during db saturation makes the saturation worse.' Timeline shows db saturation ongoing at alert trigger (14:35:00: CPU 84%, pool 97/100) and queue depth escalating (260 at 14:36:30), indicating db has not recovered. This constraint is relevant to the current incident state and documents an unsafe action path during active db saturation.\", \"timestamp\": null, \"service\": null, \"signal\": \"worker concurrency\", \"value\": null}, {\"interpretation\": \"The runbook prescribes: 'Compare booking-service error rate and latency before/after the most recent release.' Timeline shows error_rate_pct deviation at 14:25:00 (0.3% -> 0.7%) and p95_latency_ms deviation at 14:30:00 (450ms -> 900ms), both occurring within 5\u201310 minutes of the 2026-06-01T14:20:00+00:00 deploy. Alert fires at 14:35:00 with observed p95 of 2100ms (alert threshold 1000ms). Symptom onset correlates tightly with deploy time, matching the runbook's recommended check.\", \"timestamp\": \"2026-06-01T14:20:00+00:00\", \"service\": \"booking-service\", \"signal\": \"error_rate_pct + p95_latency_ms\", \"value\": null}, {\"interpretation\": \"Runbook escalation guidance states: 'Page the data team if appointments-db CPU stays > 90% for 15 minutes.' Timeline shows CPU deviation to 84% at alert trigger (14:35:00); it has not breached the 90% threshold and observation window is only 0 minutes at latest event (14:55:46). Current state does not yet meet data team escalation criteria, though trajectory is concerning.\", \"timestamp\": \"2026-06-01T14:35:00+00:00\", \"service\": \"appointments-db\", \"signal\": \"cpu_pct\", \"value\": 84.0}], \"gaps\": [\"No baseline values (pre-deployment p95_latency, error_rate, queue_depth) provided to quantify deviation magnitude or confirm 2.0x multiplier claims match the runbook failure mode descriptions.\", \"No runbook information on whether payment_enrichment feature was intended for incremental rollout (percentage-based canary) or full rollout; timeline shows deployment but not rollout scope.\", \"No trace or span data provided for the POST /book failure traces at 14:39:05 and 14:52:31 to assess whether the 3180ms and 3320ms failures break down across payment-service vs. appointments-db vs. booking-service internal processing.\", \"Runbook does not document expected p95_latency under payment_enrichment feature; observed 2100ms at alert (triggered after 5 consecutive minutes above 1000ms threshold) cannot be compared to a documented acceptable range for the new feature.\", \"No logs or metrics showing when (if ever) the eligibility lookup timeouts or retries began to succeed after 14:55:46; incident marked 'ongoing' with no recovery signal.\", \"Runbook does not specify the retry interval or backoff behavior in detail (e.g., exact milliseconds between attempts); timeline log spacing does not provide enough granularity to independently verify 'no backoff' claim.\"], \"reasoning\": \"The incident timeline exhibits a tight causal sequence matching the runbook's documented failure mode 2 ('Retry amplification after payment changes') and failure mode 1 ('appointments-db saturation'). Deployment of payment_enrichment at 14:20:00 is followed within 5\u201310 minutes by eligibility slowness warnings, then by database saturation signals (connection pool usage, CPU elevation), then by retry exhaustion and booking failures. The runbook identifies both the root cause (new eligibility enrichment path introducing slow queries) and the amplification mechanism (5 retries with no backoff creating load multiplication). The runbook's prescribed checks\u2014comparing error rate and latency before/after release, inspecting db connection pool and slow queries\u2014align perfectly with observed data. The runbook also documents safe mitigations (flag disable, rollback) and unsafe operations (adding workers during db saturation) that are directly applicable to the current state. No observed behavior contradicts the runbook's known failure modes; the timeline is fully explained by the documented patterns. Key gaps are lack of baseline values to quantify deviation severity, missing trace-level breakdown of the POST /book latency, no rollout scope information for the feature flag, and unknown recovery status as of the final timeline event.\"}"
+  }
+}

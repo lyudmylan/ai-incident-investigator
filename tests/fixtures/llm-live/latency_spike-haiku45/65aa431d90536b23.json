@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nLOG RECORDS (20 total)\n2026-06-01T14:02:11+00:00 INFO booking-service Booking confirmed for appointment 84121 in 412ms\n2026-06-01T14:10:43+00:00 INFO booking-service Booking confirmed for appointment 84137 in 438ms\n2026-06-01T14:20:05+00:00 INFO booking-service Deployment 2026.06.01-1420 rolled out; feature flag payment_enrichment enabled\n2026-06-01T14:23:18+00:00 INFO payment-service Eligibility enrichment lookup took 850ms for plan group medicare-b\n2026-06-01T14:26:02+00:00 WARN booking-service Payment eligibility check slow: 1480ms (threshold 500ms)\n2026-06-01T14:27:39+00:00 WARN payment-service Eligibility enrichment query exceeded slow query threshold: 1210ms\n2026-06-01T14:29:14+00:00 WARN booking-service Retrying eligibility lookup for booking 84152 (attempt 2 of 5)\n2026-06-01T14:30:27+00:00 WARN appointments-db Connection pool nearing saturation: 82/100 connections in use\n2026-06-01T14:31:08+00:00 ERROR booking-service Eligibility lookup timed out after 2000ms for booking 84158 (attempt 3 of 5)\n2026-06-01T14:32:36+00:00 WARN booking-service Retrying eligibility lookup for booking 84158 (attempt 4 of 5)\n2026-06-01T14:33:21+00:00 ERROR payment-service Eligibility enrichment query timed out after 2000ms\n2026-06-01T14:34:44+00:00 WARN appointments-db Connection pool saturated: 97/100 connections in use\n2026-06-01T14:35:52+00:00 ERROR booking-service Booking failed for appointment 84163: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:36:30+00:00 WARN booking-service Booking queue depth 260 exceeds normal operating range\n2026-06-01T14:38:09+00:00 ERROR booking-service Booking failed for appointment 84170: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:40:51+00:00 WARN appointments-db Slow query: SELECT plan_rules FROM eligibility_rules WHERE plan_group = $1 took 2350ms\n2026-06-01T14:45:17+00:00 ERROR booking-service Booking failed for appointment 84181: eligibility lookup exhausted retries (5 of 5)\n2026-06-01T14:50:33+00:00 WARN booking-service Retrying eligibility lookup for booking 84190 (attempt 2 of 5)\n2026-06-01T14:55:46+00:00 ERROR payment-service Eligibility enrichment query timed out after 2000ms\n2026-06-01T14:58:20+00:00 INFO notifications-service Reminder batch sent: 1200 notifications in 3.1s",
+        "role": "user"
+      }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: logs investigator.\nInput: structured log records (timestamp, level, service, message) and the\nincident window.\n\nReport as findings, each citing concrete records via timestamp and service:\n- error and warning patterns: what fails, where, starting when\n- repetition and escalation (e.g. retries per operation, attempt counts,\n  whether retry behavior is bounded)\n- resource saturation messages (pools, queues, limits) with their numbers\n- the first log record that departs from routine, and what changed at that\n  moment\n- notable silences: services logging normally through the window\nQuote key message fragments verbatim inside interpretations.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 1875,
+    "model": "claude-haiku-4-5-20251001",
+    "output_tokens": 1995,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\": [{\"interpretation\": \"Deployment 2026.06.01-1420 introduced feature flag payment_enrichment enabled at 2026-06-01T14:20:05+00:00, marking the moment of configuration change preceding error escalation.\", \"timestamp\": \"2026-06-01T14:20:05+00:00\", \"service\": \"booking-service\", \"signal\": \"Deployment\", \"value\": \"2026.06.01-1420 with payment_enrichment enabled\"}, {\"interpretation\": \"First warning-level signal: booking-service recorded \\\"Payment eligibility check slow: 1480ms (threshold 500ms)\\\" at 2026-06-01T14:26:02+00:00, indicating response time degradation in the eligibility path.\", \"timestamp\": \"2026-06-01T14:26:02+00:00\", \"service\": \"booking-service\", \"signal\": \"Payment eligibility check duration\", \"value\": 1480}, {\"interpretation\": \"Payment-service independently reported slow query: \\\"Eligibility enrichment query exceeded slow query threshold: 1210ms\\\" at 2026-06-01T14:27:39+00:00, corroborating upstream slowness.\", \"timestamp\": \"2026-06-01T14:27:39+00:00\", \"service\": \"payment-service\", \"signal\": \"Eligibility enrichment query duration\", \"value\": 1210}, {\"interpretation\": \"Retry pattern begins: booking-service logged \\\"Retrying eligibility lookup for booking 84152 (attempt 2 of 5)\\\" at 2026-06-01T14:29:14+00:00, indicating bounded retry behavior with limit of 5 attempts.\", \"timestamp\": \"2026-06-01T14:29:14+00:00\", \"service\": \"booking-service\", \"signal\": \"Retry attempt count\", \"value\": \"2 of 5\"}, {\"interpretation\": \"Resource saturation escalation observed: appointments-db reported \\\"Connection pool nearing saturation: 82/100 connections in use\\\" at 2026-06-01T14:30:27+00:00, followed by \\\"Connection pool saturated: 97/100 connections in use\\\" at 2026-06-01T14:34:44+00:00, indicating progressive resource exhaustion.\", \"timestamp\": \"2026-06-01T14:30:27+00:00\", \"service\": \"appointments-db\", \"signal\": \"Connection pool usage\", \"value\": \"82/100\"}, {\"interpretation\": \"First timeout error: booking-service recorded \\\"Eligibility lookup timed out after 2000ms for booking 84158 (attempt 3 of 5)\\\" at 2026-06-01T14:31:08+00:00, showing timeout threshold of 2000ms reached during retry sequence.\", \"timestamp\": \"2026-06-01T14:31:08+00:00\", \"service\": \"booking-service\", \"signal\": \"Eligibility lookup timeout\", \"value\": 2000}, {\"interpretation\": \"Payment-service timeout: \\\"Eligibility enrichment query timed out after 2000ms\\\" at 2026-06-01T14:33:21+00:00 indicates sustained slowness in the enrichment layer.\", \"timestamp\": \"2026-06-01T14:33:21+00:00\", \"service\": \"payment-service\", \"signal\": \"Enrichment query timeout\", \"value\": 2000}, {\"interpretation\": \"Exhausted retry pattern: booking-service recorded \\\"Booking failed for appointment 84163: eligibility lookup exhausted retries (5 of 5)\\\" at 2026-06-01T14:35:52+00:00, marking first customer-facing failure after all 5 retry attempts consumed.\", \"timestamp\": \"2026-06-01T14:35:52+00:00\", \"service\": \"booking-service\", \"signal\": \"Booking failure - retry exhaustion\", \"value\": \"appointment 84163\"}, {\"interpretation\": \"Queue backlog emergence: booking-service reported \\\"Booking queue depth 260 exceeds normal operating range\\\" at 2026-06-01T14:36:30+00:00, indicating queued requests accumulating due to slow eligibility lookups.\", \"timestamp\": \"2026-06-01T14:36:30+00:00\", \"service\": \"booking-service\", \"signal\": \"Queue depth\", \"value\": 260}, {\"interpretation\": \"Sustained database slowness: appointments-db logged \\\"Slow query: SELECT plan_rules FROM eligibility_rules WHERE plan_group = $1 took 2350ms\\\" at 2026-06-01T14:40:51+00:00, showing individual query latency exceeding timeout threshold.\", \"timestamp\": \"2026-06-01T14:40:51+00:00\", \"service\": \"appointments-db\", \"signal\": \"Query execution time\", \"value\": 2350}, {\"interpretation\": \"Repeated booking failures: booking-service recorded second exhausted-retry failure at 2026-06-01T14:38:09+00:00 (appointment 84170) and third at 2026-06-01T14:45:17+00:00 (appointment 84181), indicating persistent inability to complete eligibility lookups.\", \"timestamp\": \"2026-06-01T14:38:09+00:00\", \"service\": \"booking-service\", \"signal\": \"Booking failure pattern\", \"value\": \"appointments 84170, 84181\"}, {\"interpretation\": \"Ongoing error continuation: payment-service timeout at 2026-06-01T14:55:46+00:00 (\\\"Eligibility enrichment query timed out after 2000ms\\\") and booking-service retry at 2026-06-01T14:50:33+00:00 show error pattern persisting beyond the incident window start, consistent with unresolved underlying issue.\", \"timestamp\": \"2026-06-01T14:55:46+00:00\", \"service\": \"payment-service\", \"signal\": \"Enrichment query timeout\", \"value\": 2000}, {\"interpretation\": \"Notifications service operated normally: notifications-service logged \\\"Reminder batch sent: 1200 notifications in 3.1s\\\" at 2026-06-01T14:58:20+00:00, indicating no observed degradation in unrelated services.\", \"timestamp\": \"2026-06-01T14:58:20+00:00\", \"service\": \"notifications-service\", \"signal\": \"Batch operation throughput\", \"value\": \"1200 notifications in 3.1s\"}], \"gaps\": [\"No log records from payment-service between 2026-06-01T14:23:18+00:00 and 2026-06-01T14:27:39+00:00 showing intermediate behavior during initial slowdown\", \"No explicit log indicating what specific query plan or resource contention caused the eligibility enrichment slowdown post-deployment\", \"No log records showing connection pool recovery or release after saturation events, leaving current pool state unknown\", \"No log from booking-service or payment-service documenting the root cause diagnosis or mitigation actions taken after alert triggered at 2026-06-01T14:35:00+00:00\", \"No records from payment-service after 2026-06-01T14:55:46+00:00; unclear if service continued erroring or recovered\"], \"reasoning\": \"The incident timeline shows a clear causal chain: deployment of feature flag payment_enrichment at 14:20:05 coincides with onset of eligibility lookup slowness (14:26:02). Response times degrade from 850ms baseline to 1480ms and 1210ms warnings (14:26\u201314:27), triggering retry sequences bounded at 5 attempts. Connection pool saturation at appointments-db (82\u219297 connections) indicates resource contention that compounds eligibility query latency (individual queries exceed 2000ms timeout). Retry exhaustion begins at 14:35:52, producing customer-facing booking failures that repeat throughout the window (14:35, 14:38, 14:45). Queue depth reaches 260 at 14:36:30, showing upstream request accumulation. Timeout and retry patterns persist through 14:55, indicating unrecovered state consistent with 'deviated series not recovered' alert rule. The feature flag deployment, resource saturation, and query timeout cluster tightly in time and are consistent with either (a) enrichment feature generating expensive database queries, or (b) feature-triggered load increase hitting existing capacity limits. Notifications service unaffected, suggesting isolation to booking/payment/database services.\"}"
+  }
+}
