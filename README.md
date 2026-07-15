@@ -30,11 +30,13 @@ ANTHROPIC_API_KEY=... uv run python -m ai_incident_investigator \
 ```
 
 Everything above runs on committed fixtures - tests, CI, and demos burn
-**zero LLM tokens** by design. `docs/testing_and_demo.md` is the decision
+**zero LLM tokens** by design. `docs/demo_tour.md` is a guided five-step
+walkthrough of the whole surface (investigate, publish, approve, compare),
+all replayed at zero cost. `docs/testing_and_demo.md` is the decision
 guide: which mode costs what (measured: a full live investigation is 10
-calls / ~17k input tokens, roughly $1 on the default model and cents on
-Haiku), plus the standard recipes for free demos and the one recording
-worth paying for.
+calls / ~77k input + ~34k output tokens - about $0.25 on Haiku 4.5 and
+~$4-5 at Opus pricing), plus the standard recipes for free demos and the
+one recording worth paying for.
 
 Ten example incidents ship with fixtures, so the replay demo works out of
 the box. Four originals: `latency_spike` (deploy-driven retry amplification),

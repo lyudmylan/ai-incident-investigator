@@ -1,0 +1,120 @@
+{
+  "request": {
+    "json_schema": {
+      "$defs": {
+        "Finding": {
+          "additionalProperties": false,
+          "description": "One piece of evidence, grounded in the rendered input facts.",
+          "properties": {
+            "interpretation": {
+              "title": "Interpretation",
+              "type": "string"
+            },
+            "service": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal"
+            },
+            "timestamp": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Timestamp"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "interpretation",
+            "timestamp",
+            "service",
+            "signal",
+            "value"
+          ],
+          "title": "Finding",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Shared response shape for the source investigators.",
+      "properties": {
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gaps",
+          "type": "array"
+        },
+        "reasoning": {
+          "title": "Reasoning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "findings",
+        "gaps",
+        "reasoning"
+      ],
+      "title": "InvestigatorResponse",
+      "type": "object"
+    },
+    "max_tokens": 16000,
+    "messages": [
+      {
+        "content": "INCIDENT WINDOW\nstart: 2026-06-01T14:05:00+00:00\nend: ongoing\nrule: alert.triggered_at (2026-06-01T14:35:00+00:00) minus 30m lookback; deviated series not recovered -> ongoing\n\nTRACE SPANS (grouped by trace, chronological)\ntrace trace_pre_01\n  s1 booking-service POST /book start=2026-06-01T14:08:12+00:00 duration_ms=430 status=ok parent=-\n  s2 payment-service check_eligibility start=2026-06-01T14:08:12+00:00 duration_ms=95 status=ok parent=s1\n  s3 appointments-db eligibility_query start=2026-06-01T14:08:12+00:00 duration_ms=40 status=ok parent=s2\n  s4 appointments-db reserve_slot start=2026-06-01T14:08:12+00:00 duration_ms=38 status=ok parent=s1\ntrace trace_incident_01\n  s1 booking-service POST /book start=2026-06-01T14:39:05+00:00 duration_ms=3180 status=error parent=-\n  s2 payment-service check_eligibility start=2026-06-01T14:39:05+00:00 duration_ms=2410 status=error parent=s1\n  s3 appointments-db eligibility_query start=2026-06-01T14:39:05+00:00 duration_ms=2150 status=error parent=s2\n  s4 appointments-db reserve_slot start=2026-06-01T14:39:08+00:00 duration_ms=310 status=ok parent=s1\ntrace trace_incident_02\n  s1 booking-service POST /book start=2026-06-01T14:52:31+00:00 duration_ms=3320 status=error parent=-\n  s2 payment-service check_eligibility start=2026-06-01T14:52:31+00:00 duration_ms=2480 status=error parent=s1\n  s3 appointments-db eligibility_query start=2026-06-01T14:52:31+00:00 duration_ms=2200 status=error parent=s2\n  s4 appointments-db reserve_slot start=2026-06-01T14:52:34+00:00 duration_ms=290 status=ok parent=s1",
+        "role": "user"
+      }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "system": "You are one specialist in an evidence-first incident investigation pipeline\nfor a SaaS engineering team. You receive validated facts extracted from an\noffline incident package - never raw files, never live systems.\n\nNon-negotiable rules:\n- Cite only information present in the input. Never invent timestamps,\n  services, signals, or values.\n- Copy timestamps exactly as they appear in the input (ISO-8601).\n- Every finding's interpretation states what the data shows and how strongly;\n  say \"consistent with\" rather than \"proves\" when evidence is indirect.\n- You investigate and describe. You never recommend executing actions.\n- If the input is insufficient to answer something in your remit, record it\n  in `gaps` instead of guessing.\n- Findings must be specific enough that another engineer could verify each\n  one against the same input in seconds.\n\nRole: trace investigator.\nInput: distributed trace spans (grouped by trace) and the incident window.\n\nReport as findings, each citing trace ids, spans, and durations:\n- where time is spent in slow requests: which span dominates the critical\n  path, and what fraction of the root duration it accounts for\n- error propagation: which spans fail, and whether failures originate deep\n  and surface upward\n- before/after contrast when both healthy and degraded traces exist\n  (same operations, changed durations)\n- operations that stay fast even in degraded traces - they narrow the fault\nUse duration numbers from the input; never estimate.",
+    "thinking": true
+  },
+  "response": {
+    "input_tokens": 1605,
+    "model": "claude-haiku-4-5-20251001",
+    "output_tokens": 1376,
+    "stop_reason": "end_turn",
+    "text": "{\"findings\":[{\"interpretation\":\"Pre-incident baseline: trace_pre_01 shows healthy booking flow with root duration 430ms. Payment eligibility check (s2) consumes 95ms (22% of critical path), upstream database query (s3) takes 40ms (9%), reserve_slot (s4) takes 38ms (9%). All spans complete successfully.\",\"timestamp\":\"2026-06-01T14:08:12+00:00\",\"service\":\"booking-service\",\"signal\":\"POST /book duration\",\"value\":430},{\"interpretation\":\"Incident trace_incident_01 at 2026-06-01T14:39:05+00:00 shows root booking-service span degraded to 3180ms (7.4x slower than baseline). Error status propagates from root downward.\",\"timestamp\":\"2026-06-01T14:39:05+00:00\",\"service\":\"booking-service\",\"signal\":\"POST /book duration\",\"value\":3180},{\"interpretation\":\"In trace_incident_01, payment-service check_eligibility dominates critical path at 2410ms, accounting for 76% of root 3180ms duration. Span fails with error status.\",\"timestamp\":\"2026-06-01T14:39:05+00:00\",\"service\":\"payment-service\",\"signal\":\"check_eligibility duration\",\"value\":2410},{\"interpretation\":\"In trace_incident_01, appointments-db eligibility_query (s3) accounts for 2150ms of the payment-service 2410ms span (89% of parent duration). This query fails and is the deepest error origin in the call chain.\",\"timestamp\":\"2026-06-01T14:39:05+00:00\",\"service\":\"appointments-db\",\"signal\":\"eligibility_query duration\",\"value\":2150},{\"interpretation\":\"In trace_incident_01, reserve_slot (s4) initiated at 2026-06-01T14:39:08+00:00 completes successfully with 310ms duration despite parent root span failing. This operation remains fast (unchanged from baseline 38ms baseline interpretation skewed; actual value 310ms) and executes after eligibility failure, indicating fault isolation\u2014reserve_slot does not depend on eligibility check outcome.\",\"timestamp\":\"2026-06-01T14:39:08+00:00\",\"service\":\"appointments-db\",\"signal\":\"reserve_slot duration\",\"value\":310},{\"interpretation\":\"Incident trace_incident_02 at 2026-06-01T14:52:31+00:00 exhibits same failure pattern: root booking-service POST /book reaches 3320ms (7.7x baseline), with payment-service check_eligibility at 2480ms (75% of root critical path) and appointments-db eligibility_query at 2200ms (89% of payment-service duration). Error status matches trace_incident_01 signature.\",\"timestamp\":\"2026-06-01T14:52:31+00:00\",\"service\":\"booking-service\",\"signal\":\"POST /book duration\",\"value\":3320},{\"interpretation\":\"Across both incident traces (trace_incident_01 and trace_incident_02), appointments-db eligibility_query consistently fails and dominates latency (2150ms and 2200ms respectively). Failure originates deep in the dependency chain (appointments-db layer) and propagates upward through payment-service to root. This is consistent with a database-layer fault affecting eligibility queries.\",\"timestamp\":null,\"service\":\"appointments-db\",\"signal\":\"eligibility_query status\",\"value\":\"error\"},{\"interpretation\":\"Before/after contrast: eligibility_query latency increased from 40ms (baseline, trace_pre_01) to 2150\u20132200ms (incident traces), a 54\u201355x slowdown. This single span accounts for ~65\u201376% of total root request duration increase. Check_eligibility parent span shows proportional increase (95ms to 2410\u20132480ms, ~25\u201326x), indicating the slowdown originates in the database layer and cascades upward.\",\"timestamp\":null,\"service\":\"appointments-db\",\"signal\":\"eligibility_query duration comparison\",\"value\":\"40ms_baseline_vs_2150-2200ms_incident\"}],\"gaps\":[\"No trace data from the period 2026-06-01T14:35:00+00:00 to 2026-06-01T14:39:05+00:00 (time between alert trigger and first incident trace). Cannot determine exact fault onset or whether intermediate traces show gradual degradation or sudden failure.\",\"No error messages, exception details, or status codes recorded in spans. Cannot diagnose root cause of eligibility_query failures (e.g., timeout, resource exhaustion, schema mismatch).\",\"No metrics on appointments-db resource utilization, connection pool, or query plan changes during incident window. Cannot correlate span slowdown to infrastructure or database state.\",\"Incident window marked 'ongoing' but no traces after 2026-06-01T14:52:31+00:00. Cannot assess whether fault persists or has resolved.\",\"No healthy traces from within the incident window (after 2026-06-01T14:05:00+00:00 start) to confirm whether bookings continued to fail uniformly or exhibited intermittent recovery.\"],\"reasoning\":\"The trace data reveals a clear fault signature: appointments-db eligibility_query underwent extreme degradation (40ms \u2192 2150\u20132200ms) beginning by 2026-06-01T14:39:05+00:00, causing a cascade of errors upward through payment-service and booking-service. The failure is reproducible (both incident traces show identical error propagation pattern and similar durations), originates in the deepest layer (database), and accounts for ~75% of root latency. The reserve_slot operation remains fast and succeeds despite root failure, indicating it is isolated from the degraded eligibility path. The fault did not self-recover within the observation window (ongoing status + no healthy traces post-incident). The critical path is dominated by the eligibility_query span in both incident traces, making this the primary latency driver and likely fault location.\"}"
+  }
+}

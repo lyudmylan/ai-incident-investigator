@@ -115,6 +115,23 @@ Sonnet 5 run of latency_spike lives in `tests/fixtures/llm-live/`
     on Opus (same command, no override, ~$4-5 at measured volume) after
     the #45 quality fixes land.
 
+**The committed Haiku recording** (live-path artifact): a full Haiku 4.5
+run of latency_spike lives in `tests/fixtures/llm-live/latency_spike-haiku45/`
+(recorded 2026-07-12: 10 calls, 76k input + 34k output tokens, $0.25
+measured; post-#61 prompts, so it replays byte-identically). Replay it free:
+
+    AI_INCIDENT_INVESTIGATOR_MODEL=claude-haiku-4-5-20251001 \
+      uv run python -m ai_incident_investigator investigate \
+      --incident examples/incidents/latency_spike \
+      --llm replay --fixtures-dir tests/fixtures/llm-live/latency_spike-haiku45 \
+      --format markdown
+
+    Notable content: Haiku claims SEV-1 and the deterministic
+    severity-ceiling lint rejects it in-report ("numerically support at
+    most SEV-2"), while the critic files seven warnings - the standard
+    live demo of structural safety catching model overclaim.
+    docs/demo_tour.md step 3 walks through it.
+
 ## What stays scripted on purpose
 
 CI and the golden corpus run on scripted fakes even after live fixtures
