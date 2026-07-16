@@ -7,7 +7,10 @@ with an auditable confidence rubric, and produces safe next steps, mitigation
 options (always requiring human approval), an internal update draft, and a
 postmortem draft — as stable JSON or human-readable Markdown.
 
-It investigates and recommends. It never executes anything.
+It investigates and recommends. The ONLY thing it can execute is the v5
+pilot's single flag toggle - behind a two-person approval quorum for
+production tier, an exact allowlist, and a full audit trail; everything
+else it will only ever draft.
 
 ## Quickstart
 
@@ -109,8 +112,29 @@ deterministic, zero-token, and acts on nothing:
   Pessimistic by policy: absent signals are unverifiable, never assumed
   recovered.
 
-v5 (planned, not scheduled) pilots execution: ONE flag-toggle adapter,
-dry-run mandatory, consuming these approval records unchanged.
+## Closed-loop assistance (v5 pilot)
+
+Execution exists now - exactly ONE action, consuming the v4 approval
+records unchanged:
+
+- **`execute`**: toggle ONE allowlisted feature flag, dry-run or live.
+  The only entry to action is the `is_actionable` quorum gate: the
+  environment's tier decides how many DISTINCT approvers are required
+  (production floor: 2 - no single individual can green-light a critical
+  change; peer quorum, not hierarchy). Live toggles reach sandbox/staging
+  tiers only during the pilot; production is refused even at full quorum.
+  Every decision - including refusals - lands in an append-only
+  executions sidecar BEFORE it is reported. Keyless demo:
+  `--live --http replay` against the committed stub fixture.
+- **`compare --verify-execution`**: the executed toggle's outcome is
+  verified against a follow-up snapshot with the same deterministic
+  rules - `verified`, `unverifiable` (absent signals never assumed good),
+  or `aborted` (a met re-alert or no recovery). Verifications append;
+  execution records are never mutated.
+- The **executor refusal matrix** is part of the trust ledger: eleven
+  deterministic scenarios (tampered report, expired approval, quorum
+  games, unlisted flags, production-live attempts) scored in
+  `docs/eval_scorecard.md` on every test run.
 
 ## Collecting packages from live sources (v2)
 

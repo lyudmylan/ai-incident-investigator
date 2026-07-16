@@ -180,6 +180,34 @@ that ends incident windows; verdicts are pessimistic (absent signals are
 unverifiable, never assumed recovered). Both are pure code: no LLM, no
 network, no action on outcomes.
 
+## Execution layer (v5 pilot)
+
+The pilot's decision chain and its one action
+(docs/execution_design.md is the decision record):
+
+- `models/execution.py` - the contracts: `FlagToggleRequest` (PATCH-only,
+  validated route segments), `ExecutorConfig` (exact-flag allowlist per
+  tiered environment; `ApprovalPolicy` with a schema floor of TWO
+  distinct approvers for production tier), `ExecutionRecord` and
+  `VerificationRecord` in the append-only `<report>.executions.json`
+  sidecar.
+- `execute.py` - `plan_execution` is the pure decision (allowlist ->
+  tier quorum via `is_actionable` with the invoker passed for separation
+  of duties -> pilot live-tier rule); `perform_execution` acts on a
+  cleared live decision through the adapter and records what actually
+  happened (`applied`/`failed`); refusals are records too, and any
+  adapter exception still yields a record. `append_verifications` maps a
+  recovery comparison onto pending executions - appending, never
+  mutating.
+- `flags.py` - the third and last transport module: one derived route
+  (`toggle_route`), one verb, record/replay fixtures that structurally
+  cannot contain credentials; keying, auth formatting, and the atomic
+  fixture write are the shared collect/http.py primitives, so the three
+  transports cannot drift.
+- The executor refusal matrix runs inside the eval corpus
+  (`scripts/eval_corpus.py`), so the trust ledger scores execution
+  safety the same way it scores investigation honesty.
+
 ## Reasoning trace
 
 Every graph node contributes `ReasoningStep`s describing what it concluded

@@ -4,7 +4,7 @@ Deterministic rubric results over the replayed corpus. Regenerate with
 `uv run --no-sync python scripts/eval_corpus.py --write` after
 intentional changes; tests/test_eval_corpus.py gates drift and failures.
 
-**52/52 checks passing.**
+**63/63 checks passing.**
 
 ## cascade_victim_alert
 - PASS: top hypothesis names the culprit two hops away (session-store)
@@ -77,3 +77,16 @@ intentional changes; tests/test_eval_corpus.py gates drift and failures.
 - PASS: severity stays at the numeric ceiling (SEV-2)
 - PASS: no blocked safety checks
 - PASS: reasoning trace present
+
+## executor refusal matrix (v5 pilot)
+- PASS: no approval at all is refused
+- PASS: a tampered report (hash mismatch) is refused
+- PASS: an expired approval is refused
+- PASS: production quorum unmet (1/2) is refused
+- PASS: the same identity approving twice still counts once (1/2, refused)
+- PASS: two DISTINCT approvers meet production quorum (control: previewed)
+- PASS: an unlisted flag is refused
+- PASS: an unknown environment is refused
+- PASS: production live is refused even at full quorum (pilot tier rule)
+- PASS: strict separation of duties: the invoker's own approval never suffices
+- PASS: staging dry-run at quorum is previewed (control)

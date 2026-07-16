@@ -251,6 +251,115 @@ def run_scenario(incident_id: str) -> InvestigationReport:
     return build_report(run_investigation(state, ReplayClient(fixtures)))
 
 
+def executor_scenarios() -> list[tuple[str, bool]]:
+    """The v5 refusal matrix (#69): deterministic executor scenarios where
+    the CORRECT answer is refusal (plus the allowed paths, as controls).
+    Runs the real gate against the committed golden report and the example
+    executor config - no LLM, no network, nothing executed."""
+    from datetime import UTC, datetime, timedelta
+
+    from ai_incident_investigator.approvals import ApprovalRecord
+    from ai_incident_investigator.execute import plan_execution
+    from ai_incident_investigator.models.execution import (
+        FlagToggleRequest,
+        load_executor_config,
+    )
+
+    report = InvestigationReport.model_validate_json(
+        (ROOT / "tests" / "golden" / "latency_spike.json").read_text()
+    )
+    config = load_executor_config(ROOT / "examples" / "execute" / "executor.toml")
+    now = datetime(2026, 7, 16, tzinfo=UTC)
+    current = "a" * 64  # synthetic content hash the approvals bind to
+    plan_id, step = next(
+        (p.id, i)
+        for p in report.remediation_plans
+        for i, s in enumerate(p.steps)
+        if s.kind == "state_changing"
+    )
+
+    def approval(
+        approver: str = "oncall", sha: str = current, expires: str | None = None
+    ) -> ApprovalRecord:
+        return ApprovalRecord.model_validate(
+            {
+                "approver": approver,
+                "approved_at": now.isoformat(),
+                "plan_id": plan_id,
+                "step_index": step,
+                "report_sha256": sha,
+                "expires_at": expires,
+            }
+        )
+
+    def outcome(
+        records: list[ApprovalRecord],
+        environment: str = "staging",
+        flag: str = "payment_enrichment",
+        mode: str = "dry_run",
+        invoker: str = "oncall",
+        strict: bool = False,
+    ) -> str:
+        cfg = config
+        if strict:
+            cfg = config.model_copy(
+                update={
+                    "policy": config.policy.model_copy(
+                        update={"invoker_counts_toward_quorum": False}
+                    )
+                }
+            )
+        return plan_execution(
+            report,
+            records,
+            current,
+            cfg,
+            plan_id,
+            step,
+            FlagToggleRequest(environment=environment, flag_key=flag, on=False),
+            invoker,
+            now,
+            "live" if mode == "live" else "dry_run",
+        ).outcome
+
+    expired = (now - timedelta(minutes=1)).isoformat()
+    return [
+        ("no approval at all is refused", outcome([]) == "refused"),
+        (
+            "a tampered report (hash mismatch) is refused",
+            outcome([approval(sha="b" * 64)]) == "refused",
+        ),
+        ("an expired approval is refused", outcome([approval(expires=expired)]) == "refused"),
+        (
+            "production quorum unmet (1/2) is refused",
+            outcome([approval()], environment="prod-us") == "refused",
+        ),
+        (
+            "the same identity approving twice still counts once (1/2, refused)",
+            outcome([approval(), approval()], environment="prod-us") == "refused",
+        ),
+        (
+            "two DISTINCT approvers meet production quorum (control: previewed)",
+            outcome([approval(), approval("peer")], environment="prod-us") == "previewed",
+        ),
+        ("an unlisted flag is refused", outcome([approval()], flag="some_other_flag") == "refused"),
+        (
+            "an unknown environment is refused",
+            outcome([approval()], environment="nowhere") == "refused",
+        ),
+        (
+            "production live is refused even at full quorum (pilot tier rule)",
+            outcome([approval(), approval("peer")], environment="prod-us", mode="live")
+            == "refused",
+        ),
+        (
+            "strict separation of duties: the invoker's own approval never suffices",
+            outcome([approval("oncall")], invoker="oncall", strict=True) == "refused",
+        ),
+        ("staging dry-run at quorum is previewed (control)", outcome([approval()]) == "previewed"),
+    ]
+
+
 def score() -> tuple[list[str], int]:
     lines: list[str] = []
     failures = 0
@@ -269,6 +378,11 @@ def score() -> tuple[list[str], int]:
             failures += 0 if ok else 1
             lines.append(f"- {'PASS' if ok else 'FAIL'}: {description}")
         lines.append("")
+    lines.append("## executor refusal matrix (v5 pilot)")
+    for description, ok in executor_scenarios():
+        failures += 0 if ok else 1
+        lines.append(f"- {'PASS' if ok else 'FAIL'}: {description}")
+    lines.append("")
     return lines, failures
 
 
