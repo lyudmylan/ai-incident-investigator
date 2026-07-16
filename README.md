@@ -146,6 +146,12 @@ incident evidence). Configure endpoints in a `sources.toml`
 (`examples/collect/sources.toml` is a template); credentials are read-only
 tokens referenced by env var name, never values in config.
 
+Connecting a real stack is a gradient, not a wall: the alert anchor is
+the ONLY required source, and every other source is an incremental add
+whose absence is a reported gap. **`docs/adoption.md`** walks it step by
+step, starting from a two-line config
+(`examples/collect/sources.minimal.toml`).
+
 ```sh
 # Offline demo against committed HTTP fixtures - no credentials:
 uv run python -m ai_incident_investigator collect \

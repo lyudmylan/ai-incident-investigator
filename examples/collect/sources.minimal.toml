@@ -1,0 +1,17 @@
+# The smallest real config: ONE source. The Sentry-like issue is the alert
+# anchor - the only thing collection actually requires. Everything else
+# (metrics, logs, deploys, runbook, topology) is an incremental add; until
+# you configure it, the investigation simply reports the gap.
+#
+# Start here, run a real incident through it, then grow the config section
+# by section: docs/adoption.md walks the whole gradient.
+# Full template with every section: examples/collect/sources.toml
+
+[collection]
+services = ["your-service"]
+lookback_minutes = 30
+change_lookback_days = 7
+
+[sentry]
+base_url = "https://sentry.example.com/api/0" # or https://sentry.io/api/0/organizations/... per your install
+token_env = "SENTRY_TOKEN" # read-only issue scope; the VALUE lives in .env, never here
