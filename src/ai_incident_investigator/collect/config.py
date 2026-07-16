@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-_SECRET_KEY_MARKERS = ("token", "secret", "password", "api_key", "apikey")
+from ai_incident_investigator.models.common import config_leaves, looks_like_credential_key
 
 
 class CollectError(Exception):
@@ -51,28 +51,31 @@ class SourcesConfig(BaseModel):
         return (self.path.parent / relative).resolve()
 
 
-# The publish credential's env var name (publish.github_issue.DEFAULT_TOKEN_ENV;
-# duplicated here because collect/ must not import from publish/ - a
-# cross-check test asserts the two strings stay equal). Collection refusing
-# it keeps the write credential structurally out of every read path.
+# Env var names of write-side credentials (publish.github_issue.DEFAULT_TOKEN_ENV,
+# models.execution.DEFAULT_TOKEN_ENV; duplicated here because collect/ must not
+# import from either module - cross-check tests assert the strings stay equal).
+# Collection refusing them keeps every write credential structurally out of
+# every read path.
 _PUBLISH_TOKEN_ENV = "GITHUB_PUBLISH_TOKEN"
+_EXECUTOR_TOKEN_ENV = "FLAG_TOGGLE_TOKEN"
+_WRITE_TOKEN_ENVS = {
+    _PUBLISH_TOKEN_ENV: "publish",
+    _EXECUTOR_TOKEN_ENV: "flag executor",
+}
 
 
 def _reject_pasted_credentials(node: dict[str, Any], path: Path, where: str) -> None:
-    """Recursive: a credential-looking value anywhere in the config is rejected."""
-    for key, value in node.items():
-        location = f"{where}.{key}" if where else key
-        if isinstance(value, dict):
-            _reject_pasted_credentials(value, path, location)
-            continue
-        if key.lower().endswith("_env") and value == _PUBLISH_TOKEN_ENV:
+    """A credential-looking value anywhere in the config - including inside
+    arrays of tables - is rejected (traversal shared with the executor config
+    via models.common so the two guardrails cannot drift)."""
+    for location, key, value in config_leaves(node, where):
+        if key.lower().endswith("_env") and isinstance(value, str) and value in _WRITE_TOKEN_ENVS:
             raise CollectError(
-                f"{path}: {location} references the publish credential "
-                f"({_PUBLISH_TOKEN_ENV}). The write token must never be used for "
+                f"{path}: {location} references the {_WRITE_TOKEN_ENVS[value]} credential "
+                f"({value}). A write-side token must never be used for "
                 "collection; give the read source its own token."
             )
-        looks_secret = any(marker in key.lower() for marker in _SECRET_KEY_MARKERS)
-        if looks_secret and not key.lower().endswith("_env") and isinstance(value, str):
+        if looks_like_credential_key(key) and isinstance(value, str):
             raise CollectError(
                 f"{path}: {location} looks like a credential value. "
                 "Credentials must be env-var references (use a *_env key naming "

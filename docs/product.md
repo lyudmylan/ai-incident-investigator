@@ -384,6 +384,10 @@ v5 - Closed-Loop Assistance (pilot)
 	•	execute ONE approved action type through a controlled adapter
 		(feature-flag toggle: most reversible, best verification story),
 		consuming v4 approval records; dry-run mandatory, allowlisted targets
+	•	approval policy: a production-tier action requires two distinct
+		approvers (peer quorum, deliberately not a role hierarchy) - no
+		single individual can green-light a critical change; the quorum
+		floor is schema-enforced (docs/execution_design.md)
 	•	update postmortem from verified recovery
 	•	learn from incident patterns (deferred until execution earns trust)
 Execution remains explicitly gated and auditable.

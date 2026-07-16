@@ -13,6 +13,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from ai_incident_investigator.models.execution import ExecutionsFile, ExecutorConfig
 from ai_incident_investigator.models.package import IncidentPackage
 from ai_incident_investigator.models.report import InvestigationReport
 
@@ -54,17 +55,33 @@ confidence label carries the rubric inputs that justify it
 """
 
 
-def render(intro: str, model: type[BaseModel]) -> str:
-    schema = json.dumps(model.model_json_schema(), indent=2)
-    return (
-        f"{GENERATED_HEADER}{intro}\n## JSON Schema: `{model.__name__}`\n\n```json\n{schema}\n```\n"
+EXECUTION_INTRO = """# Execution Contract
+
+v5 pilot (epic #60): the executor's config (allowlist + approval policy)
+and its audit record. Contracts only - nothing importing this schema can
+reach a flag system. The safety floors are part of the schema itself:
+`FlagToggleRequest.method` can only be "PATCH", a flag/environment pair
+absent from the allowlist is unrepresentable as an action target, and
+`ApprovalPolicy.production` cannot go below 2 distinct approvers - no
+single individual can green-light a production-tier action. Design
+decisions and rationale: docs/execution_design.md.
+"""
+
+
+def render(intro: str, *models: type[BaseModel]) -> str:
+    sections = "".join(
+        f"\n## JSON Schema: `{model.__name__}`\n\n```json\n"
+        f"{json.dumps(model.model_json_schema(), indent=2)}\n```\n"
+        for model in models
     )
+    return f"{GENERATED_HEADER}{intro}{sections}"
 
 
 def contract_files(docs_dir: Path) -> dict[Path, str]:
     return {
         docs_dir / "incident_package_contract.md": render(PACKAGE_INTRO, IncidentPackage),
         docs_dir / "output_contract.md": render(OUTPUT_INTRO, InvestigationReport),
+        docs_dir / "execution_contract.md": render(EXECUTION_INTRO, ExecutorConfig, ExecutionsFile),
     }
 
 
