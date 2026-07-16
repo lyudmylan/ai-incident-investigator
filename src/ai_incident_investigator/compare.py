@@ -15,8 +15,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ai_incident_investigator.markdown import postmortem_block
 from ai_incident_investigator.models.package import IncidentPackage, MetricSeries
-from ai_incident_investigator.models.report import RecoveryVerificationPlan, WatchedSignal
+from ai_incident_investigator.models.report import (
+    InvestigationReport,
+    PostmortemDraft,
+    RecoveryVerificationPlan,
+    WatchedSignal,
+)
 from ai_incident_investigator.recovery import (
     build_recovery_verification,
     normalize_pattern,
@@ -261,3 +267,64 @@ def render_comparison(comparison: RecoveryComparison) -> str:
         "",
     ]
     return "\n".join(lines)
+
+
+def merge_comparison_into_postmortem(
+    report: InvestigationReport, comparison: RecoveryComparison
+) -> PostmortemDraft:
+    """Deterministically fold a recovery comparison into the report's
+    postmortem draft (docs/product.md v5: update postmortem from verified
+    recovery). Purely additive: the draft's existing text is never
+    rewritten, unverifiable signals become open questions, unrecovered
+    signals and surviving error patterns become action items, and a met
+    re-alert is never silently dropped. No LLM anywhere."""
+    draft = report.postmortem_draft
+    impact = (
+        f"{draft.impact} Recovery verification "
+        f"({comparison.follow_up_incident_id} follow-up): "
+        f"{comparison.verdict.upper().replace('_', ' ')} - {comparison.summary}"
+    )
+    open_questions = list(draft.open_questions)
+    action_items = list(draft.action_items)
+    for signal in comparison.signals:
+        if signal.recovered is None:
+            open_questions.append(
+                f"recovery of {signal.service}/{signal.signal} is unverifiable: {signal.detail}"
+            )
+        elif signal.recovered is False:
+            action_items.append(
+                f"{signal.service}/{signal.signal} had not recovered in the "
+                f"follow-up ({signal.detail}); keep watching or mitigating"
+            )
+    for pattern in comparison.patterns:
+        if pattern.still_present:
+            action_items.append(
+                f"error pattern still present in the follow-up "
+                f"({pattern.occurrences_in_follow_up} occurrence(s)): {pattern.pattern}"
+            )
+    if comparison.re_alert == "met":
+        action_items.append(
+            f"re-alert condition was met in the follow-up snapshot: {comparison.re_alert_condition}"
+        )
+    return draft.model_copy(
+        update={
+            "impact": impact,
+            "open_questions": open_questions,
+            "action_items": action_items,
+        }
+    )
+
+
+def render_updated_postmortem(report: InvestigationReport, comparison: RecoveryComparison) -> str:
+    """The sidecar document compare --update-postmortem writes. The report
+    file itself is NEVER rewritten: its hash anchors every approval, so the
+    updated draft lives next to it, not inside it."""
+    merged = merge_comparison_into_postmortem(report, comparison)
+    return (
+        "# Postmortem draft (updated from verified recovery)\n\n"
+        + postmortem_block(merged)
+        + "\n\n"
+        + f"_Deterministically merged from the {comparison.follow_up_incident_id} "
+        f"follow-up snapshot (verdict: {comparison.verdict}). The report file is "
+        "untouched - rewriting it would void the approvals bound to its hash._\n"
+    )

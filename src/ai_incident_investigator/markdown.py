@@ -8,8 +8,33 @@ then why we think so, then what to do about it, then the paper trail.
 from ai_incident_investigator.models.report import (
     Hypothesis,
     InvestigationReport,
+    PostmortemDraft,
     RemediationPlan,
 )
+
+
+def postmortem_block(postmortem: PostmortemDraft) -> str:
+    """The postmortem draft's markdown body - shared by the full report
+    rendering and compare's --update-postmortem sidecar (#70)."""
+    lines = [
+        f"### {postmortem.title}",
+        "",
+        postmortem.summary,
+        "",
+        f"**Impact.** {postmortem.impact}",
+    ]
+    if postmortem.contributing_factors:
+        lines.append(
+            "\n**Contributing factors**\n"
+            + "\n".join(f"- {f}" for f in postmortem.contributing_factors)
+        )
+    if postmortem.open_questions:
+        lines.append(
+            "\n**Open questions**\n" + "\n".join(f"- {q}" for q in postmortem.open_questions)
+        )
+    if postmortem.action_items:
+        lines.append("\n**Action items**\n" + "\n".join(f"- {a}" for a in postmortem.action_items))
+    return "\n".join(lines)
 
 
 def _plan_block(
@@ -182,28 +207,7 @@ def render_markdown(
             f"**Phase:** {drafts.status_page.phase}\n\n{drafts.status_page.text}"
         )
 
-    postmortem = report.postmortem_draft
-    postmortem_lines = [
-        f"### {postmortem.title}",
-        "",
-        postmortem.summary,
-        "",
-        f"**Impact.** {postmortem.impact}",
-    ]
-    if postmortem.contributing_factors:
-        postmortem_lines.append(
-            "\n**Contributing factors**\n"
-            + "\n".join(f"- {f}" for f in postmortem.contributing_factors)
-        )
-    if postmortem.open_questions:
-        postmortem_lines.append(
-            "\n**Open questions**\n" + "\n".join(f"- {q}" for q in postmortem.open_questions)
-        )
-    if postmortem.action_items:
-        postmortem_lines.append(
-            "\n**Action items**\n" + "\n".join(f"- {a}" for a in postmortem.action_items)
-        )
-    sections.append("## Postmortem draft\n\n" + "\n".join(postmortem_lines))
+    sections.append("## Postmortem draft\n\n" + postmortem_block(report.postmortem_draft))
 
     if report.timeline:
         lines = [
