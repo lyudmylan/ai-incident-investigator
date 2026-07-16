@@ -19,6 +19,7 @@ purpose, what each costs, and the guardrails that keep spend intentional.
 | Publish preview | `publish --report r.json --repo o/n --dry-run` | **zero** (prints, posts nothing) |
 | Publish demo (stub fixture) | `publish ... --http replay --http-fixtures-dir tests/fixtures/http/github_publish_demo` | **zero** |
 | Recovery comparison demo | `compare --incident examples/incidents/latency_spike --follow-up examples/followups/latency_spike --format markdown` | **zero** (deterministic) |
+| Setup validation | `collect doctor --sources sources.toml [--issue N]` | **zero** LLM (read-only probes of your own endpoints) |
 | Executor dry-run demo | `execute --report r.json --executor-config examples/execute/executor.toml ... --dry-run` | **zero** (deterministic; audit record written) |
 | Executor LIVE-path demo (stub fixture) | `execute ... --live --http replay --http-fixtures-dir tests/fixtures/http/flag_toggle_demo` | **zero** (keyless; nothing real toggled) |
 | Execution verification demo | `compare ... --verify-execution r.json` | **zero** (deterministic) |

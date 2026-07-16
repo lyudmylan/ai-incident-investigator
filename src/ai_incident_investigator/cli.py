@@ -742,8 +742,50 @@ def _execute_main(argv: Sequence[str]) -> int:
     return 0
 
 
+def build_doctor_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ai_incident_investigator collect doctor",
+        description="Validate a sources config against the live endpoints - read-only, "
+        "no incident needed. One PASS/FAIL/SKIP line per check with the exact fix; "
+        "exit 1 if anything FAILs.",
+    )
+    parser.add_argument("--sources", type=Path, required=True, help="path to sources.toml")
+    parser.add_argument(
+        "--issue", default=None, help="optional issue id to probe the alert anchor end-to-end"
+    )
+    parser.add_argument(
+        "--http",
+        choices=["live", "replay"],
+        default="live",
+        help="live: probe the real endpoints; replay: HTTP fixtures (keyless testing)",
+    )
+    parser.add_argument("--http-fixtures-dir", type=Path, default=None)
+    return parser
+
+
+def _doctor_main(argv: Sequence[str]) -> int:
+    from ai_incident_investigator.collect import load_sources_config
+    from ai_incident_investigator.collect.config import CollectError
+    from ai_incident_investigator.collect.doctor import render_doctor, run_doctor
+    from ai_incident_investigator.collect.http import HTTPClientError, make_http_client
+
+    parser = build_doctor_parser()
+    args = parser.parse_args(argv)
+    try:
+        config = load_sources_config(args.sources)
+        http = make_http_client(args.http, args.http_fixtures_dir)
+        checks = run_doctor(config, http, args.issue)
+    except (CollectError, HTTPClientError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(render_doctor(checks))
+    return 1 if any(check.status == "FAIL" for check in checks) else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
+    if len(arguments) >= 2 and arguments[0] == "collect" and arguments[1] == "doctor":
+        return _doctor_main(arguments[2:])
     if arguments and arguments[0] == "collect":
         return _collect_main(arguments[1:])
     if arguments and arguments[0] == "investigate":
