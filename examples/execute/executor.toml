@@ -1,0 +1,23 @@
+# Executor allowlist + approval policy (v5 pilot). Template - copy and edit.
+# The credential is an env-var NAME; the value lives in your gitignored .env,
+# never in this file. Contract: docs/execution_contract.md; decisions:
+# docs/execution_design.md.
+
+base_url = "https://flags.staging.internal.example"
+token_env = "FLAG_TOGGLE_TOKEN"
+
+[policy]
+sandbox = 1
+staging = 1
+production = 2 # schema floor: cannot be set below 2
+invoker_counts_toward_quorum = true
+
+[[environments]]
+name = "staging"
+tier = "staging"
+flags = ["payment_enrichment"]
+
+[[environments]]
+name = "prod-us"
+tier = "production" # may be listed, but live toggles refuse production during the pilot
+flags = ["payment_enrichment"]

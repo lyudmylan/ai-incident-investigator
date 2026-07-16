@@ -1,6 +1,15 @@
-"""Typed contracts: incident package input and investigation report output."""
+"""Typed contracts: package input, report output, and execution (v5 pilot)."""
 
 from ai_incident_investigator.models.common import Confidence, SeverityLevel, Source
+from ai_incident_investigator.models.execution import (
+    ApprovalPolicy,
+    EnvironmentTier,
+    ExecutionRecord,
+    ExecutionsFile,
+    ExecutorConfig,
+    FlagEnvironment,
+    FlagToggleRequest,
+)
 from ai_incident_investigator.models.package import (
     Alert,
     Deploy,
@@ -44,12 +53,19 @@ from ai_incident_investigator.models.report import (
 
 __all__ = [
     "Alert",
+    "ApprovalPolicy",
     "CommunicationDrafts",
     "Confidence",
     "ConfidenceRubric",
     "Deploy",
     "DeploysFile",
+    "EnvironmentTier",
     "EvidenceItem",
+    "ExecutionRecord",
+    "ExecutionsFile",
+    "ExecutorConfig",
+    "FlagEnvironment",
+    "FlagToggleRequest",
     "Hypothesis",
     "IncidentPackage",
     "IncidentWindow",
