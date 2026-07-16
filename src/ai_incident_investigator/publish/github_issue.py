@@ -15,9 +15,7 @@ the opposite side:
 """
 
 import json
-import os
 import re
-import tempfile
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -25,7 +23,12 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ai_incident_investigator.collect.http import EnvBearerAuth, _resolve_token
+from ai_incident_investigator.collect.http import (
+    EnvBearerAuth,
+    auth_header_value,
+    request_key,
+    write_fixture_atomically,
+)
 from ai_incident_investigator.models.report import InvestigationReport
 
 DEFAULT_BASE_URL = "https://api.github.com"
@@ -102,7 +105,7 @@ class LivePublishClient:
         ).encode("utf-8")
         headers = {"Accept": "application/vnd.github+json", "Content-Type": "application/json"}
         if auth is not None:
-            headers[auth.header] = f"{auth.scheme} {_resolve_token(auth)}".strip()
+            headers[auth.header] = auth_header_value(auth)
         raw = urllib.request.Request(url, data=payload, headers=headers, method="POST")
         try:
             with urllib.request.urlopen(raw, timeout=self._timeout) as reply:
@@ -123,16 +126,10 @@ class LivePublishClient:
             raise PublishError(f"issue-create response was not understood: {exc}") from exc
 
 
-def _request_key(request: IssueCreateRequest) -> str:
-    import hashlib
-
-    payload = json.dumps(request.model_dump(mode="json"), sort_keys=True)
-    return hashlib.sha256(payload.encode()).hexdigest()[:16]
-
-
 class RecordingPublishClient:
     """Wraps a real client and writes a replayable fixture (credential-free
-    by construction: the request type cannot carry headers)."""
+    by construction: the request type cannot carry headers; the atomic
+    write and keying are the shared collect/http.py primitives)."""
 
     def __init__(self, inner: PublishClient, fixtures_dir: Path) -> None:
         self._inner = inner
@@ -142,20 +139,7 @@ class RecordingPublishClient:
         self, request: IssueCreateRequest, auth: EnvBearerAuth | None = None
     ) -> IssueCreated:
         response = self._inner.create_issue(request, auth)
-        self._dir.mkdir(parents=True, exist_ok=True)
-        fixture = {
-            "request": request.model_dump(mode="json"),
-            "response": response.model_dump(mode="json"),
-        }
-        path = self._dir / f"{_request_key(request)}.json"
-        fd, tmp_name = tempfile.mkstemp(dir=self._dir, suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w") as handle:
-                handle.write(json.dumps(fixture, indent=2, sort_keys=True) + "\n")
-            os.replace(tmp_name, path)
-        except BaseException:
-            Path(tmp_name).unlink(missing_ok=True)
-            raise
+        write_fixture_atomically(self._dir, request_key(request), request, response)
         return response
 
 
@@ -168,7 +152,7 @@ class ReplayPublishClient:
     def create_issue(
         self, request: IssueCreateRequest, auth: EnvBearerAuth | None = None
     ) -> IssueCreated:
-        path = self._dir / f"{_request_key(request)}.json"
+        path = self._dir / f"{request_key(request)}.json"
         if not path.exists():
             raise PublishError(f"no publish fixture {path.name} in {self._dir}")
         data = json.loads(path.read_text())

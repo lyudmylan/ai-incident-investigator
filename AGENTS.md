@@ -60,8 +60,12 @@ All four checks must pass locally before pushing.
 - JSON contracts before implementation; update docs in the same PR as behavior changes.
 - Deterministic facts, agentic reasoning (product.md Principle 4): parsing, validation, and
   timeline construction are plain code; LLM-backed agents only interpret pre-validated facts.
-- The tool recommends, it never executes: no remediation, paging, or customer communication.
-  All mitigation output must be framed as requiring human approval.
+- The tool recommends; the ONLY execution that exists is the v5 pilot's single
+  flag-toggle path - behind the approval quorum (`is_actionable`), an exact
+  allowlist, sandbox/staging live tiers, mandatory dry-run availability, and an
+  audit record for every decision including refusals (docs/execution_design.md).
+  No paging, no customer communication, no other action type. All mitigation
+  output must be framed as requiring human approval.
 - No hidden business logic in prompts.
 - No live credentials or private production data anywhere in the repo, including tests
   and example incidents.

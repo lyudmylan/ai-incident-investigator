@@ -61,7 +61,7 @@ v5 pilot (epic #60): the executor's config (allowlist + approval policy)
 and its audit record. Contracts only - nothing importing this schema can
 reach a flag system. The safety floors are part of the schema itself:
 `FlagToggleRequest.method` can only be "PATCH", a flag/environment pair
-absent from the allowlist is unrepresentable as an action target, and
+absent from the allowlist is refused by every executor path, and
 `ApprovalPolicy.production` cannot go below 2 distinct approvers - no
 single individual can green-light a production-tier action. Design
 decisions and rationale: docs/execution_design.md.

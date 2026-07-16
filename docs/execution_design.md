@@ -18,6 +18,12 @@ The wire format is LaunchDarkly-like but deliberately minimal
 (`PATCH .../flags/{env}/{key}` with body `{"on": bool}`). The adapter
 (#67) stubs it with record/replay fixtures like every other adapter;
 integrating a real flag service means adapting inside the client only.
+The client accepts 200/201/204 as success; an empty success body echoes
+the DESIRED state - honest because the action is idempotent desired-state
+and verification starts `pending` regardless (nothing is assumed
+verified). The route is derived in exactly one place (`flags.toggle_route`),
+used both to send and to write the audit detail, so the trail and the
+wire can never name different URLs.
 
 ## Approval policy: peer quorum, not hierarchy
 
@@ -55,8 +61,11 @@ record binds both together, auditable.
 ## The allowlist
 
 Exact flag keys per environment; each environment carries a tier the
-policy keys on. An unlisted flag/environment pair is structurally
-unreachable. During the pilot, live execution is additionally restricted
+policy keys on. An unlisted flag/environment pair is refused by every
+executor path (a runtime allowlist lookup - the TYPE-level guarantees are
+the PATCH-only verb and validated route segments; the adapter module
+itself is guarded by the executor path, and its docstring says so
+honestly). During the pilot, live execution is additionally restricted
 to `PILOT_LIVE_TIERS` (sandbox, staging): production entries may exist -
 so plans and dry-runs can name them and quorum can be rehearsed - but the
 live path refuses them until the pilot proves out (epic #60).
@@ -72,7 +81,13 @@ approvers that met it, the invoker, the outcome
 owned by #68 (`not_applicable` for dry-runs; live starts `pending`;
 absent signals are `unverifiable`, never assumed good; a met abort
 condition is recorded as `aborted`). Refusals are records too - a denied
-execution attempt is audit-worthy, not silent.
+execution attempt is audit-worthy, not silent. Adapter failures of ANY
+exception class become `failed` records: the audit trail is written no
+matter how the transport dies. The `pending` -> terminal transition is
+#68's job and it APPENDS: a verification-outcome record referencing the
+execution (plan, step, executed_at) lands in the same sidecar; the
+original record is never mutated, and readers take the latest record for
+the step.
 
 ## What voids an execution mid-flight
 
@@ -99,6 +114,13 @@ value only ever in the environment (.env), never in config:
   outright - including inside `[[environments]]` tables; the traversal and
   the secret-key markers are shared with collect via `models.common`, so
   the two guardrails cannot drift.
+- `perform_execution` refuses any auth reference that is not the
+  configured `token_env` - the isolation holds at the library boundary,
+  not just in the CLI.
+- Honest limit of the name-based refusals: they pin the DEFAULT env names
+  (cross-check tests keep the duplicated constants equal). An operator who
+  configures a custom `token_env` must simply not reuse it for publish or
+  collection; no code can verify names it has never been told.
 - Any FUTURE write-side credential must be added to
   `collect/config._WRITE_TOKEN_ENVS` with its own cross-check test pinning
   the duplicated constant - the denylist does not discover new
