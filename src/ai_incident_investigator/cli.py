@@ -386,6 +386,14 @@ def build_approve_parser() -> argparse.ArgumentParser:
         "--report", type=Path, required=True, help="report JSON the approval binds to"
     )
     parser.add_argument("--list", action="store_true", help="show approval status per step")
+    parser.add_argument(
+        "--required-approvals",
+        type=int,
+        default=1,
+        help="distinct approvers required per step in the --list view (preview "
+        "a tier's quorum, e.g. 2 for production; the v5 executor derives this "
+        "from the environment tier policy - docs/execution_design.md)",
+    )
     parser.add_argument("--plan", help="plan id to approve (see the report's remediation_plans)")
     parser.add_argument("--step", type=int, help="0-based step index within the plan")
     parser.add_argument("--approver", help="who is approving (identity as claimed)")
@@ -422,8 +430,12 @@ def _approve_main(argv: Sequence[str]) -> int:
     current_hash = report_hash(args.report)
     now = datetime.now(UTC)
 
+    if args.required_approvals < 1:
+        parser.error("--required-approvals must be at least 1")
     if args.list:
-        statuses = step_statuses(report, load_approvals(args.report), current_hash, now)
+        statuses = step_statuses(
+            report, load_approvals(args.report), current_hash, now, args.required_approvals
+        )
         if not statuses:
             print("no state-changing steps in this report's plans")
             return 0
