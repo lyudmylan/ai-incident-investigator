@@ -394,6 +394,13 @@ v5 - Closed-Loop Assistance (pilot)
 		floor is schema-enforced (docs/execution_design.md)
 	•	update postmortem from verified recovery
 	•	learn from incident patterns (deferred until execution earns trust)
+v6 - Adoption (time-to-first-value)
+	•	minimal-first onboarding: the alert anchor is the only required
+		source; every other source is an incremental, verified add
+	•	read-only setup doctor: per-source PASS/FAIL against live endpoints
+		before any incident exists
+	•	deterministic config discovery: generate per-service queries and
+		selectors from what live Prometheus/Loki actually contain
 Execution remains explicitly gated and auditable.
 Success Criteria
 The project is successful when it can:
