@@ -14,6 +14,7 @@ from ai_incident_investigator.approvals import (
     ApprovalRecord,
     append_approval,
     approvals_path,
+    distinct_valid_approvers,
     is_actionable,
     load_approvals,
     record_status,
@@ -22,6 +23,7 @@ from ai_incident_investigator.approvals import (
 )
 from ai_incident_investigator.cli import main
 from ai_incident_investigator.markdown import render_markdown
+from ai_incident_investigator.models.execution import ApprovalPolicy, EnvironmentTier
 from ai_incident_investigator.models.report import InvestigationReport
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -247,3 +249,142 @@ def test_cli_approve_list_and_error_paths(
     report_file.write_text(report_file.read_text() + "\n")
     assert main(["approve", "--report", str(report_file), "--list"]) == 0
     assert "VOID - report changed since approval" in capsys.readouterr().out
+
+
+def test_quorum_counts_distinct_identities_once(report_file: Path) -> None:
+    """Issue #65, the owner requirement: no single individual green-lights a
+    production-tier action. The same claimed identity approving twice counts
+    once; a second distinct identity completes the quorum."""
+    report = _report(report_file)
+    current = report_hash(report_file)
+    plan_id, step_index = _state_changing_ref(report)
+
+    once = _record(report_file)
+    again = _record(report_file, approved_at=(NOW + timedelta(minutes=5)).isoformat())
+    ok, reason = is_actionable(
+        report, [once, again], current, plan_id, step_index, NOW, required_approvals=2
+    )
+    assert not ok
+    assert "quorum not met: 1/2" in reason
+    assert "needs 1 more distinct approver" in reason
+
+    peer = _record(report_file, approver="peer")
+    valid = distinct_valid_approvers(report, [once, again, peer], current, plan_id, step_index, NOW)
+    assert list(valid) == ["lyudmyla", "peer"]
+    ok, reason = is_actionable(
+        report, [once, again, peer], current, plan_id, step_index, NOW, required_approvals=2
+    )
+    assert ok
+    assert "approved by lyudmyla, peer (2/2 distinct approvals)" in reason
+
+
+def test_quorum_ignores_expired_and_void_records(report_file: Path) -> None:
+    report = _report(report_file)
+    current = report_hash(report_file)
+    plan_id, step_index = _state_changing_ref(report)
+
+    valid = _record(report_file)
+    expired_peer = _record(
+        report_file, approver="peer", expires_at=(NOW - timedelta(minutes=1)).isoformat()
+    )
+    void_peer = _record(report_file, approver="other-peer", report_sha256="0" * 64)
+    ok, reason = is_actionable(
+        report,
+        [valid, expired_peer, void_peer],
+        current,
+        plan_id,
+        step_index,
+        NOW,
+        required_approvals=2,
+    )
+    assert not ok
+    assert "quorum not met: 1/2" in reason
+
+
+def test_quorum_invoker_exclusion_policy(report_file: Path) -> None:
+    """Stricter separation of duties: the execute invoker's own approval
+    does not count when policy says so."""
+    report = _report(report_file)
+    current = report_hash(report_file)
+    plan_id, step_index = _state_changing_ref(report)
+    records = [_record(report_file), _record(report_file, approver="peer")]
+
+    ok, _ = is_actionable(
+        report,
+        records,
+        current,
+        plan_id,
+        step_index,
+        NOW,
+        required_approvals=2,
+        invoker="peer",
+        invoker_counts_toward_quorum=True,
+    )
+    assert ok
+
+    ok, reason = is_actionable(
+        report,
+        records,
+        current,
+        plan_id,
+        step_index,
+        NOW,
+        required_approvals=2,
+        invoker="peer",
+        invoker_counts_toward_quorum=False,
+    )
+    assert not ok
+    assert "quorum not met: 1/2" in reason
+    assert "peer excluded from quorum as the invoker" in reason
+
+
+def test_quorum_derives_from_the_tier_policy(report_file: Path) -> None:
+    """The #64 contract and the gate compose: one approval satisfies the
+    sandbox tier but never production (schema floor: 2)."""
+    report = _report(report_file)
+    current = report_hash(report_file)
+    plan_id, step_index = _state_changing_ref(report)
+    policy = ApprovalPolicy()
+    records = [_record(report_file)]
+
+    ok, _ = is_actionable(
+        report,
+        records,
+        current,
+        plan_id,
+        step_index,
+        NOW,
+        required_approvals=policy.required_for(EnvironmentTier.SANDBOX),
+    )
+    assert ok
+    ok, _ = is_actionable(
+        report,
+        records,
+        current,
+        plan_id,
+        step_index,
+        NOW,
+        required_approvals=policy.required_for(EnvironmentTier.PRODUCTION),
+    )
+    assert not ok
+
+
+def test_step_statuses_and_cli_show_quorum_progress(
+    report_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    report = _report(report_file)
+    plan_id, step_index = _state_changing_ref(report)
+    append_approval(report_file, _record(report_file))
+
+    statuses = step_statuses(
+        report, load_approvals(report_file), report_hash(report_file), NOW, required_approvals=2
+    )
+    assert "quorum not met: 1/2" in statuses[(plan_id, step_index)]
+
+    assert (
+        main(["approve", "--report", str(report_file), "--list", "--required-approvals", "2"]) == 0
+    )
+    assert "quorum not met: 1/2" in capsys.readouterr().out
+
+    with pytest.raises(SystemExit):
+        main(["approve", "--report", str(report_file), "--list", "--required-approvals", "0"])

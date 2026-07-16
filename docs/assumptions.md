@@ -142,11 +142,20 @@ Approvals are audit records, never triggers (`approvals.py`):
   to an executor).
 - The sidecar (`<report>.approvals.json`) is append-only: records are
   never modified or removed; a newer valid record supersedes nothing -
-  any one valid record satisfies the gate.
+  the gate reads the SET of currently-valid records.
 - Optional expiry: incidents move fast; stale approvals should die.
 - `is_actionable` is the single gate an executor (v5) may consult. It
-  refuses everything except a valid, hash-matching, unexpired approval of
-  an existing state-changing step - and it only answers, never acts.
+  refuses everything except the required number of DISTINCT claimed
+  identities holding valid, hash-matching, unexpired approvals of an
+  existing state-changing step - and it only answers, never acts. The
+  requirement defaults to 1; the v5 executor derives it from the target
+  environment tier's approval policy (production floor: 2 distinct
+  approvers - peer quorum, deliberately not hierarchy;
+  docs/execution_design.md). The same identity approving twice counts
+  once, and policy may exclude the execute invoker from quorum
+  (separation of duties).
+- Identities are claimed, not authenticated: quorum is a process control,
+  auditable after the fact; identity verification is post-pilot.
 - Approval is NEVER execution. Nothing in v4 acts on an approval; the
   records exist so v5 can consume a proven format.
 
