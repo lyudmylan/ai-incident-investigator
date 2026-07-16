@@ -29,8 +29,17 @@ uv run python -m ai_incident_investigator \
 
 Copy `examples/collect/sources.minimal.toml` next to your ops files, set
 your Sentry base URL, create a **read-only** Sentry token and add it to
-`.env` as `SENTRY_TOKEN`. That is the whole config. Pick any real past
-incident's issue id and run:
+`.env` as `SENTRY_TOKEN`. That is the whole config. Prove it before
+spending anything:
+
+```sh
+uv run --env-file .env python -m ai_incident_investigator collect doctor \
+  --sources sources.minimal.toml --issue <SENTRY_ISSUE_ID>
+```
+
+One PASS/FAIL line per check, with the exact fix in every FAIL - re-run
+it after each step below and setup stays test-driven throughout. Then
+pick any real past incident's issue id and run:
 
 ```sh
 uv run --env-file .env python -m ai_incident_investigator collect \
@@ -154,6 +163,9 @@ design) or put a ~50-line shim in front of your flag system. Start with
 `--dry-run` and a staging allowlist either way: docs/execution_design.md.
 
 ## When something fails
+
+Run `collect doctor` first - it probes every configured source read-only
+and names the exact failing check. The usual suspects:
 
 - **401/403**: the token env var named in the config is missing from
   `.env` or lacks the read scope. The error names the variable.
