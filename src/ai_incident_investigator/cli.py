@@ -523,6 +523,16 @@ def build_compare_parser() -> argparse.ArgumentParser:
         "the <report>.postmortem.md sidecar - the report file itself is never "
         "rewritten (its hash anchors the approvals)",
     )
+    parser.add_argument(
+        "--verify-execution",
+        type=Path,
+        default=None,
+        metavar="REPORT",
+        help="verify this report's applied-and-pending live executions against "
+        "the follow-up: appends VerificationRecords to the executions sidecar "
+        "(recovered -> verified; not recovered or re-alert met -> aborted; "
+        "inconclusive -> unverifiable); original records are never mutated",
+    )
     return parser
 
 
@@ -566,6 +576,35 @@ def _compare_main(argv: Sequence[str]) -> int:
             f"updated postmortem draft -> {sidecar} (report untouched; approvals remain valid)",
             file=sys.stderr,
         )
+
+    if args.verify_execution is not None:
+        from datetime import UTC, datetime
+
+        from ai_incident_investigator.approvals import report_hash
+        from ai_incident_investigator.execute import append_verifications
+
+        if not args.verify_execution.is_file():
+            print(f"error: report not found: {args.verify_execution}", file=sys.stderr)
+            return 1
+        fresh = append_verifications(
+            args.verify_execution,
+            report_hash(args.verify_execution),
+            comparison,
+            datetime.now(UTC),
+        )
+        if not fresh:
+            print(
+                "no applied-and-pending live executions to verify for this "
+                "report content (dry-runs, refusals, and already-verified "
+                "executions are skipped)",
+                file=sys.stderr,
+            )
+        for record in fresh:
+            print(
+                f"verification: {record.outcome} - plan {record.plan_id} "
+                f"step {record.step_index}: {record.detail}",
+                file=sys.stderr,
+            )
     return 0
 
 

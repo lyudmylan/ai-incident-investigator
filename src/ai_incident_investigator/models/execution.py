@@ -249,10 +249,33 @@ class ExecutionRecord(BaseModel):
     detail: str | None = Field(default=None, description="refusal reason or failure detail")
 
 
+class VerificationRecord(BaseModel):
+    """The pending -> terminal transition for a live execution, APPENDED to
+    the sidecar - the original ExecutionRecord is never mutated; readers
+    take the latest verification for (plan_id, step_index, executed_at).
+    Outcomes map deterministically from the recovery comparison (#68):
+    a met re-alert or a not-recovered verdict is `aborted` (the plan's
+    abort semantics, evaluated with the same rules that end incident
+    windows); `recovered` is `verified`; anything inconclusive is
+    `unverifiable` - absent signals are never assumed good."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    verified_at: AwareDatetime
+    plan_id: str
+    step_index: int = Field(ge=0)
+    executed_at: AwareDatetime = Field(description="executed_at of the record this verifies")
+    action: FlagToggleRequest
+    follow_up_incident_id: str
+    outcome: VerificationOutcome
+    detail: str
+
+
 class ExecutionsFile(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     executions: list[ExecutionRecord] = Field(default_factory=list)
+    verifications: list[VerificationRecord] = Field(default_factory=list)
 
 
 def executions_path(report_path: Path) -> Path:

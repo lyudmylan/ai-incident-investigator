@@ -83,11 +83,17 @@ absent signals are `unverifiable`, never assumed good; a met abort
 condition is recorded as `aborted`). Refusals are records too - a denied
 execution attempt is audit-worthy, not silent. Adapter failures of ANY
 exception class become `failed` records: the audit trail is written no
-matter how the transport dies. The `pending` -> terminal transition is
-#68's job and it APPENDS: a verification-outcome record referencing the
-execution (plan, step, executed_at) lands in the same sidecar; the
-original record is never mutated, and readers take the latest record for
-the step.
+matter how the transport dies. The `pending` -> terminal transition
+APPENDS (#68): `compare --verify-execution REPORT` writes a
+`VerificationRecord` (plan, step, executed_at reference, action, outcome,
+follow-up id) into the same sidecar; the original record is never
+mutated, readers take the latest verification for the step, and the
+mapping is deterministic - a met re-alert or a not-recovered verdict is
+`aborted`, `recovered` is `verified`, anything inconclusive is
+`unverifiable`. Only executions bound to the CURRENT report content
+(hash match) are verified; the operation is idempotent per follow-up
+snapshot id, so a later, better-evidenced snapshot can verify the same
+execution again and the latest record wins.
 
 ## What voids an execution mid-flight
 

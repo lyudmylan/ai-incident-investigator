@@ -27,6 +27,7 @@ from ai_incident_investigator.approvals import (
     is_actionable,
 )
 from ai_incident_investigator.collect.http import EnvBearerAuth
+from ai_incident_investigator.compare import RecoveryComparison
 from ai_incident_investigator.flags import FlagClient, toggle_route
 from ai_incident_investigator.models.execution import (
     PILOT_LIVE_TIERS,
@@ -35,23 +36,29 @@ from ai_incident_investigator.models.execution import (
     ExecutionsFile,
     ExecutorConfig,
     FlagToggleRequest,
+    VerificationOutcome,
+    VerificationRecord,
     executions_path,
 )
 from ai_incident_investigator.models.report import InvestigationReport
 
 
-def load_executions(report_path: Path) -> list[ExecutionRecord]:
+def load_executions_file(report_path: Path) -> ExecutionsFile:
     path = executions_path(report_path)
     if not path.exists():
-        return []
-    return ExecutionsFile.model_validate_json(path.read_text()).executions
+        return ExecutionsFile()
+    return ExecutionsFile.model_validate_json(path.read_text())
+
+
+def load_executions(report_path: Path) -> list[ExecutionRecord]:
+    return load_executions_file(report_path).executions
 
 
 def append_execution(report_path: Path, record: ExecutionRecord) -> Path:
     """Append-only, like approvals: existing records are never modified."""
     path = executions_path(report_path)
-    records = load_executions(report_path)
-    payload = ExecutionsFile(executions=[*records, record])
+    existing = load_executions_file(report_path)
+    payload = existing.model_copy(update={"executions": [*existing.executions, record]})
     path.write_text(payload.model_dump_json(indent=2) + "\n")
     return path
 
@@ -207,3 +214,78 @@ def perform_execution(
             "verification pending (compare, #68)",
         }
     )
+
+
+def verification_from_comparison(
+    comparison: RecoveryComparison,
+) -> tuple[VerificationOutcome, str]:
+    """Deterministic mapping from the recovery verdict to a verification
+    outcome (docs/execution_design.md). Order matters: a met re-alert is
+    aborted even before the verdict is consulted."""
+    if comparison.re_alert == "met":
+        return "aborted", (
+            f"re-alert condition met in {comparison.follow_up_incident_id}: "
+            f"{comparison.re_alert_condition} - abort semantics apply; {comparison.summary}"
+        )
+    if comparison.verdict == "not_recovered":
+        return "aborted", (
+            f"follow-up {comparison.follow_up_incident_id} shows no recovery - "
+            f"abort semantics apply; {comparison.summary}"
+        )
+    if comparison.verdict == "recovered":
+        return "verified", (
+            f"follow-up {comparison.follow_up_incident_id} satisfied the recovery "
+            f"plan; {comparison.summary}"
+        )
+    return "unverifiable", (
+        f"follow-up {comparison.follow_up_incident_id} is inconclusive - absent "
+        f"signals are never assumed recovered; {comparison.summary}"
+    )
+
+
+def append_verifications(
+    report_path: Path,
+    current_hash: str,
+    comparison: RecoveryComparison,
+    now: datetime,
+) -> list[VerificationRecord]:
+    """Verify every applied-and-still-pending live execution bound to the
+    CURRENT report content, by APPENDING VerificationRecords - the original
+    ExecutionRecords are never touched. Idempotent PER FOLLOW-UP snapshot
+    id: a later, better-evidenced snapshot may verify the same execution
+    again (readers take the latest record), but re-running against the
+    same follow-up appends nothing."""
+    existing = load_executions_file(report_path)
+    already = {
+        (v.plan_id, v.step_index, v.executed_at, v.follow_up_incident_id)
+        for v in existing.verifications
+    }
+    outcome, detail = verification_from_comparison(comparison)
+    fresh = [
+        VerificationRecord(
+            verified_at=now,
+            plan_id=record.plan_id,
+            step_index=record.step_index,
+            executed_at=record.executed_at,
+            action=record.action,
+            follow_up_incident_id=comparison.follow_up_incident_id,
+            outcome=outcome,
+            detail=detail,
+        )
+        for record in existing.executions
+        if record.mode == "live"
+        and record.outcome == "applied"
+        and record.verification == "pending"
+        and record.report_sha256 == current_hash
+        and (
+            record.plan_id,
+            record.step_index,
+            record.executed_at,
+            comparison.follow_up_incident_id,
+        )
+        not in already
+    ]
+    if fresh:
+        payload = existing.model_copy(update={"verifications": [*existing.verifications, *fresh]})
+        executions_path(report_path).write_text(payload.model_dump_json(indent=2) + "\n")
+    return fresh
