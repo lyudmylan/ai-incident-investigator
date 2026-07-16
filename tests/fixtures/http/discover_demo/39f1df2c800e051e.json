@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "params": {
+      "match[]": "{service=\"booking-service\"}"
+    },
+    "url": "https://prom.stub.local/api/v1/series"
+  },
+  "response": {
+    "body": "{\"status\": \"success\", \"data\": [{\"__name__\": \"error_rate_pct\", \"service\": \"booking-service\"}, {\"__name__\": \"p95_latency_ms\", \"service\": \"booking-service\"}]}",
+    "status": 200
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "GET",
+    "params": {},
+    "url": "https://prom.stub.local/api/v1/label/service/values"
+  },
+  "response": {
+    "body": "{\"status\": \"success\", \"data\": [\"booking-service\", \"payment-service\"]}",
+    "status": 200
+  }
+}

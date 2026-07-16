@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "GET",
+    "params": {},
+    "url": "https://loki.stub.local/loki/api/v1/label/app/values"
+  },
+  "response": {
+    "body": "{\"status\": \"success\", \"data\": [\"booking-service\", \"noise-svc\", \"payment-service\"]}",
+    "status": 200
+  }
+}
