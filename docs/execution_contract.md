@@ -262,6 +262,66 @@ decisions and rationale: docs/execution_design.md.
       ],
       "title": "FlagToggleRequest",
       "type": "object"
+    },
+    "VerificationRecord": {
+      "additionalProperties": false,
+      "description": "The pending -> terminal transition for a live execution, APPENDED to\nthe sidecar - the original ExecutionRecord is never mutated; readers\ntake the latest verification for (plan_id, step_index, executed_at).\nOutcomes map deterministically from the recovery comparison (#68):\na met re-alert or a not-recovered verdict is `aborted` (the plan's\nabort semantics, evaluated with the same rules that end incident\nwindows); `recovered` is `verified`; anything inconclusive is\n`unverifiable` - absent signals are never assumed good.",
+      "properties": {
+        "verified_at": {
+          "format": "date-time",
+          "title": "Verified At",
+          "type": "string"
+        },
+        "plan_id": {
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "step_index": {
+          "minimum": 0,
+          "title": "Step Index",
+          "type": "integer"
+        },
+        "executed_at": {
+          "description": "executed_at of the record this verifies",
+          "format": "date-time",
+          "title": "Executed At",
+          "type": "string"
+        },
+        "action": {
+          "$ref": "#/$defs/FlagToggleRequest"
+        },
+        "follow_up_incident_id": {
+          "title": "Follow Up Incident Id",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "not_applicable",
+            "pending",
+            "verified",
+            "unverifiable",
+            "aborted"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verified_at",
+        "plan_id",
+        "step_index",
+        "executed_at",
+        "action",
+        "follow_up_incident_id",
+        "outcome",
+        "detail"
+      ],
+      "title": "VerificationRecord",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -271,6 +331,13 @@ decisions and rationale: docs/execution_design.md.
         "$ref": "#/$defs/ExecutionRecord"
       },
       "title": "Executions",
+      "type": "array"
+    },
+    "verifications": {
+      "items": {
+        "$ref": "#/$defs/VerificationRecord"
+      },
+      "title": "Verifications",
       "type": "array"
     }
   },
