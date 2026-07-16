@@ -1,9 +1,9 @@
-# Demo tour: the whole surface in five steps
+# Demo tour: the whole surface in six steps
 
 A guided, hands-on walkthrough of everything the tool does — investigation,
-publish, approve, compare — in ~10 minutes and at zero LLM tokens. Every step
-replays committed fixtures; no API key is needed anywhere on this page.
-`docs/testing_and_demo.md` is the companion cost/mode guide.
+publish, approve, execute, compare — in ~12 minutes and at zero LLM tokens.
+Every step replays committed fixtures; no API key is needed anywhere on this
+page. `docs/testing_and_demo.md` is the companion cost/mode guide.
 
 Prep once:
 
@@ -103,6 +103,34 @@ patterns gone, re-alert condition not met... and the tool still refuses to say
 "recovered", because `appointments-db / cpu_pct` is absent from the follow-up
 snapshot, and absent is *unverifiable*, never assumed good. It names exactly what to
 capture to upgrade the verdict, and ends with a paste-ready postmortem addendum.
+(Add `--update-postmortem /tmp/incident-demo/report.json` and the verdict is folded
+into a `report.postmortem.md` sidecar — the report file itself is never rewritten,
+because its hash anchors the approvals.)
+
+## 6. The executor — approval-gated, audited, and mostly saying no
+
+```sh
+uv run python -m ai_incident_investigator approve \
+  --report /tmp/incident-demo/report.json --list
+
+uv run python -m ai_incident_investigator execute \
+  --report /tmp/incident-demo/report.json \
+  --executor-config examples/execute/executor.toml \
+  --plan <plan-id-from-list> --step 1 \
+  --environment staging --flag payment_enrichment --off \
+  --executed-by "$USER" --dry-run
+```
+
+**Watch for:** without an approval it refuses — and the refusal itself is written
+to `report.executions.json` before it is reported. Approve the step (step 4),
+re-run: `DRY RUN - would send PATCH .../flags/staging/payment_enrichment`. Then
+try `--environment prod-us`: **refused, "quorum not met: 1/2"** — production tier
+needs a second distinct approver, no matter who you are. The full live path runs
+keyless against the committed stub fixture (`--live --http replay
+--http-fixtures-dir tests/fixtures/http/flag_toggle_demo`), and
+`compare ... --verify-execution /tmp/incident-demo/report.json` closes the loop
+with a deterministic verification appended to the same sidecar. The whole refusal
+matrix is scored in `docs/eval_scorecard.md`.
 
 ---
 

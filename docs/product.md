@@ -419,11 +419,14 @@ drafts, and postmortem drafts in every golden; remediation still executes
 nothing (approval records exist, the executor does not). Two live runs
 (Haiku, Sonnet 5) validated the pipeline against the real API; committed
 sample reports under docs/samples/.
-Status update (2026-07-16, v5 pilot in progress): the flag-toggle executor
-now exists behind the approval quorum - dry-run and live (sandbox/staging
-tiers only), every decision audited in the executions sidecar; postmortems
-update deterministically from verified recovery. Verification of executed
-toggles (#68) and the adversarial executor scenarios (#69) are still open.
+Status update (2026-07-16, v5 pilot complete): the flag-toggle executor
+exists behind the approval quorum - dry-run and live (sandbox/staging
+tiers only), every decision audited in the executions sidecar; executed
+toggles are verified deterministically against follow-up snapshots
+(verifications append, records never mutate); postmortems update from
+verified recovery; and the executor refusal matrix (11 scenarios) is
+scored in the committed eval scorecard on every test run. "Learn from
+incident patterns" remains deferred.
 Quality Bar
 The project should follow engineering discipline from day one:
 	•	JSON contracts before implementation
