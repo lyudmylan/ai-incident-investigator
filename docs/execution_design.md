@@ -42,6 +42,16 @@ production-affecting change, and the answer is NOT a role hierarchy.
   a peer approves, on-call runs it. Teams wanting stricter separation of
   duties set `invoker_counts_toward_quorum = false`.
 
+## Step -> action mapping (explicit, never parsed)
+
+A plan step is prose; the executor never extracts a flag name from it (no
+hidden business logic in text). The human names `--environment`, `--flag`,
+and the desired state explicitly; the executor then validates EVERYTHING:
+the action's shape, the allowlist, the tier's quorum against the approval
+records for exactly that plan step, and the pilot's live-tier rule. The
+approval binds the step; the invocation binds the action; the execution
+record binds both together, auditable.
+
 ## The allowlist
 
 Exact flag keys per environment; each environment carries a tier the
