@@ -514,6 +514,15 @@ def build_compare_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output", type=Path, default=None, help="write to this file instead of stdout"
     )
+    parser.add_argument(
+        "--update-postmortem",
+        type=Path,
+        default=None,
+        metavar="REPORT",
+        help="fold the verdict into this report's postmortem draft, written to "
+        "the <report>.postmortem.md sidecar - the report file itself is never "
+        "rewritten (its hash anchors the approvals)",
+    )
     return parser
 
 
@@ -522,6 +531,7 @@ def _compare_main(argv: Sequence[str]) -> int:
         ComparisonError,
         build_comparison,
         render_comparison,
+        render_updated_postmortem,
     )
 
     parser = build_compare_parser()
@@ -541,6 +551,21 @@ def _compare_main(argv: Sequence[str]) -> int:
     )
     _emit(text, args.output)
     print(f"verdict: {comparison.verdict} - {comparison.summary}", file=sys.stderr)
+
+    if args.update_postmortem is not None:
+        from ai_incident_investigator.models.report import InvestigationReport
+
+        try:
+            report = InvestigationReport.model_validate_json(args.update_postmortem.read_text())
+        except (OSError, ValueError) as exc:
+            print(f"error: could not load the report: {exc}", file=sys.stderr)
+            return 1
+        sidecar = args.update_postmortem.with_suffix(".postmortem.md")
+        sidecar.write_text(render_updated_postmortem(report, comparison))
+        print(
+            f"updated postmortem draft -> {sidecar} (report untouched; approvals remain valid)",
+            file=sys.stderr,
+        )
     return 0
 
 

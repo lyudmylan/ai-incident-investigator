@@ -182,6 +182,24 @@ def regenerate_comparison_golden() -> None:
     print(f"wrote comparison golden -> {out} (verdict: {comparison.verdict})")
 
 
+def regenerate_postmortem_golden() -> None:
+    """The committed updated-postmortem golden (#70): the latency_spike
+    golden report's draft deterministically merged with the committed
+    follow-up comparison."""
+    from ai_incident_investigator.compare import build_comparison, render_updated_postmortem
+    from ai_incident_investigator.models.report import InvestigationReport
+
+    report = InvestigationReport.model_validate_json(
+        (ROOT / "tests" / "golden" / "latency_spike.json").read_text()
+    )
+    original = load_package(ROOT / "examples" / "incidents" / "latency_spike").package
+    follow_up = load_package(ROOT / "examples" / "followups" / "latency_spike").package
+    out = ROOT / "tests" / "golden" / "postmortems" / "latency_spike.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(render_updated_postmortem(report, build_comparison(original, follow_up)))
+    print(f"wrote postmortem golden -> {out}")
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     goldens_only = "--goldens-only" in sys.argv
@@ -197,6 +215,7 @@ def main() -> None:
     regenerate_publish_fixture()
     regenerate_flag_fixture()
     regenerate_comparison_golden()
+    regenerate_postmortem_golden()
 
 
 if __name__ == "__main__":
