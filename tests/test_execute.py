@@ -143,7 +143,9 @@ def test_production_tier_demands_two_distinct_approvers(
     assert record.approvals_satisfied == ["lyudmyla", "peer"]
 
 
-def test_live_is_refused_everywhere_in_the_pilot(report_file: Path, config: ExecutorConfig) -> None:
+def test_live_is_refused_for_production_but_cleared_for_staging(
+    report_file: Path, config: ExecutorConfig
+) -> None:
     _approve(report_file)
     _approve(report_file, approver="peer")
     production = _decide(report_file, config, environment="prod-us", mode="live")
@@ -151,9 +153,10 @@ def test_live_is_refused_everywhere_in_the_pilot(report_file: Path, config: Exec
     assert production.detail is not None
     assert "does not allow live execution during the pilot" in production.detail
 
+    # staging live passes clearance; actually acting (and recording what
+    # happened) is perform_execution's job - pinned in test_flags.py
     staging = _decide(report_file, config, mode="live")
-    assert staging.outcome == "refused"
-    assert staging.detail is not None and "flag adapter lands with #67" in staging.detail
+    assert staging.outcome == "previewed"
 
 
 def test_unknown_environment_and_unlisted_flag_are_refused(

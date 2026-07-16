@@ -151,13 +151,20 @@ def test_cli_error_paths(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> 
     assert "requires --http-fixtures-dir" in capsys.readouterr().err
 
 
-def test_urllib_stays_confined_to_the_two_transport_modules() -> None:
+def test_urllib_stays_confined_to_the_transport_modules() -> None:
+    """Exactly three modules may touch the network stack: the GET-only
+    collection client, the issue-create write client, and the flag-toggle
+    write client (#67). Anything else importing urllib is a leak."""
     src = ROOT / "src" / "ai_incident_investigator"
-    allowed = {src / "collect" / "http.py", src / "publish" / "github_issue.py"}
+    allowed = {
+        src / "collect" / "http.py",
+        src / "publish" / "github_issue.py",
+        src / "flags.py",
+    }
     for module in src.rglob("*.py"):
         if module in allowed:
             continue
         assert "urllib" not in module.read_text(), (
             f"{module.relative_to(src)} touches the network stack outside the "
-            "GET-only client and the single write client"
+            "GET-only client and the two write clients"
         )

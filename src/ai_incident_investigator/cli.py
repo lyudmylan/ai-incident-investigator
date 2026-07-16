@@ -339,6 +339,16 @@ def _publish_main(argv: Sequence[str]) -> int:
         print(f"error: could not load the report: {exc}", file=sys.stderr)
         return 1
 
+    from ai_incident_investigator.models.execution import DEFAULT_TOKEN_ENV as EXECUTOR_TOKEN_ENV
+
+    if args.token_env == EXECUTOR_TOKEN_ENV:
+        print(
+            f"error: --token-env {EXECUTOR_TOKEN_ENV} is the flag executor's "
+            "credential; publish must have its own token (docs/execution_design.md)",
+            file=sys.stderr,
+        )
+        return 1
+
     try:
         request = render_issue(report, args.repo, render_markdown(report))
     except ValueError as exc:
@@ -563,10 +573,25 @@ def build_execute_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--executed-by", required=True, help="who is executing (identity as claimed)"
     )
-    parser.add_argument(
-        "--dry-run",
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--dry-run", action="store_true", help="preview only; writes an audit record")
+    mode.add_argument(
+        "--live",
         action="store_true",
-        help="preview only - mandatory in the pilot until the adapter lands (#67)",
+        help="send the one PATCH through the flag adapter (sandbox/staging "
+        "tiers only during the pilot; production is refused)",
+    )
+    parser.add_argument(
+        "--http",
+        choices=["live", "replay", "record"],
+        default="live",
+        help="adapter transport for --live: replay/record use flag fixtures (keyless demo/testing)",
+    )
+    parser.add_argument(
+        "--http-fixtures-dir",
+        type=Path,
+        default=None,
+        help="flag fixture directory (required for --http replay/record)",
     )
     return parser
 
@@ -577,7 +602,14 @@ def _execute_main(argv: Sequence[str]) -> int:
     from pydantic import ValidationError
 
     from ai_incident_investigator.approvals import load_approvals, report_hash
-    from ai_incident_investigator.execute import append_execution, plan_execution
+    from ai_incident_investigator.collect.http import EnvBearerAuth
+    from ai_incident_investigator.execute import append_execution, perform_execution
+    from ai_incident_investigator.flags import (
+        FlagClient,
+        LiveFlagClient,
+        RecordingFlagClient,
+        ReplayFlagClient,
+    )
     from ai_incident_investigator.models.execution import (
         ExecutionConfigError,
         FlagToggleRequest,
@@ -587,8 +619,6 @@ def _execute_main(argv: Sequence[str]) -> int:
 
     parser = build_execute_parser()
     args = parser.parse_args(argv)
-    if not args.dry_run:
-        parser.error("live execution is not available in the pilot yet (#67); pass --dry-run")
 
     try:
         report = InvestigationReport.model_validate_json(args.report.read_text())
@@ -607,7 +637,22 @@ def _execute_main(argv: Sequence[str]) -> int:
         print(f"error: the requested action is not representable: {exc}", file=sys.stderr)
         return 1
 
-    record = plan_execution(
+    client: FlagClient | None = None
+    auth: EnvBearerAuth | None = None
+    if args.live:
+        live_client = LiveFlagClient(base_url=config.base_url)
+        if args.http == "live":
+            client = live_client
+        elif args.http_fixtures_dir is None:
+            print(f"error: --http {args.http} requires --http-fixtures-dir", file=sys.stderr)
+            return 1
+        elif args.http == "replay":
+            client = ReplayFlagClient(args.http_fixtures_dir)
+        else:
+            client = RecordingFlagClient(live_client, args.http_fixtures_dir)
+        auth = EnvBearerAuth(env_var=config.token_env) if args.http != "replay" else None
+
+    record = perform_execution(
         report,
         load_approvals(args.report),
         report_hash(args.report),
@@ -617,14 +662,18 @@ def _execute_main(argv: Sequence[str]) -> int:
         action,
         args.executed_by,
         datetime.now(UTC),
+        "live" if args.live else "dry_run",
+        client,
+        auth,
     )
     # the audit record lands BEFORE the outcome is reported (epic #60)
     sidecar = append_execution(args.report, record)
-    if record.outcome == "refused":
-        print(f"refused: {record.detail}", file=sys.stderr)
+    if record.outcome in ("refused", "failed"):
+        print(f"{record.outcome}: {record.detail}", file=sys.stderr)
         print(sidecar)
         return 1
-    print(f"DRY RUN - {record.detail}", file=sys.stderr)
+    prefix = "DRY RUN - " if record.mode == "dry_run" else "EXECUTED - "
+    print(f"{prefix}{record.detail}", file=sys.stderr)
     print(sidecar)
     return 0
 

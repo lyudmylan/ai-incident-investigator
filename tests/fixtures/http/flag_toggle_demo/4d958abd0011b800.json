@@ -1,0 +1,12 @@
+{
+  "request": {
+    "environment": "staging",
+    "flag_key": "payment_enrichment",
+    "method": "PATCH",
+    "on": false
+  },
+  "response": {
+    "key": "payment_enrichment",
+    "on": false
+  }
+}

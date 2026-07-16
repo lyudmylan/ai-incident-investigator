@@ -153,6 +153,21 @@ def regenerate_publish_fixture() -> None:
     print(f"recorded {len(list(fixtures.glob('*.json')))} publish fixture -> {fixtures}")
 
 
+def regenerate_flag_fixture() -> None:
+    """The flag-toggle demo fixture (#67): the canonical staging disable of
+    payment_enrichment 'sent' against the stub endpoint. Keys on the request
+    only, so any approved report replays it keyless."""
+    from ai_incident_investigator.flags import RecordingFlagClient
+    from ai_incident_investigator.models.execution import FlagToggleRequest
+    from flag_stub import FlagToggleStub
+
+    fixtures = ROOT / "tests" / "fixtures" / "http" / "flag_toggle_demo"
+    shutil.rmtree(fixtures, ignore_errors=True)
+    request = FlagToggleRequest(environment="staging", flag_key="payment_enrichment", on=False)
+    RecordingFlagClient(FlagToggleStub(), fixtures).toggle(request)
+    print(f"recorded {len(list(fixtures.glob('*.json')))} flag fixture -> {fixtures}")
+
+
 def regenerate_comparison_golden() -> None:
     """The committed recovery-comparison golden: latency_spike vs its
     committed follow-up snapshot (deterministic, no fixtures involved)."""
@@ -173,12 +188,14 @@ def main() -> None:
     if "--http" in sys.argv:
         regenerate_http_fixtures()
         regenerate_publish_fixture()
+        regenerate_flag_fixture()
         return
     regenerate_http_fixtures()
     regenerate_collected_example()
     for incident_id in args or sorted(SCRIPTED_INCIDENTS):
         regenerate(incident_id, goldens_only)
     regenerate_publish_fixture()
+    regenerate_flag_fixture()
     regenerate_comparison_golden()
 
 
