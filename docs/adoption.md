@@ -8,7 +8,9 @@ report after step 1, and every step after that ends with a command that
 proves it worked.
 
 (Reference-grade endpoint mappings live in docs/collection_sources.md;
-cost/mode details in docs/testing_and_demo.md; this page is the how-to.)
+cost/mode details in docs/testing_and_demo.md; this page is the how-to.
+Want to try the whole loop with zero risk first? `sandbox/README.md`
+runs it all - including live execution - against a local docker stack.)
 
 ## Step 0 - install and key (once, ~2 min)
 

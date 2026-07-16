@@ -71,7 +71,12 @@ def _adapter_checks(
 ) -> list[DoctorCheck]:
     checks: list[DoctorCheck] = []
     if isinstance(adapter, PrometheusMetricsAdapter):
-        spans = compute_spans(context, adapter._config.post_minutes)
+        spans = compute_spans(
+            context,
+            adapter._config.post_minutes,
+            timedelta(minutes=adapter._config.baseline_span_minutes),
+            timedelta(minutes=adapter._config.baseline_margin_minutes),
+        )
         for spec in adapter._config.queries:
 
             def probe_query(query: str = spec.query) -> str:

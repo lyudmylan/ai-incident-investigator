@@ -52,6 +52,18 @@ class PromConfig(BaseModel):
     token_env: str | None = None
     step_seconds: int = 300
     post_minutes: int = 30
+    baseline_span_minutes: int = Field(
+        default=120,
+        ge=1,
+        description="length of the pre-incident baseline span; shrink it for "
+        "short-retention environments (docs/assumptions.md)",
+    )
+    baseline_margin_minutes: int = Field(
+        default=15,
+        ge=0,
+        description="gap between baseline span and incident window so run-up "
+        "cannot contaminate the baseline",
+    )
     queries: list[PromQuery] = Field(min_length=1)
 
 
@@ -87,14 +99,20 @@ class Spans(BaseModel):
     window_end: datetime
 
 
-def compute_spans(context: CollectionContext, post_minutes: int) -> Spans:
-    """docs/assumptions.md, 'Collected metric baselines': the baseline span is
-    a fixed 2h ending margin-before-the-lookback so incident run-up cannot
-    contaminate it; points cover the window plus a post-anchor span."""
+def compute_spans(
+    context: CollectionContext,
+    post_minutes: int,
+    baseline_span: timedelta = BASELINE_SPAN,
+    baseline_margin: timedelta = BASELINE_MARGIN,
+) -> Spans:
+    """docs/assumptions.md, 'Collected metric baselines': the baseline span
+    (default 2h) ends margin-before-the-lookback (default 15m) so incident
+    run-up cannot contaminate it; both are configurable per environment
+    retention. Points cover the window plus a post-anchor span."""
     window_start = context.anchor_time - context.lookback
-    baseline_end = window_start - BASELINE_MARGIN
+    baseline_end = window_start - baseline_margin
     return Spans(
-        baseline_start=baseline_end - BASELINE_SPAN,
+        baseline_start=baseline_end - baseline_span,
         baseline_end=baseline_end,
         window_start=window_start,
         window_end=context.anchor_time + timedelta(minutes=post_minutes),
@@ -194,7 +212,12 @@ class PrometheusMetricsAdapter:
         )
 
     def collect(self, context: CollectionContext) -> PackageContribution:
-        spans = compute_spans(context, self._config.post_minutes)
+        spans = compute_spans(
+            context,
+            self._config.post_minutes,
+            timedelta(minutes=self._config.baseline_span_minutes),
+            timedelta(minutes=self._config.baseline_margin_minutes),
+        )
         notes: list[str] = []
         series = [
             built

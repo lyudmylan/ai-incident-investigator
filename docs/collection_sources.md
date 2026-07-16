@@ -58,10 +58,13 @@ Endpoint used (read-only): `GET {base_url}/api/v1/query_range` with
 
 Configuration: one `[[prometheus.queries]]` entry per package series
 (`service`, `signal`, `query`, optional `unit`); `step_seconds` (default
-300) and `post_minutes` (default 30, how far past the alert trigger points
-are collected). No PromQL is authored by the tool - each configured query
-must return **exactly one** series; zero or several is a skip with a note
-(make the query more specific).
+300), `post_minutes` (default 30, how far past the alert trigger points
+are collected), and the baseline machinery `baseline_span_minutes`
+(default 120) / `baseline_margin_minutes` (default 15) - shrink both for
+short-retention environments such as the sandbox (docs/assumptions.md,
+"Collected metric baselines"). No PromQL is authored by the tool - each
+configured query must return **exactly one** series; zero or several is a
+skip with a note (make the query more specific).
 
 ### metrics.json
 

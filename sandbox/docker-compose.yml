@@ -1,0 +1,26 @@
+# The zero-risk live playground (#81): mini Prometheus + Loki + a demo
+# checkout service that misbehaves on command. See sandbox/README.md for
+# the full walkthrough (collect -> investigate -> approve -> execute ->
+# verified recovery, all against localhost).
+
+services:
+  loki:
+    image: grafana/loki:3.0.0
+    ports:
+      - "3100:3100"
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  app:
+    build: ./app
+    environment:
+      LOKI_URL: http://loki:3100
+    ports:
+      - "8000:8000"
+    depends_on:
+      - loki

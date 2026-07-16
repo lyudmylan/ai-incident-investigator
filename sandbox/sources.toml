@@ -1,0 +1,47 @@
+# Sandbox collection config: everything points at the docker-compose stack
+# on localhost. Baseline spans are shrunk so a ~15-minute-old stack already
+# has usable pre-incident baselines (the knobs exist for short-retention
+# environments; production defaults are 2h span / 15m margin).
+
+[collection]
+services = ["checkout-service"]
+lookback_minutes = 5
+change_lookback_days = 7
+
+[sentry]
+# the demo app doubles as a Sentry-like issue endpoint (the alert anchor)
+base_url = "http://localhost:8000/api/0"
+
+[prometheus]
+base_url = "http://localhost:9090"
+step_seconds = 15
+post_minutes = 5
+baseline_span_minutes = 8
+baseline_margin_minutes = 2
+
+[[prometheus.queries]]
+service = "checkout-service"
+signal = "p95_latency_ms"
+query = 'p95_latency_ms{service="checkout-service"}'
+unit = "ms"
+
+[[prometheus.queries]]
+service = "checkout-service"
+signal = "error_rate_pct"
+query = 'error_rate_pct{service="checkout-service"}'
+unit = "%"
+
+[loki]
+base_url = "http://localhost:3100"
+
+[[loki.streams]]
+service = "checkout-service"
+selector = '{app="checkout-service"}'
+
+[runbook]
+[[runbook.documents]]
+service = "checkout-service"
+file = "runbook.md"
+
+[topology]
+file = "topology.json"

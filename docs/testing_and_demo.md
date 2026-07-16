@@ -21,6 +21,7 @@ purpose, what each costs, and the guardrails that keep spend intentional.
 | Recovery comparison demo | `compare --incident examples/incidents/latency_spike --follow-up examples/followups/latency_spike --format markdown` | **zero** (deterministic) |
 | Setup validation | `collect doctor --sources sources.toml [--issue N]` | **zero** LLM (read-only probes of your own endpoints) |
 | Config discovery demo | `init --discover --prometheus https://prom.stub.local --loki https://loki.stub.local --http replay --http-fixtures-dir tests/fixtures/http/discover_demo --output /tmp/draft.toml` | **zero** (keyless) |
+| Sandbox: the whole loop LIVE on localhost | `sandbox/README.md` (docker compose; incl. live execute + verified recovery) | **zero** except one ~$0.25 Haiku investigation |
 | Executor dry-run demo | `execute --report r.json --executor-config examples/execute/executor.toml ... --dry-run` | **zero** (deterministic; audit record written) |
 | Executor LIVE-path demo (stub fixture) | `execute ... --live --http replay --http-fixtures-dir tests/fixtures/http/flag_toggle_demo` | **zero** (keyless; nothing real toggled) |
 | Execution verification demo | `compare ... --verify-execution r.json` | **zero** (deterministic) |
