@@ -534,6 +534,101 @@ def _compare_main(argv: Sequence[str]) -> int:
     return 0
 
 
+def build_execute_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ai_incident_investigator execute",
+        description="The v5 pilot executor: preview (dry-run) ONE approved flag "
+        "toggle against the allowlist and the tier's approval quorum. Every "
+        "decision - including refusals - is recorded in the executions sidecar "
+        "before it is reported. Live execution does not exist yet (#67).",
+    )
+    parser.add_argument("--report", type=Path, required=True, help="report JSON to execute against")
+    parser.add_argument(
+        "--executor-config",
+        type=Path,
+        required=True,
+        help="executor allowlist + policy TOML (docs/execution_contract.md)",
+    )
+    parser.add_argument("--plan", required=True, help="plan id containing the approved step")
+    parser.add_argument(
+        "--step", type=int, required=True, help="0-based step index within the plan"
+    )
+    parser.add_argument(
+        "--environment", required=True, help="allowlisted environment name the toggle targets"
+    )
+    parser.add_argument("--flag", required=True, help="exact allowlisted flag key")
+    state = parser.add_mutually_exclusive_group(required=True)
+    state.add_argument("--on", action="store_true", help="desired state: enable the flag")
+    state.add_argument("--off", action="store_true", help="desired state: disable the flag")
+    parser.add_argument(
+        "--executed-by", required=True, help="who is executing (identity as claimed)"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="preview only - mandatory in the pilot until the adapter lands (#67)",
+    )
+    return parser
+
+
+def _execute_main(argv: Sequence[str]) -> int:
+    from datetime import UTC, datetime
+
+    from pydantic import ValidationError
+
+    from ai_incident_investigator.approvals import load_approvals, report_hash
+    from ai_incident_investigator.execute import append_execution, plan_execution
+    from ai_incident_investigator.models.execution import (
+        ExecutionConfigError,
+        FlagToggleRequest,
+        load_executor_config,
+    )
+    from ai_incident_investigator.models.report import InvestigationReport
+
+    parser = build_execute_parser()
+    args = parser.parse_args(argv)
+    if not args.dry_run:
+        parser.error("live execution is not available in the pilot yet (#67); pass --dry-run")
+
+    try:
+        report = InvestigationReport.model_validate_json(args.report.read_text())
+    except (OSError, ValueError) as exc:
+        print(f"error: could not load the report: {exc}", file=sys.stderr)
+        return 1
+    try:
+        config = load_executor_config(args.executor_config)
+    except ExecutionConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    try:
+        action = FlagToggleRequest(environment=args.environment, flag_key=args.flag, on=args.on)
+    except ValidationError as exc:
+        # an unrepresentable action gets no record: it cannot even be named
+        print(f"error: the requested action is not representable: {exc}", file=sys.stderr)
+        return 1
+
+    record = plan_execution(
+        report,
+        load_approvals(args.report),
+        report_hash(args.report),
+        config,
+        args.plan,
+        args.step,
+        action,
+        args.executed_by,
+        datetime.now(UTC),
+    )
+    # the audit record lands BEFORE the outcome is reported (epic #60)
+    sidecar = append_execution(args.report, record)
+    if record.outcome == "refused":
+        print(f"refused: {record.detail}", file=sys.stderr)
+        print(sidecar)
+        return 1
+    print(f"DRY RUN - {record.detail}", file=sys.stderr)
+    print(sidecar)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
     if arguments and arguments[0] == "collect":
@@ -546,6 +641,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _approve_main(arguments[1:])
     if arguments and arguments[0] == "compare":
         return _compare_main(arguments[1:])
+    if arguments and arguments[0] == "execute":
+        return _execute_main(arguments[1:])
     return _investigate_main(arguments)  # bare flags: backward-compatible investigate
 
 
