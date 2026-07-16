@@ -1,26 +1,26 @@
 """The second (and last pilot) write this codebase can perform: toggle ONE flag.
 
-Structural narrowing, mirroring publish/github_issue.py exactly:
+Structural narrowing, mirroring publish/github_issue.py:
 
 - `FlagToggleRequest` (models.execution) carries validated NAME segments,
-  never a URL - the endpoint is derived inside the client as
-  /flags/{environment}/{flag_key} and no other route is representable.
+  never a URL - the endpoint is derived by `toggle_route` (the single
+  source for it, shared with the executor's audit detail) and no other
+  route is representable through this module's API.
 - `method` is Literal["PATCH"]; there is no generic request type here.
-- Credentials are env-var references (EnvBearerAuth, shared primitive);
-  the executor token env is its own name from ExecutorConfig, refused if
-  it aliases the publish or LLM credentials (#64), and refused by
-  collection from the other side.
-- Record/replay fixtures follow the adapter pattern: the recordable
-  request cannot carry headers, so credentials cannot reach disk.
+- Credentials are env-var references; key formatting, fixture keying, and
+  the atomic credential-free fixture write are the SHARED collect/http.py
+  primitives, so the three transport modules cannot drift.
+- Every failure mode raises FlagToggleError so the executor can always
+  write its audit record; nothing else escapes toggle().
 
 WHO may call this is not this module's job: the executor (execute.py)
-reaches it only through `plan_execution`'s clearance - allowlist, tier
-quorum, pilot live-tier rule - and records the outcome before reporting.
+reaches it only through clearance - allowlist, tier quorum, pilot
+live-tier rule - and records the outcome before reporting. That guard is
+the executor's path, not a property of this type; do not call the live
+client directly.
 """
 
 import json
-import os
-import tempfile
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -28,10 +28,20 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
 
-from ai_incident_investigator.collect.http import EnvBearerAuth, _resolve_token
+from ai_incident_investigator.collect.http import (
+    EnvBearerAuth,
+    HTTPClientError,
+    auth_header_value,
+    request_key,
+    write_fixture_atomically,
+)
 from ai_incident_investigator.models.execution import FlagToggleRequest
 
 DEFAULT_TIMEOUT_SECONDS = 30.0
+
+# PATCH success statuses: some flag backends answer 200+body, others
+# 201/204 with no body. A 2xx means the desired state was accepted.
+_SUCCESS_STATUSES = (200, 201, 204)
 
 
 class FlagToggleError(Exception):
@@ -51,19 +61,46 @@ class FlagClient(Protocol):
     ) -> FlagToggled: ...
 
 
+def toggle_route(base_url: str, request: FlagToggleRequest) -> str:
+    """The ONE route the pilot can address - used by the live client to
+    send and by the executor to record, so the audit trail and the wire
+    can never name different URLs."""
+    return f"{base_url.rstrip('/')}/flags/{request.environment}/{request.flag_key}"
+
+
+def _parse_toggle_response(status: int, body: str, request: FlagToggleRequest) -> FlagToggled:
+    """2xx handling, unit-testable without a network: a parseable body is
+    authoritative; an empty body on a success status echoes the DESIRED
+    state (the action is idempotent desired-state, and #68's verification
+    starts 'pending' regardless - nothing is assumed verified)."""
+    if status not in _SUCCESS_STATUSES:
+        raise FlagToggleError(f"flag toggle returned unexpected HTTP {status}")
+    if not body.strip():
+        return FlagToggled(key=request.flag_key, on=request.on)
+    try:
+        return FlagToggled.model_validate_json(body)
+    except Exception as exc:
+        raise FlagToggleError(f"flag-toggle response was not understood: {exc}") from exc
+
+
 class LiveFlagClient:
     """PATCHes exactly one derived route; auth resolved at send time."""
 
     def __init__(self, base_url: str, timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS) -> None:
-        self._base = base_url.rstrip("/")
+        self._base = base_url
         self._timeout = timeout_seconds
 
     def toggle(self, request: FlagToggleRequest, auth: EnvBearerAuth | None = None) -> FlagToggled:
-        url = f"{self._base}/flags/{request.environment}/{request.flag_key}"
+        url = toggle_route(self._base, request)
         payload = json.dumps({"on": request.on}).encode("utf-8")
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        if auth is not None:
-            headers[auth.header] = f"{auth.scheme} {_resolve_token(auth)}".strip()
+        try:
+            if auth is not None:
+                headers[auth.header] = auth_header_value(auth)
+        except HTTPClientError as exc:
+            # a missing credential must surface as FlagToggleError so the
+            # executor can still write its audit record
+            raise FlagToggleError(f"flag toggle failed: {exc}") from exc
         raw = urllib.request.Request(url, data=payload, headers=headers, method="PATCH")
         try:
             with urllib.request.urlopen(raw, timeout=self._timeout) as reply:
@@ -76,19 +113,7 @@ class LiveFlagClient:
             ) from exc
         except urllib.error.URLError as exc:
             raise FlagToggleError(f"flag toggle failed: {exc.reason}") from exc
-        if status != 200:
-            raise FlagToggleError(f"flag toggle returned unexpected HTTP {status}")
-        try:
-            return FlagToggled.model_validate_json(body)
-        except Exception as exc:
-            raise FlagToggleError(f"flag-toggle response was not understood: {exc}") from exc
-
-
-def _request_key(request: FlagToggleRequest) -> str:
-    import hashlib
-
-    payload = json.dumps(request.model_dump(mode="json"), sort_keys=True)
-    return hashlib.sha256(payload.encode()).hexdigest()[:16]
+        return _parse_toggle_response(status, body, request)
 
 
 class RecordingFlagClient:
@@ -101,20 +126,7 @@ class RecordingFlagClient:
 
     def toggle(self, request: FlagToggleRequest, auth: EnvBearerAuth | None = None) -> FlagToggled:
         response = self._inner.toggle(request, auth)
-        self._dir.mkdir(parents=True, exist_ok=True)
-        fixture = {
-            "request": request.model_dump(mode="json"),
-            "response": response.model_dump(mode="json"),
-        }
-        path = self._dir / f"{_request_key(request)}.json"
-        fd, tmp_name = tempfile.mkstemp(dir=self._dir, suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w") as handle:
-                handle.write(json.dumps(fixture, indent=2, sort_keys=True) + "\n")
-            os.replace(tmp_name, path)
-        except BaseException:
-            Path(tmp_name).unlink(missing_ok=True)
-            raise
+        write_fixture_atomically(self._dir, request_key(request), request, response)
         return response
 
 
@@ -125,10 +137,19 @@ class ReplayFlagClient:
         self._dir = fixtures_dir
 
     def toggle(self, request: FlagToggleRequest, auth: EnvBearerAuth | None = None) -> FlagToggled:
-        path = self._dir / f"{_request_key(request)}.json"
+        path = self._dir / f"{request_key(request)}.json"
         if not path.exists():
             raise FlagToggleError(f"no flag fixture {path.name} in {self._dir}")
-        data = json.loads(path.read_text())
-        if data["request"] != request.model_dump(mode="json"):
+        try:
+            data = json.loads(path.read_text())
+            stored_request = data["request"]
+            response = FlagToggled.model_validate(data["response"])
+        except FlagToggleError:
+            raise
+        except Exception as exc:
+            # a corrupt fixture must not escape as a bare JSON/Key error:
+            # the executor's audit record depends on catching this
+            raise FlagToggleError(f"flag fixture {path.name} is unusable: {exc}") from exc
+        if stored_request != request.model_dump(mode="json"):
             raise FlagToggleError(f"flag fixture {path.name} stores a different request")
-        return FlagToggled.model_validate(data["response"])
+        return response

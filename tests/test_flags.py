@@ -7,12 +7,16 @@ from pathlib import Path
 import pytest
 
 from ai_incident_investigator.cli import main
+from ai_incident_investigator.collect.http import EnvBearerAuth, request_key
 from ai_incident_investigator.execute import load_executions, perform_execution
 from ai_incident_investigator.flags import (
     FlagToggled,
     FlagToggleError,
+    LiveFlagClient,
     RecordingFlagClient,
     ReplayFlagClient,
+    _parse_toggle_response,
+    toggle_route,
 )
 from ai_incident_investigator.models.execution import FlagToggleRequest, load_executor_config
 from flag_stub import AuthResolvingFlagStub, FlagToggleStub
@@ -34,6 +38,46 @@ CANONICAL = FlagToggleRequest(environment="staging", flag_key=FLAG, on=False)
 def test_committed_demo_fixture_replays() -> None:
     result = ReplayFlagClient(DEMO_FIXTURES).toggle(CANONICAL)
     assert result == FlagToggled(key=FLAG, on=False)
+
+
+def test_route_is_derived_in_exactly_one_place() -> None:
+    assert (
+        toggle_route("https://flags.example/", CANONICAL)
+        == f"https://flags.example/flags/staging/{FLAG}"
+    )
+
+
+def test_success_status_handling_without_a_network() -> None:
+    """200 with a body is authoritative; 201/204 empty bodies echo the
+    DESIRED state (idempotent desired-state action, verification pending);
+    non-2xx and garbage bodies are errors - never a silent mislabel."""
+    assert _parse_toggle_response(200, '{"key": "k", "on": true}', CANONICAL) == FlagToggled(
+        key="k", on=True
+    )
+    assert _parse_toggle_response(204, "", CANONICAL) == FlagToggled(key=FLAG, on=False)
+    assert _parse_toggle_response(201, "  ", CANONICAL) == FlagToggled(key=FLAG, on=False)
+    with pytest.raises(FlagToggleError, match="unexpected HTTP 500"):
+        _parse_toggle_response(500, "", CANONICAL)
+    with pytest.raises(FlagToggleError, match="not understood"):
+        _parse_toggle_response(200, "<html>gateway</html>", CANONICAL)
+
+
+def test_missing_credential_raises_flag_toggle_error_before_any_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The auth header is assembled inside the guarded path: an unset env
+    var must surface as FlagToggleError so the executor can still write
+    its audit record."""
+    monkeypatch.delenv("FLAG_TOGGLE_TOKEN", raising=False)
+    client = LiveFlagClient("https://flags.invalid.example")
+    with pytest.raises(FlagToggleError, match="FLAG_TOGGLE_TOKEN"):
+        client.toggle(CANONICAL, EnvBearerAuth(env_var="FLAG_TOGGLE_TOKEN"))
+
+
+def test_corrupt_fixture_raises_flag_toggle_error(tmp_path: Path) -> None:
+    (tmp_path / f"{request_key(CANONICAL)}.json").write_text("{ not json")
+    with pytest.raises(FlagToggleError, match="unusable"):
+        ReplayFlagClient(tmp_path).toggle(CANONICAL)
 
 
 def test_replay_refuses_unknown_and_mismatched_requests(tmp_path: Path) -> None:
@@ -157,34 +201,51 @@ def test_live_failure_is_recorded_as_failed(
     args = _live_cli_args(report_file, plan_id, step_index, "staging")
     args[args.index(str(DEMO_FIXTURES))] = str(tmp_path)
     assert main(args) == 1
-    assert "failed: flag toggle failed" in capsys.readouterr().err
+    assert "failed: no flag fixture" in capsys.readouterr().err
     records = load_executions(report_file)
     assert records[0].outcome == "failed"
     assert records[0].verification == "not_applicable"
+    # single prefix: the detail is the error itself, not a re-wrapped one
+    assert records[0].detail is not None
+    assert not records[0].detail.startswith("flag toggle failed: flag toggle failed")
 
 
-def test_cleared_live_without_client_is_refused(report_file: Path) -> None:
-    """perform_execution never assumes a transport exists."""
+def _cleared_live_kwargs(report_file: Path) -> dict[str, object]:
     from ai_incident_investigator.approvals import load_approvals, report_hash
 
     report = _report(report_file)
     plan_id, step_index = _state_changing_ref(report)
     _approve(report_file)
-    record = perform_execution(
-        report,
-        load_approvals(report_file),
-        report_hash(report_file),
-        load_executor_config(EXAMPLE_CONFIG),
-        plan_id,
-        step_index,
-        CANONICAL,
-        "lyudmyla",
-        NOW,
-        "live",
-        client=None,
-    )
-    assert record.outcome == "refused"
-    assert record.detail is not None and "no flag client" in record.detail
+    return {
+        "report": report,
+        "records": load_approvals(report_file),
+        "current_hash": report_hash(report_file),
+        "config": load_executor_config(EXAMPLE_CONFIG),
+        "plan_id": plan_id,
+        "step_index": step_index,
+        "action": CANONICAL,
+        "executed_by": "lyudmyla",
+        "now": NOW,
+        "mode": "live",
+    }
+
+
+def test_cleared_live_without_client_is_a_wiring_error(report_file: Path) -> None:
+    """A missing transport is a programming bug, never recorded as a policy
+    refusal that could mislead an audit."""
+    with pytest.raises(ValueError, match="requires a flag client"):
+        perform_execution(**_cleared_live_kwargs(report_file), client=None)  # type: ignore[arg-type]
+
+
+def test_foreign_credential_is_refused_at_the_library_boundary(report_file: Path) -> None:
+    """Credential isolation is not just a CLI convention: perform_execution
+    only ever presents the executor's own token."""
+    with pytest.raises(ValueError, match="credential isolation"):
+        perform_execution(
+            **_cleared_live_kwargs(report_file),  # type: ignore[arg-type]
+            client=FlagToggleStub(),
+            auth=EnvBearerAuth(env_var="GITHUB_PUBLISH_TOKEN"),
+        )
 
 
 def test_dry_run_and_live_are_mutually_exclusive(report_file: Path) -> None:

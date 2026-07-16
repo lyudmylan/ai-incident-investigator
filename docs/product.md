@@ -63,8 +63,12 @@ The output should include:
 Top-level recommended next steps are an aggregation that references the hypotheses and missing-data entries they come from, so the output stays internally consistent.
 Product Principles
 1. Investigation first, remediation later
-The product should not execute rollback, restart services, change infrastructure, modify feature flags, or page people.
-It may recommend actions, but execution must remain human-approved and outside the tool.
+The product should not execute rollback, restart services, change infrastructure, or page people.
+It may recommend actions; execution must remain human-approved. The single
+exception is the v5 pilot: ONE flag-toggle action, and only behind the
+approval quorum (two distinct approvers for production tier), an exact
+allowlist, sandbox/staging live tiers, mandatory dry-run, and a full audit
+record for every decision including refusals (docs/execution_design.md).
 2. Evidence-backed reasoning
 Every hypothesis should include supporting evidence.
 Bad output:
@@ -415,6 +419,11 @@ drafts, and postmortem drafts in every golden; remediation still executes
 nothing (approval records exist, the executor does not). Two live runs
 (Haiku, Sonnet 5) validated the pipeline against the real API; committed
 sample reports under docs/samples/.
+Status update (2026-07-16, v5 pilot in progress): the flag-toggle executor
+now exists behind the approval quorum - dry-run and live (sandbox/staging
+tiers only), every decision audited in the executions sidecar; postmortems
+update deterministically from verified recovery. Verification of executed
+toggles (#68) and the adversarial executor scenarios (#69) are still open.
 Quality Bar
 The project should follow engineering discipline from day one:
 	•	JSON contracts before implementation

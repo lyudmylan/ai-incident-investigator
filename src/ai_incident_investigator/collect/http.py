@@ -67,9 +67,41 @@ class HTTPClient(Protocol):
     def get(self, request: HTTPRequest, auth: EnvBearerAuth | None = None) -> HTTPResponse: ...
 
 
-def request_key(request: HTTPRequest) -> str:
+def request_key(request: BaseModel) -> str:
+    """Content-address of a recordable request. Shared by EVERY
+    record/replay client (collection GETs, publish, flag toggle) so fixture
+    keying can never drift between adapters."""
     payload = json.dumps(request.model_dump(mode="json"), sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
+
+
+def auth_header_value(auth: EnvBearerAuth) -> str:
+    """The ONE place a credential is formatted into a header value; every
+    live client (GET, publish, flag toggle) calls this."""
+    return f"{auth.scheme} {_resolve_token(auth)}".strip()
+
+
+def write_fixture_atomically(
+    fixtures_dir: Path, key: str, request: BaseModel, response: BaseModel
+) -> Path:
+    """Credential-free fixture write shared by every recording client: the
+    recordable request types cannot carry headers, and the temp-file +
+    os.replace dance means no torn fixture survives an interrupt."""
+    fixtures_dir.mkdir(parents=True, exist_ok=True)
+    fixture = {
+        "request": request.model_dump(mode="json"),
+        "response": response.model_dump(mode="json"),
+    }
+    path = fixtures_dir / f"{key}.json"
+    fd, tmp_name = tempfile.mkstemp(dir=fixtures_dir, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as handle:
+            handle.write(json.dumps(fixture, indent=2, sort_keys=True) + "\n")
+        os.replace(tmp_name, path)
+    except BaseException:
+        Path(tmp_name).unlink(missing_ok=True)
+        raise
+    return path
 
 
 def raise_for_status(request: HTTPRequest, response: HTTPResponse) -> HTTPResponse:
@@ -102,9 +134,7 @@ class LiveHTTPClient:
             url = f"{url}?{urllib.parse.urlencode(sorted(request.params.items()))}"
         headers: dict[str, str] = {"Accept": "application/json"}
         if auth is not None:
-            token = _resolve_token(auth)
-            value = f"{auth.scheme} {token}".strip()
-            headers[auth.header] = value
+            headers[auth.header] = auth_header_value(auth)
         raw = urllib.request.Request(url, headers=headers, method="GET")
         try:
             with urllib.request.urlopen(raw, timeout=self._timeout) as reply:
@@ -161,18 +191,5 @@ class RecordingHTTPClient:
 
     def get(self, request: HTTPRequest, auth: EnvBearerAuth | None = None) -> HTTPResponse:
         response = self._inner.get(request, auth)
-        self._dir.mkdir(parents=True, exist_ok=True)
-        fixture = {
-            "request": request.model_dump(mode="json"),
-            "response": response.model_dump(mode="json"),
-        }
-        path = self._dir / f"{request_key(request)}.json"
-        fd, tmp_name = tempfile.mkstemp(dir=self._dir, suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w") as handle:
-                handle.write(json.dumps(fixture, indent=2, sort_keys=True) + "\n")
-            os.replace(tmp_name, path)
-        except BaseException:
-            Path(tmp_name).unlink(missing_ok=True)
-            raise
+        write_fixture_atomically(self._dir, request_key(request), request, response)
         return response

@@ -27,7 +27,7 @@ from ai_incident_investigator.approvals import (
     is_actionable,
 )
 from ai_incident_investigator.collect.http import EnvBearerAuth
-from ai_incident_investigator.flags import FlagClient, FlagToggleError
+from ai_incident_investigator.flags import FlagClient, toggle_route
 from ai_incident_investigator.models.execution import (
     PILOT_LIVE_TIERS,
     ExecutionMode,
@@ -54,11 +54,6 @@ def append_execution(report_path: Path, record: ExecutionRecord) -> Path:
     payload = ExecutionsFile(executions=[*records, record])
     path.write_text(payload.model_dump_json(indent=2) + "\n")
     return path
-
-
-def derived_route(config: ExecutorConfig, action: FlagToggleRequest) -> str:
-    """The one route the pilot can address (docs/execution_design.md)."""
-    return f"{config.base_url}/flags/{action.environment}/{action.flag_key}"
 
 
 def plan_execution(
@@ -104,7 +99,7 @@ def plan_execution(
     if not config.allows(action.environment, action.flag_key):
         return refusal(
             f"flag '{action.flag_key}' is not allowlisted for environment "
-            f"'{action.environment}' - an unlisted flag is structurally unreachable"
+            f"'{action.environment}' - no executor path can toggle an unlisted flag"
         )
     required = config.policy.required_for(environment.tier)
     actionable, gate_reason = is_actionable(
@@ -144,7 +139,7 @@ def plan_execution(
         approvals_satisfied=counted,
         outcome="previewed",
         verification="not_applicable",
-        detail=f"would send PATCH {derived_route(config, action)} setting "
+        detail=f"would send PATCH {toggle_route(config.base_url, action)} setting "
         f"on={str(action.on).lower()} ({gate_reason})",
     )
 
@@ -189,23 +184,25 @@ def perform_execution(
     if mode != "live" or decision.outcome != "previewed":
         return decision
     if client is None:
-        return decision.model_copy(
-            update={
-                "outcome": "refused",
-                "detail": "live execution requested but no flag client was provided",
-            }
+        # a wiring bug, not a policy decision: no record pretends the gate
+        # refused something it never evaluated
+        raise ValueError("live execution requires a flag client")
+    if auth is not None and auth.env_var != config.token_env:
+        # credential isolation at the library boundary, not just the CLI:
+        # the executor may only ever present its OWN token
+        raise ValueError(
+            f"executor auth must reference {config.token_env}, not {auth.env_var} "
+            "(credential isolation, docs/execution_design.md)"
         )
     try:
         result = client.toggle(action, auth)
-    except FlagToggleError as exc:
-        return decision.model_copy(
-            update={"outcome": "failed", "detail": f"flag toggle failed: {exc}"}
-        )
+    except Exception as exc:
+        return decision.model_copy(update={"outcome": "failed", "detail": str(exc)})
     return decision.model_copy(
         update={
             "outcome": "applied",
             "verification": "pending",
-            "detail": f"sent PATCH {derived_route(config, action)}; flag "
+            "detail": f"sent PATCH {toggle_route(config.base_url, action)}; flag "
             f"'{result.key}' is now on={str(result.on).lower()} - recovery "
             "verification pending (compare, #68)",
         }

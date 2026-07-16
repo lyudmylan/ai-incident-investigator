@@ -169,7 +169,7 @@ def test_unknown_environment_and_unlisted_flag_are_refused(
 
     unlisted = _decide(report_file, config, flag_key="some_other_flag")
     assert unlisted.outcome == "refused"
-    assert unlisted.detail is not None and "structurally unreachable" in unlisted.detail
+    assert unlisted.detail is not None and "no executor path can toggle" in unlisted.detail
 
 
 def test_tampered_report_voids_the_execution(report_file: Path, config: ExecutorConfig) -> None:
