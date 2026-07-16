@@ -62,7 +62,18 @@ by what the investigation actually wanted.
 
 ## Step 2 - add metrics (Prometheus)
 
-Append to your sources file - one entry per signal worth watching:
+Don't author the entries blind - generate them from what Prometheus
+actually contains, then trim:
+
+```sh
+uv run python -m ai_incident_investigator init --discover \
+  --prometheus http://prometheus:9090 --loki http://loki:3100 \
+  --service your-service --output sources.draft.toml
+```
+
+(Deterministic read-only discovery; `--service-label job` if your metrics
+use `job` instead of `service`.) Or append by hand - one entry per signal
+worth watching:
 
 ```toml
 [prometheus]

@@ -782,10 +782,131 @@ def _doctor_main(argv: Sequence[str]) -> int:
     return 1 if any(check.status == "FAIL" for check in checks) else 0
 
 
+def build_init_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ai_incident_investigator init",
+        description="Generate a draft sources.toml from what live Prometheus/Loki "
+        "actually contain (deterministic read-only discovery; the tool proposes, "
+        "you trim). Never overwrites an existing file.",
+    )
+    parser.add_argument(
+        "--discover",
+        action="store_true",
+        required=True,
+        help="discovery is the only init mode (explicit by design)",
+    )
+    parser.add_argument("--prometheus", default=None, help="Prometheus base URL")
+    parser.add_argument("--loki", default=None, help="Loki base URL")
+    parser.add_argument(
+        "--service",
+        action="append",
+        default=[],
+        help="service name to discover for (repeatable; omit to auto-discover, capped)",
+    )
+    parser.add_argument(
+        "--service-label",
+        default="service",
+        help="Prometheus label that identifies the service (try 'job' if empty)",
+    )
+    parser.add_argument(
+        "--loki-label",
+        default="app",
+        help="Loki stream label that identifies the service",
+    )
+    parser.add_argument("--prometheus-token-env", default=None)
+    parser.add_argument("--loki-token-env", default=None)
+    parser.add_argument(
+        "--output", type=Path, default=Path("sources.toml"), help="draft file to write"
+    )
+    parser.add_argument(
+        "--http",
+        choices=["live", "replay", "record"],
+        default="live",
+        help="replay/record use HTTP fixtures (keyless demo/testing)",
+    )
+    parser.add_argument("--http-fixtures-dir", type=Path, default=None)
+    return parser
+
+
+def _init_main(argv: Sequence[str]) -> int:
+    from ai_incident_investigator.collect.discover import (
+        discover_loki,
+        discover_prometheus,
+        render_draft,
+    )
+    from ai_incident_investigator.collect.http import (
+        EnvBearerAuth,
+        make_http_client,
+    )
+
+    parser = build_init_parser()
+    args = parser.parse_args(argv)
+    if args.prometheus is None and args.loki is None:
+        parser.error("--discover needs at least one of --prometheus/--loki")
+    if args.output.exists():
+        print(
+            f"error: {args.output} already exists - discovery never overwrites; "
+            "move it aside or pass a different --output",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        http = make_http_client(args.http, args.http_fixtures_dir)
+        metrics: dict[str, list[str]] = {}
+        loki_services: list[str] = []
+        notes: list[str] = []
+        if args.prometheus is not None:
+            auth = (
+                EnvBearerAuth(env_var=args.prometheus_token_env)
+                if args.prometheus_token_env
+                else None
+            )
+            metrics, prom_notes = discover_prometheus(
+                http, args.prometheus, args.service_label, args.service, auth
+            )
+            notes.extend(prom_notes)
+        if args.loki is not None:
+            auth = EnvBearerAuth(env_var=args.loki_token_env) if args.loki_token_env else None
+            loki_services, loki_notes = discover_loki(
+                http, args.loki, args.loki_label, args.service, auth
+            )
+            notes.extend(loki_notes)
+    except Exception as exc:
+        print(f"error: discovery failed: {exc}", file=sys.stderr)
+        return 1
+
+    args.output.write_text(
+        render_draft(
+            args.prometheus,
+            args.prometheus_token_env,
+            args.service_label,
+            metrics,
+            args.loki,
+            args.loki_token_env,
+            args.loki_label,
+            loki_services,
+        )
+    )
+    proposed = sum(len(names) for names in metrics.values())
+    print(
+        f"wrote draft {args.output}: {proposed} metric quer{'y' if proposed == 1 else 'ies'} "
+        f"across {len(metrics)} service(s), {len(loki_services)} log selector(s). "
+        "TRIM it, fill the TODOs, then validate: collect doctor --sources "
+        f"{args.output}",
+        file=sys.stderr,
+    )
+    for note in notes:
+        print(f"note: {note}", file=sys.stderr)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
     if len(arguments) >= 2 and arguments[0] == "collect" and arguments[1] == "doctor":
         return _doctor_main(arguments[2:])
+    if arguments and arguments[0] == "init":
+        return _init_main(arguments[1:])
     if arguments and arguments[0] == "collect":
         return _collect_main(arguments[1:])
     if arguments and arguments[0] == "investigate":

@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "params": {
+      "match[]": "{service=\"payment-service\"}"
+    },
+    "url": "https://prom.stub.local/api/v1/series"
+  },
+  "response": {
+    "body": "{\"status\": \"success\", \"data\": [{\"__name__\": \"p95_latency_ms\", \"service\": \"payment-service\"}]}",
+    "status": 200
+  }
+}

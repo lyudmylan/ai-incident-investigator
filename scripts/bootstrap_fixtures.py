@@ -153,6 +153,21 @@ def regenerate_publish_fixture() -> None:
     print(f"recorded {len(list(fixtures.glob('*.json')))} publish fixture -> {fixtures}")
 
 
+def regenerate_discover_fixture() -> None:
+    """The init --discover demo fixtures (#80): parameter-free discovery
+    requests recorded against the stub, so the keyless demo replays."""
+    from ai_incident_investigator.collect import RecordingHTTPClient
+    from ai_incident_investigator.collect.discover import discover_loki, discover_prometheus
+    from discover_stub import DEMO_LOKI_URL, DEMO_PROM_URL, DiscoverStubHTTP
+
+    fixtures = ROOT / "tests" / "fixtures" / "http" / "discover_demo"
+    shutil.rmtree(fixtures, ignore_errors=True)
+    recorder = RecordingHTTPClient(DiscoverStubHTTP(), fixtures)
+    discover_prometheus(recorder, DEMO_PROM_URL, "service", [])
+    discover_loki(recorder, DEMO_LOKI_URL, "app", [])
+    print(f"recorded {len(list(fixtures.glob('*.json')))} discover fixtures -> {fixtures}")
+
+
 def regenerate_flag_fixture() -> None:
     """The flag-toggle demo fixture (#67): the canonical staging disable of
     payment_enrichment 'sent' against the stub endpoint. Keys on the request
@@ -207,6 +222,7 @@ def main() -> None:
         regenerate_http_fixtures()
         regenerate_publish_fixture()
         regenerate_flag_fixture()
+        regenerate_discover_fixture()
         return
     regenerate_http_fixtures()
     regenerate_collected_example()
@@ -214,6 +230,7 @@ def main() -> None:
         regenerate(incident_id, goldens_only)
     regenerate_publish_fixture()
     regenerate_flag_fixture()
+    regenerate_discover_fixture()
     regenerate_comparison_golden()
     regenerate_postmortem_golden()
 
