@@ -29,9 +29,13 @@ collected live (`collect/prometheus.py`), each series' baseline is derived:
 
 - **baseline = median** of the samples in the pre-incident span (median,
   not mean: robust against earlier spikes).
-- The span is a fixed **2 hours**, ending **15 minutes before the incident
+- The span defaults to **2 hours**, ending **15 minutes before the incident
   window starts** (window start = alert trigger minus the lookback), so the
-  incident run-up cannot contaminate the baseline.
+  incident run-up cannot contaminate the baseline. Both knobs are
+  configurable per environment retention (`baseline_span_minutes` /
+  `baseline_margin_minutes` in the `[prometheus]` section - the sandbox
+  shrinks them so a fresh stack has baselines in ~15 minutes); the margin
+  rule itself is not optional.
 - A series with no samples in that span cannot satisfy the contract and is
   skipped, with the skip recorded in the collection report.
 - Non-finite samples (NaN/Inf) are skipped and counted in the report.

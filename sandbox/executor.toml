@@ -1,0 +1,18 @@
+# Sandbox executor config: the demo app serves the pilot's flag API, so
+# `execute --live --http live` really PATCHes it - and because the incident
+# IS the flag, executing the approved mitigation genuinely ends the outage.
+# The token value is arbitrary in the sandbox but must exist (credential
+# isolation is enforced everywhere): add FLAG_TOGGLE_TOKEN=sandbox to .env.
+
+base_url = "http://localhost:8000"
+token_env = "FLAG_TOGGLE_TOKEN"
+
+[policy]
+sandbox = 1
+staging = 1
+production = 2
+
+[[environments]]
+name = "staging"
+tier = "staging"
+flags = ["checkout_enrichment"]

@@ -70,6 +70,33 @@ def test_spans_follow_documented_rules() -> None:
     assert spans.baseline_start.isoformat() == "2026-06-01T11:50:00+00:00"  # 2h span
 
 
+def test_spans_are_configurable_for_short_retention() -> None:
+    """The sandbox (#81) and short-retention setups shrink the baseline
+    machinery; the defaults stay the documented 2h/15m."""
+    spans = compute_spans(
+        CONTEXT,
+        post_minutes=5,
+        baseline_span=timedelta(minutes=8),
+        baseline_margin=timedelta(minutes=2),
+    )
+    assert spans.baseline_end.isoformat() == "2026-06-01T14:03:00+00:00"  # 2m margin
+    assert spans.baseline_start.isoformat() == "2026-06-01T13:55:00+00:00"  # 8m span
+    assert spans.window_end.isoformat() == "2026-06-01T14:40:00+00:00"
+
+    queries = [{"service": "s", "signal": "x", "query": "x"}]
+    shrunk = PromConfig.model_validate(
+        {
+            "base_url": "https://prom.example",
+            "baseline_span_minutes": 8,
+            "baseline_margin_minutes": 2,
+            "queries": queries,
+        }
+    )
+    assert shrunk.baseline_span_minutes == 8
+    default = PromConfig.model_validate({"base_url": "https://prom.example", "queries": queries})
+    assert (default.baseline_span_minutes, default.baseline_margin_minutes) == (120, 15)
+
+
 def test_median_baseline_is_median() -> None:
     assert median_baseline([1.0, 100.0, 2.0]) == 2.0
     assert median_baseline([1.0, 2.0, 3.0, 4.0]) == 2.5
