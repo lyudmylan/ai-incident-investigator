@@ -14,6 +14,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from ai_incident_investigator.models.execution import ExecutionsFile, ExecutorConfig
+from ai_incident_investigator.models.history import HistoryEntry, PatternMatch
 from ai_incident_investigator.models.package import IncidentPackage
 from ai_incident_investigator.models.report import InvestigationReport
 
@@ -68,6 +69,20 @@ decisions and rationale: docs/execution_design.md.
 """
 
 
+LEARNING_INTRO = """# Learning Contract
+
+v7 pilot (epic #86): the incident fingerprint, the history entry the local
+store keeps, and the match record. Contracts only - fingerprinting and
+matching are pure functions of the tool's own artifacts (patterns.py); no
+LLM, no network, no wall clock. The honesty floors are part of the schema
+itself: a match's `score` must equal the sum of its matched features'
+weights, differences travel in `unmatched` next to `matched`, and a
+previewed or refused execution is not representable as a tried fix.
+The normative matching rule: docs/assumptions.md ("Pattern matching
+rule"). Design decisions and rationale: docs/learning_design.md.
+"""
+
+
 def render(intro: str, *models: type[BaseModel]) -> str:
     sections = "".join(
         f"\n## JSON Schema: `{model.__name__}`\n\n```json\n"
@@ -82,6 +97,7 @@ def contract_files(docs_dir: Path) -> dict[Path, str]:
         docs_dir / "incident_package_contract.md": render(PACKAGE_INTRO, IncidentPackage),
         docs_dir / "output_contract.md": render(OUTPUT_INTRO, InvestigationReport),
         docs_dir / "execution_contract.md": render(EXECUTION_INTRO, ExecutorConfig, ExecutionsFile),
+        docs_dir / "learning_contract.md": render(LEARNING_INTRO, HistoryEntry, PatternMatch),
     }
 
 

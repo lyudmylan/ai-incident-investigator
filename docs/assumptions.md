@@ -205,10 +205,57 @@ Rules (lintable; the deterministic linter and the safety critic both check):
 Suggested priority is a documented mapping, not a judgment call:
 SEV-1 -> Highest, SEV-2 -> High, SEV-3 -> Medium, SEV-4 -> Low.
 
+## Pattern matching rule (v7)
+
+Fingerprints and matching are pure code (`patterns.py`); contracts in
+`models/history.py`, generated schema in docs/learning_contract.md,
+rationale in docs/learning_design.md. Zero LLM involvement.
+
+- **Fingerprint** - derived ONLY from the report file (plus the executions
+  sidecar when one exists), never from wall-clock time or free text:
+  - sorted union of affected services and evidence-cited services;
+  - the (service, signal) pairs cited as evidence, each with a deviation
+    direction only when the report's own numbers make it derivable
+    (median of metrics-sourced evidence values vs. the recovery plan's
+    baseline for the same pair; no baseline, no numeric values, or an
+    equal median -> "unknown", never guessed from wording);
+  - the severity level;
+  - whether the top-ranked hypothesis cites deploys-sourced evidence;
+  - live executions that were applied or failed - previewed and refused
+    ones never appear - each carrying its LATEST verification outcome.
+- **The gate**: a past incident is a candidate ONLY when it shares at
+  least one abnormal (service, signal) pair with the probe. Shared
+  severity or deploy correlation alone can never manufacture a match.
+- **Score** = the sum of matched-feature weights, auditable because every
+  match record carries the features and their weights: shared pair +2;
+  direction agreement on a shared pair (both non-unknown and equal) +1;
+  each shared service not already covered by a shared pair +1; same
+  severity +1; deploy-correlated in both +1.
+- **Ranking**: score descending, then most recent incident window, then
+  entry id; at most 3 matches are reported.
+- **Self-exclusion / re-investigation**: the probe's own report (identical
+  sha256) is never a match. A different report for the same incident_id
+  may match but is labeled a re-investigation, never independent precedent.
+- **Honesty**: every difference the rule inspects is recorded in
+  `unmatched` (direction conflicts, severity difference, deploy-correlation
+  difference, pairs unique to either side). A match asserts resemblance of
+  observed behavior - never "same root cause".
+- **Fix wording**: only a fix whose latest verification outcome is
+  `verified` may be presented as precedent; an applied-but-unverified or
+  failed fix is a caution and must read as one.
+- **Invariance**: pattern output is additive context. Severity,
+  hypotheses, confidence labels, rankings, and every agent output are
+  byte-identical with and without history (tested, and scored in the eval
+  corpus from v7 hardening on).
+
 ## Safety assumptions
 
-- The tool investigates and recommends; it never executes. No rollback,
-  restart, scaling, config, flag, migration, paging, or customer communication.
+- The tool investigates and recommends; it never executes - with ONE
+  exception: the v5 pilot's flag-toggle path, behind the approval quorum,
+  an exact allowlist, sandbox/staging live tiers, and a full audit record
+  for every decision including refusals (docs/execution_design.md). No
+  rollback, restart, scaling, config, migration, paging, or customer
+  communication, and no other flag path.
 - Every mitigation option carries `requires_human_approval: true`, enforced by
   the output schema (a value of `false` cannot be expressed).
 - Drafts are for internal review; nothing is sent anywhere by this tool.
