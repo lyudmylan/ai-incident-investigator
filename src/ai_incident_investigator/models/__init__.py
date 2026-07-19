@@ -1,4 +1,5 @@
-"""Typed contracts: package input, report output, and execution (v5 pilot)."""
+"""Typed contracts: package input, report output, execution (v5 pilot),
+and learning (v7 pilot)."""
 
 from ai_incident_investigator.models.common import Confidence, SeverityLevel, Source
 from ai_incident_investigator.models.execution import (
@@ -9,6 +10,14 @@ from ai_incident_investigator.models.execution import (
     ExecutorConfig,
     FlagEnvironment,
     FlagToggleRequest,
+)
+from ai_incident_investigator.models.history import (
+    ExecutedFix,
+    HistoryEntry,
+    IncidentFingerprint,
+    MatchedFeature,
+    PatternMatch,
+    SignalObservation,
 )
 from ai_incident_investigator.models.package import (
     Alert,
@@ -61,23 +70,28 @@ __all__ = [
     "DeploysFile",
     "EnvironmentTier",
     "EvidenceItem",
+    "ExecutedFix",
     "ExecutionRecord",
     "ExecutionsFile",
     "ExecutorConfig",
     "FlagEnvironment",
     "FlagToggleRequest",
+    "HistoryEntry",
     "Hypothesis",
+    "IncidentFingerprint",
     "IncidentPackage",
     "IncidentWindow",
     "InvestigationReport",
     "JiraTicketDraft",
     "LogRecord",
+    "MatchedFeature",
     "MetricPoint",
     "MetricSeries",
     "MetricsFile",
     "MissingData",
     "MitigationOption",
     "NextStep",
+    "PatternMatch",
     "PostmortemDraft",
     "ReadOnlyStep",
     "ReasoningStep",
@@ -88,6 +102,7 @@ __all__ = [
     "ServiceNode",
     "SeverityAssessment",
     "SeverityLevel",
+    "SignalObservation",
     "SlackUpdateDraft",
     "Source",
     "Span",

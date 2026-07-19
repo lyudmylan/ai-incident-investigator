@@ -401,6 +401,18 @@ v6 - Adoption (time-to-first-value)
 		before any incident exists
 	•	deterministic config discovery: generate per-service queries and
 		selectors from what live Prometheus/Loki actually contain
+v7 - Learning from Incident Patterns (pilot)
+	•	deterministic incident fingerprints derived from the tool's own past
+		reports and execution/verification records - pure code, zero LLM tokens
+	•	explainable matching: every match carries the exact shared features
+		with their score weights AND the differences; the normative rule
+		lives in docs/assumptions.md ("Pattern matching rule")
+	•	prior incidents surfaced in new reports with verified-fix precedent;
+		failed or unverified fixes surface as cautions, never endorsements
+	•	invariance: priors inform humans and never move severity, hypotheses,
+		confidence, or any agent output
+	•	local history only: the tool's own artifacts, no network, no new
+		credentials, no learning inside prompts
 Execution remains explicitly gated and auditable.
 Success Criteria
 The project is successful when it can:
