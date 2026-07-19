@@ -69,7 +69,9 @@ uv run --env-file .env python -m ai_incident_investigator collect \
 Read `/tmp/sandbox-report.md`: a real investigation of an outage that is
 really happening on your machine - the runbook's "retry amplification"
 failure mode, evidence-cited hypotheses, and a remediation plan whose
-state-changing step is disabling the flag. Then the JSON twin, replayed
+state-changing step is disabling the flag. A committed sample of exactly
+this artifact - from the first real run of this walkthrough, prior-incidents
+section included - lives at `docs/samples/sandbox_closed_loop-haiku45-report.md`. Then the JSON twin, replayed
 free from the recording:
 
 ```sh
