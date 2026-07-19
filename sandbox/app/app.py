@@ -44,8 +44,12 @@ def _incident_active() -> bool:
 
 def _metrics_text() -> str:
     incident = _incident_active()
-    p95 = random.gauss(1900, 120) if incident else random.gauss(90, 8)
-    err = random.gauss(7.5, 0.6) if incident else max(0.1, random.gauss(0.4, 0.1))
+    # healthy jitter must sit INSIDE the recovery rule's +/-10%-of-baseline
+    # band (docs/assumptions.md), or compare can never call the demo
+    # recovered: sigma 2.5 keeps p95 in ~85-95 against a ~90 baseline, and
+    # sigma 0.012 keeps errors in ~0.38-0.42 against ~0.4
+    p95 = random.gauss(1900, 120) if incident else random.gauss(90, 2.5)
+    err = random.gauss(7.5, 0.6) if incident else max(0.1, random.gauss(0.4, 0.012))
     rps = max(1.0, random.gauss(42, 4))
     return (
         "# TYPE p95_latency_ms gauge\n"
