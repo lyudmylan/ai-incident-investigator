@@ -20,6 +20,7 @@ purpose, what each costs, and the guardrails that keep spend intentional.
 | Publish demo (stub fixture) | `publish ... --http replay --http-fixtures-dir tests/fixtures/http/github_publish_demo` | **zero** |
 | Recovery comparison demo | `compare --incident examples/incidents/latency_spike --follow-up examples/followups/latency_spike --format markdown` | **zero** (deterministic) |
 | Setup validation | `collect doctor --sources sources.toml [--issue N]` | **zero** LLM (read-only probes of your own endpoints) |
+| Pattern-matching demo (v7) | `history add` a committed golden, `history match` another (recipe below) | **zero** (pure code, keyless) |
 | Config discovery demo | `init --discover --prometheus https://prom.stub.local --loki https://loki.stub.local --http replay --http-fixtures-dir tests/fixtures/http/discover_demo --output /tmp/draft.toml` | **zero** (keyless) |
 | Sandbox: the whole loop LIVE on localhost | `sandbox/README.md` (docker compose; incl. live execute + verified recovery) | **zero** except one ~$0.25 Haiku investigation |
 | Executor dry-run demo | `execute --report r.json --executor-config examples/execute/executor.toml ... --dry-run` | **zero** (deterministic; audit record written) |
@@ -77,6 +78,23 @@ verified working):
     request content. For single-example demos, plain
     `investigate --incident examples/incidents/<id> --llm replay` works
     with no naming constraint.
+
+**Zero-token pattern-matching demo** (v7; the demo history is built on the
+fly from committed goldens, so there is no committed store to churn when
+schemas change):
+
+    uv run python -m ai_incident_investigator history add \
+      --history /tmp/demo-history --report tests/golden/latency_spike.json
+    uv run python -m ai_incident_investigator history match \
+      --history /tmp/demo-history --report tests/golden/collected_demo.json
+
+    The two goldens are the same underlying scenario collected two ways,
+    so the match is strong (score 9: shared booking-service/p95 elevated
+    in both, shared services, same severity, deploy-correlated in both)
+    and the one difference is listed honestly. Matching the store's own
+    report back at it demonstrates self-exclusion instead. Goldens carry
+    no executions sidecars, so no [verified] precedent appears here - the
+    sandbox (sandbox/README.md) produces one live.
 
 **Key setup (once)**: put `ANTHROPIC_API_KEY=sk-ant-...` in the repo-root
 `.env` file (gitignored; `chmod 600`). Live commands load it with uv's

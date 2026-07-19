@@ -136,6 +136,30 @@ records unchanged:
   games, unlisted flags, production-live attempts) scored in
   `docs/eval_scorecard.md` on every test run.
 
+## Learning from incident patterns (v7 pilot)
+
+Past investigations become queryable precedent - deterministically, with
+zero LLM tokens (docs/learning_design.md):
+
+- **`history add`**: fingerprint one investigation (report + its
+  execution/verification sidecars) into a local, content-addressed store.
+  Idempotent; writes only inside the history directory.
+- **`history match`**: explainable matches for a report against the
+  store. The gate: at least one shared abnormal (service, signal) pair -
+  shared severity alone can never manufacture precedent. Every match
+  shows the exact shared features WITH their score weights, the exact
+  differences, and what was executed on the prior incident - where only
+  a `[verified]` fix reads as precedent; anything else is a caution.
+  Read-only: safe against an approved report (approvals stay valid).
+- **`history list`**: the store's entries with headline facts.
+
+Try it now from the committed goldens (zero tokens, no keys):
+
+    uv run python -m ai_incident_investigator history add \
+      --history /tmp/demo-history --report tests/golden/latency_spike.json
+    uv run python -m ai_incident_investigator history match \
+      --history /tmp/demo-history --report tests/golden/collected_demo.json
+
 ## Collecting packages from live sources (v2)
 
 Instead of hand-authoring a package, `collect` gathers one from read-only
