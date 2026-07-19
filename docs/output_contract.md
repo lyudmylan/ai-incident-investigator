@@ -177,6 +177,78 @@ confidence label carries the rubric inputs that justify it
       "title": "EvidenceItem",
       "type": "object"
     },
+    "ExecutedFix": {
+      "additionalProperties": false,
+      "description": "A live execution that was actually attempted on this incident,\nwith how its verification ended. The consumer's wording rule\n(docs/assumptions.md): only `verification == \"verified\"` may be\npresented as precedent; every other outcome is a caution.",
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/FlagToggleRequest"
+        },
+        "outcome": {
+          "enum": [
+            "applied",
+            "failed"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "verification": {
+          "enum": [
+            "not_applicable",
+            "pending",
+            "verified",
+            "unverifiable",
+            "aborted"
+          ],
+          "title": "Verification",
+          "type": "string"
+        },
+        "executed_at": {
+          "format": "date-time",
+          "title": "Executed At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "outcome",
+        "verification",
+        "executed_at"
+      ],
+      "title": "ExecutedFix",
+      "type": "object"
+    },
+    "FlagToggleRequest": {
+      "additionalProperties": false,
+      "description": "The ONLY action the pilot can express: set one allowlisted flag\non or off in one named environment. Route and verb are fixed; the\nvalidated segments are the only variable parts.",
+      "properties": {
+        "method": {
+          "const": "PATCH",
+          "default": "PATCH",
+          "title": "Method",
+          "type": "string"
+        },
+        "environment": {
+          "title": "Environment",
+          "type": "string"
+        },
+        "flag_key": {
+          "title": "Flag Key",
+          "type": "string"
+        },
+        "on": {
+          "title": "On",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "environment",
+        "flag_key",
+        "on"
+      ],
+      "title": "FlagToggleRequest",
+      "type": "object"
+    },
     "Hypothesis": {
       "additionalProperties": false,
       "properties": {
@@ -306,6 +378,39 @@ confidence label carries the rubric inputs that justify it
       "title": "JiraTicketDraft",
       "type": "object"
     },
+    "MatchedFeature": {
+      "additionalProperties": false,
+      "description": "One shared feature, carrying its own score weight so the total is\nauditable from the record.",
+      "properties": {
+        "feature": {
+          "enum": [
+            "signal",
+            "direction",
+            "service",
+            "severity",
+            "deploy_correlated"
+          ],
+          "title": "Feature",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "weight": {
+          "minimum": 1,
+          "title": "Weight",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "feature",
+        "detail",
+        "weight"
+      ],
+      "title": "MatchedFeature",
+      "type": "object"
+    },
     "MissingData": {
       "additionalProperties": false,
       "properties": {
@@ -359,6 +464,19 @@ confidence label carries the rubric inputs that justify it
           "description": "Schema-enforced: a mitigation can never be pre-approved",
           "title": "Requires Human Approval",
           "type": "boolean"
+        },
+        "precedent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "deterministic annotation from prior incidents (v7): set only when a matched incident executed a fix this option names; wording rule - only a verified outcome reads as precedent, anything else is a caution (docs/assumptions.md, 'Pattern matching rule')",
+          "title": "Precedent"
         }
       },
       "required": [
@@ -400,6 +518,73 @@ confidence label carries the rubric inputs that justify it
         "description"
       ],
       "title": "NextStep",
+      "type": "object"
+    },
+    "PatternMatch": {
+      "additionalProperties": false,
+      "description": "The assertion \"this new incident resembles that past one\", with the\nexact shared features, the exact differences, and the fixes that were\nactually tried there. It asserts resemblance of observed behavior -\nnever \"same root cause\".",
+      "properties": {
+        "entry_id": {
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "incident_id": {
+          "title": "Incident Id",
+          "type": "string"
+        },
+        "window_start": {
+          "format": "date-time",
+          "title": "Window Start",
+          "type": "string"
+        },
+        "re_investigation": {
+          "description": "true when the matched entry is an earlier investigation of this same incident_id - labeled, never passed off as independent precedent",
+          "title": "Re Investigation",
+          "type": "boolean"
+        },
+        "score": {
+          "minimum": 1,
+          "title": "Score",
+          "type": "integer"
+        },
+        "matched": {
+          "items": {
+            "$ref": "#/$defs/MatchedFeature"
+          },
+          "minItems": 1,
+          "title": "Matched",
+          "type": "array"
+        },
+        "unmatched": {
+          "description": "how the incidents differ; empty only when nothing differs",
+          "items": {
+            "type": "string"
+          },
+          "title": "Unmatched",
+          "type": "array"
+        },
+        "executed_fixes": {
+          "items": {
+            "$ref": "#/$defs/ExecutedFix"
+          },
+          "title": "Executed Fixes",
+          "type": "array"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entry_id",
+        "incident_id",
+        "window_start",
+        "re_investigation",
+        "score",
+        "matched",
+        "explanation"
+      ],
+      "title": "PatternMatch",
       "type": "object"
     },
     "PostmortemDraft": {
@@ -1033,6 +1218,14 @@ confidence label carries the rubric inputs that justify it
         "$ref": "#/$defs/ReasoningStep"
       },
       "title": "Reasoning Trace",
+      "type": "array"
+    },
+    "prior_incidents": {
+      "description": "deterministic pattern matches against a local history of past investigations (v7 pilot). Additive context ONLY: severity, hypotheses, confidence, and rankings are byte-identical with and without history - a match asserts behavioral resemblance, never a shared root cause",
+      "items": {
+        "$ref": "#/$defs/PatternMatch"
+      },
+      "title": "Prior Incidents",
       "type": "array"
     }
   },

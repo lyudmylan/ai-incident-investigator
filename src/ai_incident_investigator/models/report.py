@@ -20,6 +20,7 @@ from ai_incident_investigator.models.common import (
     SeverityLevel,
     Source,
 )
+from ai_incident_investigator.models.history import PatternMatch
 
 
 class ReportModel(BaseModel):
@@ -103,6 +104,13 @@ class MitigationOption(ReportModel):
     risks: list[str] = Field(default_factory=list)
     requires_human_approval: Literal[True] = Field(
         default=True, description="Schema-enforced: a mitigation can never be pre-approved"
+    )
+    precedent: str | None = Field(
+        default=None,
+        description="deterministic annotation from prior incidents (v7): set only "
+        "when a matched incident executed a fix this option names; wording rule - "
+        "only a verified outcome reads as precedent, anything else is a caution "
+        "(docs/assumptions.md, 'Pattern matching rule')",
     )
 
 
@@ -240,3 +248,10 @@ class InvestigationReport(ReportModel):
     communication_drafts: CommunicationDrafts
     postmortem_draft: PostmortemDraft
     reasoning_trace: list[ReasoningStep]
+    prior_incidents: list[PatternMatch] = Field(
+        default_factory=list,
+        description="deterministic pattern matches against a local history of past "
+        "investigations (v7 pilot). Additive context ONLY: severity, hypotheses, "
+        "confidence, and rankings are byte-identical with and without history - "
+        "a match asserts behavioral resemblance, never a shared root cause",
+    )

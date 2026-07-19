@@ -113,6 +113,24 @@ Verdict RECOVERED, the execution's `pending` verification becomes
 the recovery evidence. The loop is closed and every step of it is in the
 audit files next to `/tmp/sandbox-report.json`.
 
+## 5b. The second-incident payoff (v7 learning)
+
+Add the closed incident to a history store - the verified fix rides
+along automatically from the sidecars:
+
+```sh
+uv run python -m ai_incident_investigator history add \
+  --history /tmp/sandbox-history --report /tmp/sandbox-report.json
+```
+
+Now re-break the service (step 3) and investigate again with
+`--history /tmp/sandbox-history` added to the investigate command. The
+new report opens with precedent: a deterministic match to the first
+incident, exactly which signals matched, and
+`[verified] staging/checkout_enrichment -> off` as the fix that provably
+ended it last time. Same approval quorum, same gates - the tool just no
+longer starts from zero.
+
 ## 6. Tear down
 
 ```sh

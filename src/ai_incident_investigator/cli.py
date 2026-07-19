@@ -80,6 +80,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="write the report to this file instead of stdout",
     )
+    parser.add_argument(
+        "--history",
+        type=Path,
+        default=None,
+        help="local history store ('history add'): embed deterministic "
+        "prior-incident matches in the report - additive context only, "
+        "conclusions are unchanged (docs/learning_design.md)",
+    )
     parser.add_argument("--version", action="version", version=__version__)
     return parser
 
@@ -135,6 +143,12 @@ def build_collect_parser() -> argparse.ArgumentParser:
         default=None,
         help="write the investigation output to this file instead of stdout",
     )
+    parser.add_argument(
+        "--history",
+        type=Path,
+        default=None,
+        help="history store for --then-investigate (same semantics as investigate)",
+    )
     return parser
 
 
@@ -187,12 +201,34 @@ def _run_and_emit(
     llm_fixtures_dir: Path | None,
     output_format: str,
     output: Path | None,
+    history_dir: Path | None = None,
 ) -> int:
     try:
         loaded = load_package(incident_dir)
     except PackageLoadError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+
+    # Load history up front: a bad --history path must fail BEFORE any
+    # tokens are spent, and per-entry corruption degrades with notes.
+    history_entries = None
+    if history_dir is not None:
+        from ai_incident_investigator.history import HistoryError, load_entries
+
+        if llm_mode == "off":
+            print(
+                "error: --history needs a full report to enrich; "
+                "use --llm replay|live|record (facts-only mode has no report)",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            history_entries, history_notes = load_entries(history_dir)
+        except HistoryError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        for note in history_notes:
+            print(f"history note: {note}", file=sys.stderr)
 
     state = initial_state(loaded, lookback)
 
@@ -221,6 +257,14 @@ def _run_and_emit(
     if tracker is not None and tracker.calls:
         print(tracker.summary(), file=sys.stderr)
     report = build_report(state)
+    if history_entries is not None:
+        from ai_incident_investigator.patterns import enrich_report
+
+        report = enrich_report(report, history_entries)
+        print(
+            f"prior incidents: {len(report.prior_incidents)} match(es) from the history",
+            file=sys.stderr,
+        )
     text = (
         render_markdown(report) if output_format == "markdown" else report.model_dump_json(indent=2)
     )
@@ -240,6 +284,7 @@ def _investigate_main(argv: Sequence[str]) -> int:
         args.fixtures_dir,
         args.format,
         args.output,
+        args.history,
     )
 
 
@@ -279,7 +324,7 @@ def _collect_main(argv: Sequence[str]) -> int:
 
     lookback = timedelta(minutes=config.collection.lookback_minutes)
     return _run_and_emit(
-        args.output, lookback, args.llm, args.fixtures_dir, args.format, args.report
+        args.output, lookback, args.llm, args.fixtures_dir, args.format, args.report, args.history
     )
 
 

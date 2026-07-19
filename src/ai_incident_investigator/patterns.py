@@ -16,6 +16,8 @@ matching rule"); this module implements it and nothing beyond it:
   every difference the rule inspects lands in `unmatched` when it differs
 """
 
+import hashlib
+import re
 import statistics
 
 from ai_incident_investigator.models.common import Source
@@ -34,7 +36,7 @@ from ai_incident_investigator.models.history import (
     SignalDirection,
     SignalObservation,
 )
-from ai_incident_investigator.models.report import InvestigationReport
+from ai_incident_investigator.models.report import InvestigationReport, MitigationOption
 
 TOP_MATCHES = 3
 """Matches reported per probe (docs/assumptions.md): precedent is a
@@ -275,3 +277,53 @@ def match_fingerprints(
     ]
     matches.sort(key=lambda m: (-m.score, -m.window_start.timestamp(), m.entry_id))
     return matches[:top_n]
+
+
+def _precedent_note(option: MitigationOption, matches: list[PatternMatch]) -> str | None:
+    """The annotation rule (docs/assumptions.md): a matched incident's
+    executed fix annotates a mitigation option ONLY when the option's text
+    names that exact flag key (word-boundary match on the validated key -
+    informational linkage, never routing: the executor still takes its
+    flag explicitly). Wording: verified reads as precedent, everything
+    else as a caution."""
+    notes = []
+    for match in matches:
+        for fix in match.executed_fixes:
+            if not re.search(rf"\b{re.escape(fix.action.flag_key)}\b", option.action):
+                continue
+            what = (
+                f"{fix.action.environment}/{fix.action.flag_key} -> "
+                f"{'on' if fix.action.on else 'off'} on {match.incident_id} "
+                f"({match.window_start.date().isoformat()})"
+            )
+            if fix.verification == "verified":
+                notes.append(f"precedent: {what} verified-recovered that incident")
+            else:
+                notes.append(f"caution: {what} was tried and did NOT verify ({fix.verification})")
+    return "; ".join(notes) if notes else None
+
+
+def enrich_report(
+    report: InvestigationReport, entries: list[HistoryEntry], top_n: int = TOP_MATCHES
+) -> InvestigationReport:
+    """Attach prior-incident matches (and mitigation precedent notes) to a
+    freshly generated report. Additive BY CONSTRUCTION: the only fields
+    this touches are `prior_incidents` and `MitigationOption.precedent` -
+    severity, hypotheses, confidence, rankings, and every agent output
+    pass through untouched (the invariance the epic requires; tested).
+
+    The probe is fingerprinted from the pre-enrichment content; its sha256
+    exists only for self-exclusion, so an earlier report of this same
+    incident in the history surfaces as a labeled re-investigation."""
+    sha = hashlib.sha256(report.model_dump_json().encode()).hexdigest()
+    probe = fingerprint_report(report, sha)
+    matches = match_fingerprints(probe, entries, top_n)
+    options = [
+        option.model_copy(update={"precedent": note})
+        if (note := _precedent_note(option, matches)) is not None
+        else option
+        for option in report.safe_mitigation_options
+    ]
+    return report.model_copy(
+        update={"prior_incidents": matches, "safe_mitigation_options": options}
+    )

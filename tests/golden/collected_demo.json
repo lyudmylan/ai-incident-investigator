@@ -233,7 +233,8 @@
       "risks": [
         "eligibility enrichment unavailable while disabled"
       ],
-      "requires_human_approval": true
+      "requires_human_approval": true,
+      "precedent": null
     }
   ],
   "remediation_plans": [
@@ -508,5 +509,6 @@
       "summary": "deterministic lint: 10 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
-  ]
+  ],
+  "prior_incidents": []
 }
