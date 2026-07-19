@@ -109,7 +109,13 @@ allowlist, and the tier quorum.
 ## 5. Prove the recovery
 
 ```sh
-# give it 2-3 minutes to re-baseline, then snapshot again:
+# wait LONGER than the 5-minute log lookback after the fix (6+ minutes):
+# a follow-up collected sooner still sees the outage's ERROR lines inside
+# its lookback window, and the verdict is honestly "not recovered -
+# watched error patterns still present". If that happens, the aborted
+# verification is not the end: collect a LATER follow-up (new directory)
+# and re-run - verifications append per follow-up, and readers take the
+# latest (pending -> aborted -> verified is a legitimate audit trail).
 uv run python -m ai_incident_investigator collect \
   --sources sandbox/sources.toml --issue 9001 \
   --output /tmp/sandbox-followup --http live
