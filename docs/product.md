@@ -446,6 +446,19 @@ toggles are verified deterministically against follow-up snapshots
 verified recovery; and the executor refusal matrix (11 scenarios) is
 scored in the committed eval scorecard on every test run. "Learn from
 incident patterns" remains deferred.
+Status update (2026-07-19, v7 pilot complete): the tool learns from its
+own past investigations - deterministically, explainably, at zero tokens.
+Fingerprints and matching are pure code with the rule documented in
+assumptions.md; the history store is local and content-addressed;
+`investigate --history` embeds prior incidents whose scores are auditable
+from the record; only VERIFIED fixes read as precedent. The invariance
+guarantee - priors never move severity, hypotheses, confidence, or any
+agent output - is schema-supported, tested, and scored in the eval
+corpus, whose pattern matching matrix (10 scenarios: near-misses,
+self-exclusion, re-investigation labeling, unverified-fix cautions,
+corrupt-store degradation, and the genuine cross-golden control) joins
+the executor refusal matrix in the trust ledger. Every roadmap item
+v1-v7 is now shipped.
 Quality Bar
 The project should follow engineering discipline from day one:
 	•	JSON contracts before implementation

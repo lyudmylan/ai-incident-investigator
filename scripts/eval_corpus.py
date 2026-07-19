@@ -360,6 +360,168 @@ def executor_scenarios() -> list[tuple[str, bool]]:
     ]
 
 
+def pattern_scenarios() -> list[tuple[str, bool]]:
+    """The v7 matching matrix (#90): deterministic scenarios where the
+    CORRECT answer is no match, a labeled match, or a caution - plus the
+    genuine-match controls. Runs the real fingerprint/match/enrich code
+    against the committed goldens and constructed stores - no LLM, no
+    network, nothing executed. Mirrors the executor refusal matrix: the
+    ways the pattern layer must refuse to manufacture precedent are pinned
+    here, scored on every run."""
+    import json
+    import tempfile
+    from datetime import UTC, datetime
+
+    from ai_incident_investigator.approvals import report_hash
+    from ai_incident_investigator.history import add_entry, load_entries
+    from ai_incident_investigator.models.history import (
+        HistoryEntry,
+        IncidentFingerprint,
+        SignalObservation,
+        entry_id_for,
+    )
+    from ai_incident_investigator.patterns import (
+        enrich_report,
+        fingerprint_report,
+        match_fingerprints,
+    )
+
+    golden_path = ROOT / "tests" / "golden" / "latency_spike.json"
+    prior_path = ROOT / "tests" / "golden" / "collected_demo.json"
+    report = InvestigationReport.model_validate_json(golden_path.read_text())
+    probe = fingerprint_report(report, report_hash(golden_path))
+
+    def fp(
+        incident_id: str = "constructed",
+        sha: str = "b" * 64,
+        services: tuple[str, ...] = ("booking-service",),
+        signals: tuple[tuple[str, str], ...] = (("booking-service", "p95_latency_ms"),),
+        severity: str = "SEV-2",
+        deploy: bool = True,
+    ) -> IncidentFingerprint:
+        return IncidentFingerprint.model_validate(
+            {
+                "incident_id": incident_id,
+                "report_sha256": sha,
+                "window_start": datetime(2026, 5, 1, tzinfo=UTC).isoformat(),
+                "services": sorted(set(services) | {s for s, _ in signals}),
+                "severity": severity,
+                "abnormal_signals": [
+                    SignalObservation(service=s, signal=g).model_dump() for s, g in sorted(signals)
+                ],
+                "deploy_correlated": deploy,
+                "executed_fixes": [],
+            }
+        )
+
+    def entry(fingerprint: IncidentFingerprint) -> HistoryEntry:
+        return HistoryEntry(entry_id=entry_id_for(fingerprint), fingerprint=fingerprint)
+
+    def matches(*entries: HistoryEntry) -> list[str]:
+        return [m.incident_id for m in match_fingerprints(probe, list(entries))]
+
+    # near-miss: latency_spike's exact signal shapes on DIFFERENT services
+    near_miss = fp(
+        incident_id="near_miss",
+        services=("other-service",),
+        signals=(("other-service", "p95_latency_ms"), ("other-db", "duration_ms")),
+    )
+    # threshold boundary: shared services, same severity, deploy-correlated,
+    # overlapping everything EXCEPT a (service, signal) pair
+    boundary = fp(
+        incident_id="boundary",
+        services=("booking-service", "notifications-service", "appointments-db"),
+        signals=(("booking-service", "error_rate_pct"),),
+    )
+    itself = entry(probe)
+    earlier = fp(incident_id="latency_spike", sha="c" * 64)
+
+    # scenario: the store degrades per-entry, and enrichment stays additive
+    with tempfile.TemporaryDirectory() as tmp:
+        history_dir = Path(tmp) / "history"
+        add_entry(history_dir, prior_path)
+        corrupt = history_dir / "corrupt-entry"
+        corrupt.mkdir()
+        (corrupt / "entry.json").write_text("{broken")
+        empty_dir = Path(tmp) / "empty"
+        empty_dir.mkdir()
+        entries, notes = load_entries(history_dir)
+        corrupt_ok = len(entries) == 1 and len(notes) == 1
+        empty_ok = load_entries(empty_dir) == ([], [])
+        enriched = enrich_report(report, entries)
+        genuine = [m.incident_id for m in enriched.prior_incidents] == ["collected_demo"]
+        audited = all(
+            m.score == sum(f.weight for f in m.matched) and m.unmatched is not None
+            for m in enriched.prior_incidents
+        )
+        before = json.loads(report.model_dump_json())
+        after = json.loads(enriched.model_dump_json())
+        for dump in (before, after):
+            dump.pop("prior_incidents")
+            for option in dump["safe_mitigation_options"]:
+                option["precedent"] = None
+        invariant = before == after
+
+    tried = IncidentFingerprint.model_validate(
+        {
+            **fp(incident_id="unverified_fix").model_dump(),
+            "executed_fixes": [
+                {
+                    "action": {
+                        "method": "PATCH",
+                        "environment": "staging",
+                        "flag_key": "payment_enrichment",
+                        "on": False,
+                    },
+                    "outcome": "applied",
+                    "verification": "pending",
+                    "executed_at": datetime(2026, 5, 1, 12, 0, tzinfo=UTC).isoformat(),
+                }
+            ],
+        }
+    )
+    tried_match = match_fingerprints(probe, [entry(tried)])
+    caution_ok = bool(tried_match) and "did NOT verify" in tried_match[0].explanation
+
+    re_investigation = match_fingerprints(probe, [entry(earlier)])
+
+    return [
+        (
+            "near-miss (same signals, different service) is not a match",
+            matches(entry(near_miss)) == [],
+        ),
+        (
+            "everything-but-a-shared-pair (services, severity, deploys) is not a match",
+            matches(entry(boundary)) == [],
+        ),
+        ("the probe's own report (identical sha) is excluded", matches(itself) == []),
+        (
+            "an earlier report of the same incident is labeled a re-investigation",
+            bool(re_investigation)
+            and re_investigation[0].re_investigation
+            and re_investigation[0].explanation.startswith("earlier investigation"),
+        ),
+        (
+            "an applied-but-unverified fix reads as a caution, never precedent",
+            caution_ok,
+        ),
+        ("a corrupt history entry degrades to a note; the rest still load", corrupt_ok),
+        ("an empty history yields zero matches and zero noise", empty_ok),
+        (
+            "the genuine cross-golden match is found (control: collected_demo)",
+            genuine,
+        ),
+        (
+            "every reported score equals the sum of its matched feature weights",
+            audited,
+        ),
+        (
+            "INVARIANCE: enrichment moved nothing but prior_incidents/precedent",
+            invariant,
+        ),
+    ]
+
+
 def score() -> tuple[list[str], int]:
     lines: list[str] = []
     failures = 0
@@ -380,6 +542,11 @@ def score() -> tuple[list[str], int]:
         lines.append("")
     lines.append("## executor refusal matrix (v5 pilot)")
     for description, ok in executor_scenarios():
+        failures += 0 if ok else 1
+        lines.append(f"- {'PASS' if ok else 'FAIL'}: {description}")
+    lines.append("")
+    lines.append("## pattern matching matrix (v7 pilot)")
+    for description, ok in pattern_scenarios():
         failures += 0 if ok else 1
         lines.append(f"- {'PASS' if ok else 'FAIL'}: {description}")
     lines.append("")

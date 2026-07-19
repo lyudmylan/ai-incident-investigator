@@ -4,7 +4,7 @@ Deterministic rubric results over the replayed corpus. Regenerate with
 `uv run --no-sync python scripts/eval_corpus.py --write` after
 intentional changes; tests/test_eval_corpus.py gates drift and failures.
 
-**63/63 checks passing.**
+**73/73 checks passing.**
 
 ## cascade_victim_alert
 - PASS: top hypothesis names the culprit two hops away (session-store)
@@ -90,3 +90,15 @@ intentional changes; tests/test_eval_corpus.py gates drift and failures.
 - PASS: production live is refused even at full quorum (pilot tier rule)
 - PASS: strict separation of duties: the invoker's own approval never suffices
 - PASS: staging dry-run at quorum is previewed (control)
+
+## pattern matching matrix (v7 pilot)
+- PASS: near-miss (same signals, different service) is not a match
+- PASS: everything-but-a-shared-pair (services, severity, deploys) is not a match
+- PASS: the probe's own report (identical sha) is excluded
+- PASS: an earlier report of the same incident is labeled a re-investigation
+- PASS: an applied-but-unverified fix reads as a caution, never precedent
+- PASS: a corrupt history entry degrades to a note; the rest still load
+- PASS: an empty history yields zero matches and zero noise
+- PASS: the genuine cross-golden match is found (control: collected_demo)
+- PASS: every reported score equals the sum of its matched feature weights
+- PASS: INVARIANCE: enrichment moved nothing but prior_incidents/precedent
