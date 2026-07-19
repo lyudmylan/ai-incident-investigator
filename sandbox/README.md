@@ -50,7 +50,13 @@ operation the stack has honest pre-incident baselines. Coffee.
 
 ```sh
 curl -X POST localhost:8000/incident/start
-# give the outage 3-5 minutes to produce alert-worthy data, then:
+# give the outage 3-4 minutes to produce alert-worthy data, then collect
+# PROMPTLY - the baseline margin is 2 minutes, so an outage older than
+# ~7 minutes at collect time starts bleeding into the baseline window.
+# If you wait too long the tool stays honest and the story degrades:
+# "current values match baseline" -> SEV-4, no deviated series, no
+# recovery-verification plan, and compare will refuse to verify.
+# (Recover the flag, let it re-bake ~15 minutes, and break it again.)
 
 AI_INCIDENT_INVESTIGATOR_MODEL=claude-haiku-4-5-20251001 \
 uv run --env-file .env python -m ai_incident_investigator collect \
@@ -69,9 +75,16 @@ free from the recording:
 ```sh
 AI_INCIDENT_INVESTIGATOR_MODEL=claude-haiku-4-5-20251001 \
 uv run python -m ai_incident_investigator investigate \
-  --incident /tmp/sandbox-incident --llm replay \
+  --incident /tmp/sandbox-incident --llm replay --lookback-minutes 5 \
   --fixtures-dir /tmp/sandbox-fixtures --output /tmp/sandbox-report.json
 ```
+
+`--lookback-minutes 5` is required: the recording was made through
+`collect --then-investigate`, which takes the 5-minute lookback from
+sandbox/sources.toml, while bare `investigate` defaults to 30. A
+different lookback is a different incident window, different prompts,
+and therefore different fixture keys - every agent would miss its
+recording and the report would degrade to fallbacks.
 
 ## 4. Approve, execute LIVE, and end the outage
 
