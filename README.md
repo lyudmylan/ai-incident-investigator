@@ -152,6 +152,13 @@ zero LLM tokens (docs/learning_design.md):
   a `[verified]` fix reads as precedent; anything else is a caution.
   Read-only: safe against an approved report (approvals stay valid).
 - **`history list`**: the store's entries with headline facts.
+- **`investigate --history`**: prior incidents embed in the report itself
+  - under a tested invariance guarantee: severity, hypotheses, and
+  confidence are byte-identical with and without history. The **pattern
+  matching matrix** (10 deterministic scenarios: near-misses that must
+  not match, self-exclusion, unverified-fix cautions, corrupt-store
+  degradation) joins the executor refusal matrix in
+  `docs/eval_scorecard.md`, scored on every test run.
 
 Try it now from the committed goldens (zero tokens, no keys):
 
