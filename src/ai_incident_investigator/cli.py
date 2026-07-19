@@ -901,6 +901,71 @@ def _init_main(argv: Sequence[str]) -> int:
     return 0
 
 
+def build_history_parser(mode: str) -> argparse.ArgumentParser:
+    descriptions = {
+        "add": "Copy one investigation (report + sidecars) into the local history "
+        "store as precedent. Content-addressed and idempotent; writes only inside "
+        "the history directory.",
+        "list": "Show every history entry with its headline facts.",
+        "match": "Explainable matches for a report against the history store. "
+        "Read-only: safe to run against an approved report.",
+    }
+    parser = argparse.ArgumentParser(
+        prog=f"ai_incident_investigator history {mode}", description=descriptions[mode]
+    )
+    parser.add_argument("--history", type=Path, required=True, help="history store directory")
+    if mode in ("add", "match"):
+        parser.add_argument("--report", type=Path, required=True, help="investigation report JSON")
+    if mode == "add":
+        parser.add_argument(
+            "--executions",
+            type=Path,
+            default=None,
+            help="executions sidecar (default: <report>.executions.json when present)",
+        )
+        parser.add_argument(
+            "--approvals",
+            type=Path,
+            default=None,
+            help="approvals sidecar, copied for provenance only "
+            "(default: <report>.approvals.json when present)",
+        )
+    return parser
+
+
+def _history_main(argv: Sequence[str]) -> int:
+    from ai_incident_investigator.history import (
+        HistoryError,
+        add_entry,
+        load_entries,
+        match_report,
+        render_entries,
+        render_matches,
+    )
+
+    if not argv or argv[0] not in ("add", "list", "match"):
+        print("usage: ai_incident_investigator history {add,list,match} ...", file=sys.stderr)
+        return 2
+    mode = argv[0]
+    args = build_history_parser(mode).parse_args(list(argv[1:]))
+    try:
+        if mode == "add":
+            entry, created = add_entry(args.history, args.report, args.executions, args.approvals)
+            status = "added" if created else "already in history (no-op):"
+            print(f"{status} {entry.entry_id}", file=sys.stderr)
+            print(str(args.history / entry.entry_id))
+        elif mode == "list":
+            entries, notes = load_entries(args.history)
+            print(render_entries(entries, notes))
+        else:
+            matches, notes = match_report(args.history, args.report)
+            print(render_matches(matches, notes))
+    except HistoryError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(argv) if argv is not None else sys.argv[1:]
     if len(arguments) >= 2 and arguments[0] == "collect" and arguments[1] == "doctor":
@@ -919,6 +984,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _compare_main(arguments[1:])
     if arguments and arguments[0] == "execute":
         return _execute_main(arguments[1:])
+    if arguments and arguments[0] == "history":
+        return _history_main(arguments[1:])
     return _investigate_main(arguments)  # bare flags: backward-compatible investigate
 
 

@@ -41,6 +41,28 @@ pair, compared against the recovery plan's baseline for that exact pair.
 Anything less grounded is `"unknown"` - direction is never inferred from
 wording like "spiked" or "dropped".
 
+## The store
+
+One directory per entry under a user-chosen history dir (`history.py`,
+issue #88): a byte-verbatim copy of the report (so the entry's sha256
+stays true), copies of its executions/approvals sidecars when they exist
+(the approvals copy is provenance only - matching never reads it), and
+the derived `entry.json`. The store IS the artifacts; anything index-like
+is derived by scanning, so there is no second source of truth to drift.
+
+- **Content-addressed and immutable**: the entry id is
+  `<incident_id>-<report sha256 first 16>`; re-adding the same report is
+  a no-op, and an entry directory is never rewritten.
+- **Sidecar auto-discovery**: `history add` picks up the conventional
+  `<report>.executions.json` / `.approvals.json` automatically (explicit
+  flags override), so a verified fix cannot be silently left out of
+  precedent by a forgotten flag.
+- **Write boundary**: `add` writes only inside the history directory;
+  `list` and `match` write nothing at all - matching against an APPROVED
+  report leaves it byte-identical, so its approvals stay valid.
+- **Degradation**: a corrupt, foreign, or renamed entry is a per-entry
+  note, never a crash - one bad directory cannot take down the store.
+
 ## Matching: a gate, then explainable arithmetic
 
 The gate: **no shared abnormal (service, signal) pair, no match.** Two
