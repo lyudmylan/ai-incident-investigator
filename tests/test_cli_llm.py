@@ -24,6 +24,7 @@ CONTRACT_KEYS = {
     "communication_drafts",
     "postmortem_draft",
     "reasoning_trace",
+    "prior_incidents",
 }
 
 

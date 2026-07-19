@@ -269,7 +269,8 @@
       "risks": [
         "rich template features unavailable until fixed"
       ],
-      "requires_human_approval": true
+      "requires_human_approval": true,
+      "precedent": null
     },
     {
       "id": "mitigation_cb90395a98",
@@ -279,7 +280,8 @@
         "notifications delivered late",
         "duplicate sends if drained too fast"
       ],
-      "requires_human_approval": true
+      "requires_human_approval": true,
+      "precedent": null
     }
   ],
   "remediation_plans": [
@@ -527,5 +529,6 @@
       "summary": "deterministic lint: 10 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
-  ]
+  ],
+  "prior_incidents": []
 }

@@ -247,6 +247,20 @@ rationale in docs/learning_design.md. Zero LLM involvement.
   hypotheses, confidence labels, rankings, and every agent output are
   byte-identical with and without history (tested, and scored in the eval
   corpus from v7 hardening on).
+- **Report enrichment** (`investigate --history`, v7): matches embed in
+  the report's `prior_incidents` field at GENERATION time only - an
+  existing report file is never rewritten (approvals bind to its sha;
+  post-hoc matching stays in `history match`). Enrichment is additive by
+  construction: it touches exactly `prior_incidents` and
+  `MitigationOption.precedent`, nothing else. The probe's sha is the hash
+  of the pre-enrichment content and exists only for self-exclusion.
+- **Mitigation precedent notes**: a matched incident's executed fix
+  annotates a mitigation option ONLY when the option's text contains that
+  exact flag key (word-boundary match on the validated key). This is
+  informational linkage, never routing - the executor still takes its
+  environment and flag explicitly (docs/execution_design.md, "Step ->
+  action mapping"). Wording follows the fix rule: `precedent:` only for
+  verified outcomes, `caution: ... did NOT verify` for everything else.
 
 ## Safety assumptions
 

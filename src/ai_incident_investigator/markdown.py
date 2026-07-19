@@ -138,12 +138,39 @@ def render_markdown(
             lines.append(f"1. {step.description}{suffix}")
         sections.append("## Recommended next steps\n\n" + "\n".join(lines))
 
+    if report.prior_incidents:
+        lines = []
+        for rank, match in enumerate(report.prior_incidents, start=1):
+            lines.append(f"### {rank}. {match.explanation}")
+            lines.extend(f"- shared (+{f.weight}): {f.detail}" for f in match.matched)
+            lines.extend(f"- differs: {difference}" for difference in match.unmatched)
+            for fix in match.executed_fixes:
+                tag = (
+                    "[verified]"
+                    if fix.verification == "verified"
+                    else f"[did NOT verify: {fix.verification}]"
+                )
+                state = "on" if fix.action.on else "off"
+                lines.append(
+                    f"- executed there: {tag} {fix.action.environment}/"
+                    f"{fix.action.flag_key} -> {state}"
+                )
+            lines.append("")
+        lines.append(
+            "_Matches are behavioral resemblance, never a root-cause claim; "
+            "only [verified] fixes are precedent. Conclusions above are "
+            "unchanged by these matches._"
+        )
+        sections.append("## Prior incidents (deterministic pattern matches)\n\n" + "\n".join(lines))
+
     if report.safe_mitigation_options:
         lines = ["> **Human approval required before any mitigation is acted on.**", ""]
         for option in report.safe_mitigation_options:
             lines.append(f"- **{option.action}** — {option.rationale}")
             if option.risks:
                 lines.append(f"  - risks: {'; '.join(option.risks)}")
+            if option.precedent:
+                lines.append(f"  - {option.precedent}")
         sections.append("## Safe mitigation options\n\n" + "\n".join(lines))
 
     if report.remediation_plans:

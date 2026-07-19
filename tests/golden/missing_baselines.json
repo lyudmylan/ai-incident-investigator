@@ -380,5 +380,6 @@
       "summary": "deterministic lint: 10 checks (total review: 0 blocked, 0 warning)",
       "input_ids": []
     }
-  ]
+  ],
+  "prior_incidents": []
 }
