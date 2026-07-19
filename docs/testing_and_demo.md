@@ -156,6 +156,20 @@ measured; post-#61 prompts, so it replays byte-identically). Replay it free:
     live demo of structural safety catching model overclaim.
     docs/demo_tour.md step 3 walks through it.
 
+**The committed closed-loop sample** (the first real sandbox run): a full
+Haiku investigation of a live outage on the sandbox stack lives at
+`docs/samples/sandbox_closed_loop-haiku45-report.md` (recorded 2026-07-19,
+$0.18 measured). Notable content: SEV-2 at 20.7x a clean baseline; a
+"Prior incidents" section matched deterministically from a real history
+store - including the honest `[did NOT verify: pending]` caution from an
+earlier contaminated-baseline run; and the remediation plan whose
+state-changing step was then genuinely approved, executed live (the
+tool's own PATCH ended the outage), and VERIFIED against a follow-up
+snapshot. The execution's audit trail ran pending -> aborted (premature
+follow-up) -> verified (clean follow-up), all appended - the sidecars
+stay local, but the report is the artifact the whole loop produced.
+sandbox/README.md is the walkthrough that generates it.
+
 ## What stays scripted on purpose
 
 CI and the golden corpus run on scripted fakes even after live fixtures
